@@ -3,36 +3,32 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GhostPrint PRO 2026</title>
+    <title>GhostPrint PRO 2026 - Master</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        .btn { background: #6d28d9; color: white; padding: 12px 16px; border-radius: 12px; cursor: pointer; font-weight: 700; border: none; transition: 0.2s; text-transform: uppercase; font-size: 11px; }
-        .btn:hover { background: #5b21b6; transform: translateY(-1px); }
-        .card { background: white; padding: 20px; margin: 12px 0; border-radius: 18px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); border: 1px solid #f1f1f1; }
-        input, select { border: 1px solid #e2e8f0; padding: 12px; margin: 8px 0; border-radius: 12px; width: 100%; font-size: 14px; background: #f8fafc; }
-        label { font-size: 10px; color: #64748b; font-weight: 800; text-transform: uppercase; display: block; margin-left: 4px; }
+        .btn { background: #6d28d9; color: white; padding: 10px 14px; border-radius: 12px; cursor: pointer; font-weight: 700; border: none; transition: 0.2s; text-transform: uppercase; font-size: 10px; }
+        .btn:hover { background: #5b21b6; }
+        .card { background: white; padding: 15px; margin: 10px 0; border-radius: 18px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid #f1f1f1; }
+        input, select { border: 1px solid #e2e8f0; padding: 10px; margin: 5px 0; border-radius: 10px; width: 100%; font-size: 14px; background: #f8fafc; }
+        label { font-size: 9px; color: #64748b; font-weight: 800; text-transform: uppercase; margin-left: 4px; }
     </style>
 </head>
-<body class="bg-slate-50 font-sans text-slate-800">
+<body class="bg-slate-50 font-sans text-slate-800 pb-20">
 
-<div class="bg-gradient-to-r from-purple-900 to-indigo-800 text-white p-5 shadow-lg flex justify-between items-center sticky top-0 z-50">
-    <div>
-        <h1 class="text-2xl font-black italic tracking-tighter uppercase">GhostPrint PRO</h1>
-        <p class="text-[9px] opacity-70 font-bold tracking-widest uppercase">Cloud Sync Active</p>
-    </div>
+<div class="bg-gradient-to-r from-purple-900 to-indigo-800 text-white p-4 shadow-lg flex justify-between items-center sticky top-0 z-50">
+    <h1 class="text-xl font-black italic uppercase">GhostPrint PRO</h1>
     <div id="sync-status" class="bg-amber-500/20 px-3 py-1 rounded-full text-[10px] font-bold text-amber-200 border border-amber-500/30">CONECTANDO...</div>
 </div>
 
-<div class="p-3 flex gap-2 flex-wrap bg-white/90 backdrop-blur shadow-sm sticky top-[76px] z-40 overflow-x-auto border-b">
-    <button onclick="setView('dashboard')" class="btn">Dashboard</button>
+<div class="p-2 flex gap-2 overflow-x-auto bg-white shadow-sm sticky top-[68px] z-40 border-b">
+    <button onclick="setView('dashboard')" class="btn">Inicio</button>
     <button onclick="setView('ventas')" class="btn bg-indigo-600">Venta</button>
     <button onclick="setView('cobranzas')" class="btn border-2 border-amber-500 !text-amber-600 !bg-white">Cobros</button>
     <button onclick="setView('gastos')" class="btn">Gastos</button>
     <button onclick="setView('compras')" class="btn">Stock</button>
 </div>
 
-<div id="app" class="p-4 max-w-5xl mx-auto pb-24"></div>
+<div id="app" class="p-4 max-w-4xl mx-auto"></div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
@@ -51,18 +47,33 @@ const appF = initializeApp(firebaseConfig);
 const db = getFirestore(appF);
 const docRef = doc(db, "sistema", "datos_principales");
 
-window.state = { 
-    ventas: [], gastos: [], serviciosExtra: [], 
-    inventario: {"VINIL GLOSSY": {stock: 0, costo: 3.00}, "BANNER": {stock: 0, costo: 3.60}}, 
-    historialCompras: [] 
+// LISTA MAESTRA DE RESPALDO (Por si se borra)
+const defaultState = {
+    ventas: [], gastos: [], 
+    serviciosExtra: ["DISEÑO GRÁFICO", "INSTALACIÓN", "IMPRESIÓN SOLA"],
+    inventario: {
+        "VINIL GLOSSY": {stock: 0, costo: 3.00},
+        "BANNER": {stock: 0, costo: 3.60},
+        "VINIL MATE": {stock: 0, costo: 3.00},
+        "MICROPERFORADO": {stock: 0, costo: 5.00}
+    }
 };
+
+window.state = JSON.parse(JSON.stringify(defaultState));
 window.view = "dashboard";
 
 onSnapshot(docRef, (snap) => {
     if (snap.exists()) {
-        window.state = snap.data();
+        const data = snap.data();
+        // Si la base de datos no tiene inventario, le ponemos el de respaldo
+        window.state = {
+            ...window.state,
+            ...data,
+            inventario: (data.inventario && Object.keys(data.inventario).length > 0) ? data.inventario : defaultState.inventario,
+            serviciosExtra: (data.serviciosExtra && data.serviciosExtra.length > 0) ? data.serviciosExtra : defaultState.serviciosExtra
+        };
         document.getElementById("sync-status").innerText = "SINCRONIZADO ✓";
-        document.getElementById("sync-status").className = "bg-green-600/20 px-3 py-1 rounded-full text-[10px] font-bold text-green-300 border border-green-500/30";
+        document.getElementById("sync-status").className = "bg-green-600 text-white px-3 py-1 rounded-full text-[10px] font-bold";
     } else {
         window.save();
     }
@@ -77,68 +88,101 @@ window.render = function() {
 
     if(window.view === "dashboard"){
         let vT = window.state.ventas.reduce((a,b) => a + b.total, 0), gT = window.state.gastos.reduce((a,b) => a + b.amount, 0);
-        html = `<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div class="card bg-green-50">Ventas<br><b class="text-3xl text-green-700">$${vT.toFixed(2)}</b></div>
-            <div class="card bg-red-50">Gastos<br><b class="text-3xl text-red-600">$${gT.toFixed(2)}</b></div>
-            <div class="card bg-slate-900 text-white italic text-center">Utilidad<br><b class="text-3xl text-purple-400 font-black">$${(vT-gT).toFixed(2)}</b></div>
+        html = `<div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div class="card bg-green-50">Ventas<br><b class="text-2xl text-green-700">$${vT.toFixed(2)}</b></div>
+            <div class="card bg-red-50">Gastos<br><b class="text-2xl text-red-600">$${gT.toFixed(2)}</b></div>
+            <div class="card bg-slate-900 text-white italic text-center">Utilidad<br><b class="text-2xl text-purple-400 font-black">$${(vT-gT).toFixed(2)}</b></div>
         </div>`;
     }
 
     if(window.view === "ventas"){
-        let hoy = new Date().toISOString().split('T')[0];
-        html = `<h2>NUEVA VENTA</h2><div class="card">
+        html = `<h2>REGISTRAR VENTA</h2><div class="card">
             <label>Cliente</label><input id="cli" placeholder="Nombre">
-            <label>WhatsApp</label><input id="tel" type="number" placeholder="58412...">
-            <label>Producto</label><select id="producto">${Object.keys(window.state.inventario).map(p=>`<option value="${p}">${p}</option>`).join("")}</select>
-            <label>Monto $</label><input id="monto" type="number" placeholder="0.00">
-            <button onclick="regVenta()" class="btn w-full mt-4 bg-indigo-600">Guardar Venta</button></div>`;
+            <label>Producto / Servicio</label>
+            <select id="producto">
+                <optgroup label="Materiales">
+                    ${Object.keys(window.state.inventario).map(p=>`<option value="${p}">${p}</option>`).join("")}
+                </optgroup>
+                <optgroup label="Servicios">
+                    ${window.state.serviciosExtra.map(s=>`<option value="${s}">${s}</option>`).join("")}
+                </optgroup>
+            </select>
+            <label>Monto $</label><input id="monto" type="number" step="0.01">
+            <button onclick="regVenta()" class="btn w-full mt-3 bg-indigo-600 py-3">Guardar</button></div>`;
     }
 
     if(window.view === "cobranzas"){
-        html = `<h2>COBRANZAS</h2>`;
+        html = `<h2>COBRANZAS PENDIENTES</h2>`;
         window.state.ventas.filter(v=>!v.pagado).slice().reverse().forEach(v => {
-            html += `<div class="card border-l-4 border-amber-500 flex justify-between items-center">
-                <div><b>${v.cliente}</b><br><small>$${v.total}</small></div>
-                <div class="flex gap-2">
-                    <button onclick="liquidar(${v.id})" class="bg-green-600 text-white p-2 rounded-lg text-[10px]">PAGÓ</button>
-                    <button onclick="borrarV(${v.id})" class="bg-red-500 text-white p-2 rounded-lg text-[10px]">X</button>
+            html += `<div class="card border-l-4 border-amber-500">
+                <div class="flex justify-between items-center">
+                    <div><b>${v.cliente}</b><br><small class="text-indigo-600">${v.producto}</small> - <b class="text-red-600">$${v.total}</b></div>
+                    <div class="flex gap-1">
+                        <button onclick="editVenta(${v.id})" class="bg-slate-200 text-slate-700 p-2 rounded-lg text-[9px]">EDITAR</button>
+                        <button onclick="liquidar(${v.id})" class="bg-green-600 text-white p-2 rounded-lg text-[9px]">PAGÓ</button>
+                    </div>
                 </div>
             </div>`;
         });
     }
 
     if(window.view === "gastos"){
-        let hoy = new Date().toISOString().split('T')[0];
-        html = `<h2>GASTOS</h2><div class="card"><input id="gn" placeholder="Motivo"><input id="ga" type="number" placeholder="Monto"><button onclick="regGasto()" class="btn w-full mt-2 bg-red-600">Registrar Gasto</button></div>
+        html = `<h2>GASTOS</h2><div class="card"><input id="gn" placeholder="Motivo"><input id="ga" type="number" placeholder="Monto"><button onclick="regGasto()" class="btn w-full mt-2 bg-red-600">Registrar</button></div>
         <div class="mt-4">${window.state.gastos.slice().reverse().map(g=>`
-            <div class="card py-3 flex justify-between items-center bg-white border-l-4 border-red-300">
-                <div><span class="text-xs font-bold uppercase">${g.name}</span><br><b class="text-red-600 text-lg">$${g.amount}</b></div>
-                <button onclick="borrarGasto(${g.id})" class="bg-red-100 text-red-600 px-3 py-1 rounded-lg font-black hover:bg-red-600 hover:text-white transition">BORRAR</button>
+            <div class="card py-3 flex justify-between items-center border-l-4 border-red-400">
+                <div><span class="text-[10px] font-bold">${g.name}</span><br><b>$${g.amount}</b></div>
+                <div class="flex gap-2">
+                    <button onclick="editGasto(${g.id})" class="text-blue-600 font-bold text-[10px]">EDITAR</button>
+                    <button onclick="borrarGasto(${g.id})" class="text-red-600 font-bold text-[10px]">BORRAR</button>
+                </div>
             </div>`).join("")}</div>`;
     }
 
     if(window.view === "compras"){
-        html = `<h2>STOCK ACTUAL</h2><div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+        html = `<h2>STOCK Y CATÁLOGO</h2><div class="grid grid-cols-1 md:grid-cols-2 gap-2">
             ${Object.entries(window.state.inventario).map(([name, info]) => `
-                <div class="card"><b>${name}</b><br><span class="text-2xl">${info.stock}</span> mts
+                <div class="card"><b>${name}</b><br><span class="text-xl">${info.stock}</span> mts
                 <div class="flex gap-1 mt-2">
-                    <input type="number" id="stk-${name.replace(/\s/g, '')}" placeholder="Cant" class="!m-0 !py-1 text-xs">
-                    <button onclick="updateStock('${name}')" class="bg-indigo-600 text-white px-3 rounded-lg text-xs">SUMAR</button>
+                    <input type="number" id="stk-${name.replace(/\s/g, '')}" placeholder="Cant" class="!m-0 !py-1">
+                    <button onclick="updateStock('${name}')" class="bg-indigo-600 text-white px-2 rounded-lg text-[10px]">SUMAR</button>
                 </div></div>`).join("")}</div>
-            <div class="card mt-4"><label>Nuevo Material</label><input id="nm" placeholder="Nombre"><button onclick="addMat()" class="btn w-full bg-blue-600 mt-2">Añadir al Catálogo</button></div>`;
+            <div class="card"><label>Añadir Material o Servicio</label><input id="nm" placeholder="Nombre"><button onclick="addMat()" class="btn w-full bg-blue-600 mt-2 text-[9px]">Agregar al Menú</button></div>`;
     }
 
     app.innerHTML = html;
 };
 
-// ACCIONES
+// --- LOGICA DE EDICIÓN ---
+window.editGasto = async (id) => {
+    let g = window.state.gastos.find(x => x.id === id);
+    let nuevoNom = prompt("Nuevo nombre:", g.name);
+    let nuevoMon = prompt("Nuevo monto:", g.amount);
+    if(nuevoNom && nuevoMon){
+        g.name = nuevoNom.toUpperCase();
+        g.amount = parseFloat(nuevoMon);
+        await window.save(); render();
+    }
+};
+
+window.editVenta = async (id) => {
+    let v = window.state.ventas.find(x => x.id === id);
+    let nuevoCli = prompt("Nombre del cliente:", v.cliente);
+    let nuevoMon = prompt("Monto de la venta:", v.total);
+    if(nuevoCli && nuevoMon){
+        v.cliente = nuevoCli.toUpperCase();
+        v.total = parseFloat(nuevoMon);
+        await window.save(); render();
+    }
+};
+
 window.regVenta = async () => {
-    let c = document.getElementById("cli").value, m = parseFloat(document.getElementById("monto").value);
+    let c = document.getElementById("cli").value, m = parseFloat(document.getElementById("monto").value), p = document.getElementById("producto").value;
     if(c && m > 0){
-        window.state.ventas.push({id:Date.now(), fecha:new Date().toISOString(), cliente:c.toUpperCase(), total:m, pagado:false, abonado:0});
+        window.state.ventas.push({id:Date.now(), cliente:c.toUpperCase(), producto:p, total:m, pagado:false});
         await window.save(); setView('cobranzas');
     }
 };
+
 window.regGasto = async () => {
     let n = document.getElementById("gn").value, a = parseFloat(document.getElementById("ga").value);
     if(n && a > 0){
@@ -146,12 +190,8 @@ window.regGasto = async () => {
         await window.save(); render();
     }
 };
-window.borrarGasto = async (id) => {
-    if(confirm("¿Seguro que quieres borrar este gasto?")){
-        window.state.gastos = window.state.gastos.filter(g => g.id !== id);
-        await window.save(); render();
-    }
-};
+
+window.borrarGasto = async (id) => { if(confirm("¿Borrar?")){ window.state.gastos = window.state.gastos.filter(g => g.id !== id); await window.save(); render(); } };
 window.updateStock = async (name) => {
     let val = parseFloat(document.getElementById('stk-'+name.replace(/\s/g, '')).value) || 0;
     window.state.inventario[name].stock += val;
@@ -162,7 +202,6 @@ window.addMat = async () => {
     if(n){ window.state.inventario[n] = {stock:0, costo:0}; await window.save(); render(); }
 };
 window.liquidar = async (id) => { let v = window.state.ventas.find(x => x.id === id); v.pagado = true; await window.save(); render(); };
-window.borrarV = async (id) => { if(confirm("¿Borrar venta?")){ window.state.ventas = window.state.ventas.filter(v=>v.id!==id); await window.save(); render(); } };
 
 render();
 </script>
