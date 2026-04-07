@@ -12,31 +12,26 @@
 <div class="bg-gradient-to-r from-purple-700 to-purple-500 text-white p-4 shadow flex justify-between">
     <h1 class="text-xl font-bold">👻 GhostPrint PRO</h1>
     <div class="flex items-center gap-2">
-        <span id="status" class="text-xs bg-purple-800 px-2 py-1 rounded">Conectando...</span>
-        <span class="text-sm font-bold">Cloud Mode</span>
+        <span id="status" class="text-xs bg-purple-800 px-2 py-1 rounded">Sincronizando...</span>
     </div>
 </div>
 
 <div class="p-4 flex gap-2 flex-wrap justify-center md:justify-start">
-    <button onclick="setView('dashboard')" class="btn">Dashboard</button>
+    <button onclick="setView('dashboard')" class="btn">Inicio</button>
     <button onclick="setView('ventas')" class="btn">Ventas</button>
     <button onclick="setView('cobranzas')" class="btn">Cobranzas</button>
-    <button onclick="setView('compras')" class="btn">Compras / Catálogo</button>
+    <button onclick="setView('compras')" class="btn">Compras</button>
     <button onclick="setView('gastos')" class="btn">Gastos</button>
     <button onclick="setView('inventario')" class="btn">Inventario</button>
-    <button onclick="setView('reporte')" class="btn">Reporte</button>
 </div>
 
 <div id="app" class="p-6 max-w-4xl mx-auto"></div>
 
 <style>
-    .btn{background:#6d28d9;color:white;padding:8px 14px;border-radius:8px;cursor:pointer;border:none;transition:all 0.2s}
+    .btn{background:#6d28d9;color:white;padding:8px 14px;border-radius:8px;cursor:pointer;border:none;transition:all 0.2s;font-weight:bold;font-size:14px}
     .btn:hover{background:#5b21b6;transform: scale(1.05)}
     .card{background:white;padding:15px;margin:10px 0;border-radius:12px;box-shadow:0 4px 10px rgba(0,0,0,0.08)}
     input,select{border:1px solid #ddd;padding:10px;margin:6px 0;border-radius:8px;width:100%}
-    label{font-size:13px;color:#555;font-weight:bold}
-    .alert{background:#fee2e2;color:#991b1b;padding:10px;border-radius:8px;margin-bottom:10px}
-    .hidden{display:none}
 </style>
 
 <script type="module">
@@ -56,85 +51,78 @@ const appFirebase = initializeApp(firebaseConfig);
 const db = getFirestore(appFirebase);
 const docRef = doc(db, "sistema", "datos_principales");
 
-// STATE GLOBAL
-window.state = {
-    ventas:[],
-    compras:[],
-    gastos:[],
-    serviciosExtra: [],
-    inventario:{
-        "VINIL GLOSSY":{stock:0,costo:0},
-        "BANNER":{stock:0,costo:0},
-        "KIT DE TINTA":{stock:0,costo:0}
-    }
-};
+window.state = { ventas:[], compras:[], gastos:[], inventario:{"VINIL GLOSSY":{stock:0,costo:0},"BANNER":{stock:0,costo:0},"KIT DE TINTA":{stock:0,costo:0}} };
 
-// SINCRONIZACIÓN EN TIEMPO REAL
 onSnapshot(docRef, (docSnap) => {
     if (docSnap.exists()) {
         window.state = docSnap.data();
-        document.getElementById("status").innerText = "Sincronizado";
-        document.getElementById("status").classList.replace("bg-purple-800", "bg-green-600");
-    } else {
-        save(); // Crear documento inicial si no existe
+        document.getElementById("status").innerText = "Sincronizado ✓";
+        document.getElementById("status").style.background = "#059669";
     }
     render();
 });
 
 async function save() {
-    document.getElementById("status").innerText = "Guardando...";
     await setDoc(docRef, window.state);
 }
 
-// FUNCIONES GLOBALES (Hacerlas disponibles para los botones)
 window.setView = (v) => { window.view = v; render(); };
+
+// LÓGICA DE VENTAS
 window.crearVenta = async () => {
-    let cliente = document.getElementById("cliente").value;
-    let producto = document.getElementById("producto").value;
-    let tipoCliente = document.getElementById("tipoCliente").value;
-    let cantidad = parseFloat(document.getElementById("cantidad").value) || 1;
-    let pLibre = parseFloat(document.getElementById("precioLibreInput").value) || 0;
+    let cli = document.getElementById("cliente").value;
+    let prod = document.getElementById("producto").value;
+    let cant = parseFloat(document.getElementById("cantidad").value) || 0;
+    let precioM = parseFloat(document.getElementById("precioManual").value) || 10;
     
-    let precio = (tipoCliente === "libre") ? pLibre : (producto.includes("VINIL") || producto.includes("BANNER") ? (tipoCliente == "mayorista" ? 10 : 12) : (window.state.inventario[producto]?.costo * 2.5 || 10));
-    
+    if(!cli || cant <= 0) return alert("Llena los datos");
+
     window.state.ventas.push({
         id: Date.now(),
         fecha: new Date().toLocaleDateString(),
-        cliente: cliente.toUpperCase(),
-        producto: producto,
-        total: cantidad * precio,
-        pagado: false,
-        abonado: 0
+        cliente: cli.toUpperCase(),
+        producto: prod,
+        cantidad: cant,
+        total: cant * precioM,
+        pagado: false
     });
     
-    // Descontar inventario
-    if(window.state.inventario[producto]) window.state.inventario[producto].stock -= cantidad;
-    
+    if(window.state.inventario[prod]) window.state.inventario[prod].stock -= cant;
     await save();
 };
 
-window.eliminarVenta = async (id) => {
-    window.state.ventas = window.state.ventas.filter(v => v.id !== id);
-    await save();
-};
+// LÓGICA DE COMPRAS (Esto es lo que te faltaba)
+window.registrarCompra = async () => {
+    let prod = document.getElementById("compra_prod").value;
+    let cant = parseFloat(document.getElementById("compra_cant").value) || 0;
+    let costo = parseFloat(document.getElementById("compra_costo").value) || 0;
 
-window.cobrarVenta = async (id) => {
-    let v = window.state.ventas.find(x => x.id === id);
-    v.pagado = true;
-    v.abonado = v.total;
-    await save();
-};
+    if(cant <= 0) return alert("Ingresa una cantidad válida");
 
-window.agregarGasto = async () => {
-    let n = document.getElementById('gn').value;
-    let a = parseFloat(document.getElementById('ga').value);
-    if(n && a) {
-        window.state.gastos.push({id: Date.now(), name: n, amount: a, fecha: new Date().toLocaleDateString()});
-        await save();
+    window.state.compras.push({
+        id: Date.now(),
+        fecha: new Date().toLocaleDateString(),
+        producto: prod,
+        cantidad: cant,
+        monto: cant * costo
+    });
+
+    // SUMAR AL INVENTARIO AUTOMÁTICAMENTE
+    if(window.state.inventario[prod]) {
+        window.state.inventario[prod].stock += cant;
+        window.state.inventario[prod].costo = costo;
     }
+
+    await save();
 };
 
-window.guardarInventario = async (p) => {
+window.marcarPagado = async (id) => {
+    let v = window.state.ventas.find(x => x.id === id);
+    if(v) v.pagado = true;
+    await save();
+};
+
+window.guardarInv = async (p) => {
     window.state.inventario[p].stock = parseFloat(document.getElementById("s-"+p).value);
     window.state.inventario[p].costo = parseFloat(document.getElementById("c-"+p).value);
     await save();
@@ -143,70 +131,75 @@ window.guardarInventario = async (p) => {
 window.view = "dashboard";
 
 function render() {
-    let html = "";
     let app = document.getElementById("app");
     if(!app) return;
+    let html = "";
 
     if(window.view == "dashboard") {
         let vT = window.state.ventas.reduce((a,b)=>a+b.total,0);
-        let gT = window.state.gastos.reduce((a,b)=>a+b.amount,0);
-        html = `<h2 class="text-2xl font-bold mb-4">Resumen General</h2>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div class="card">Ventas: <b class="text-green-600">$${vT.toFixed(2)}</b></div>
-            <div class="card">Gastos: <b class="text-red-600">$${gT.toFixed(2)}</b></div>
-            <div class="card">Neto: <b class="text-purple-700">$${(vT-gT).toFixed(2)}</b></div>
+        let gT = window.state.gastos.reduce((a,b)=>a+b.amount,0) + window.state.compras.reduce((a,b)=>a+b.monto,0);
+        html = `<h2 class="text-xl font-bold mb-4 text-purple-800 text-center">Resumen de Negocio</h2>
+        <div class="grid grid-cols-2 gap-3">
+            <div class="card bg-green-50 text-center"><p class="text-xs">VENTAS</p><b class="text-lg text-green-700">$${vT.toFixed(2)}</b></div>
+            <div class="card bg-red-50 text-center"><p class="text-xs">SALIDAS</p><b class="text-lg text-red-700">$${gT.toFixed(2)}</b></div>
         </div>
-        <div class="card"><canvas id="grafica"></canvas></div>`;
-        app.innerHTML = html;
-        new Chart(document.getElementById("grafica"),{type:'bar',data:{labels:['Ventas','Gastos'],datasets:[{label:'Balance', data:[vT,gT], backgroundColor:['#6d28d9','#ef4444']}]}});
+        <div class="card bg-purple-900 text-white text-center"><p class="text-xs">GANANCIA NETO</p><b class="text-2xl">$${(vT-gT).toFixed(2)}</b></div>`;
     }
 
     if(window.view == "ventas") {
         html = `<div class="card">
-            <h2 class="font-bold mb-2">Nueva Venta</h2>
-            <input id="cliente" placeholder="Cliente">
-            <select id="tipoCliente" onchange="document.getElementById('divPrecioLibre').classList.toggle('hidden', this.value !== 'libre')">
-                <option value="detal">Detal</option>
-                <option value="mayorista">Mayorista</option>
-                <option value="libre">Precio Libre</option>
-            </select>
-            <div id="divPrecioLibre" class="hidden"><input id="precioLibreInput" type="number" placeholder="Precio manual"></div>
-            <select id="producto">
-                ${Object.keys(window.state.inventario).map(p=>`<option>${p}</option>`).join("")}
-            </select>
-            <input id="cantidad" type="number" placeholder="Cantidad/Metros">
-            <button onclick="crearVenta()" class="btn w-full mt-2">Registrar Venta</button>
+            <h2 class="font-bold text-purple-700 mb-2">Nueva Venta</h2>
+            <input id="cliente" placeholder="Nombre del Cliente">
+            <select id="producto">${Object.keys(window.state.inventario).map(p=>`<option>${p}</option>`).join("")}</select>
+            <input id="cantidad" type="number" placeholder="Cantidad / Metros">
+            <input id="precioManual" type="number" placeholder="Precio x Unidad ($)">
+            <button onclick="crearVenta()" class="btn w-full mt-2">REGISTRAR VENTA</button>
         </div>
-        <h3 class="font-bold mt-4">Historial</h3>
-        ${window.state.ventas.slice(-5).reverse().map(v=>`<div class="card flex justify-between"><span>${v.cliente}</span><b>$${v.total.toFixed(2)}</b></div>`).join("")}`;
-        app.innerHTML = html;
+        <h3 class="font-bold mt-4 text-sm">ÚLTIMAS 5 VENTAS</h3>
+        ${window.state.ventas.slice(-5).reverse().map(v=>`<div class="card flex justify-between items-center text-sm"><span>${v.cliente}</span><b>$${v.total.toFixed(2)}</b></div>`).join("")}`;
+    }
+
+    if(window.view == "compras") {
+        html = `<div class="card border-l-4 border-blue-500">
+            <h2 class="font-bold text-blue-700 mb-2">Entrada de Material (Compra)</h2>
+            <select id="compra_prod">${Object.keys(window.state.inventario).map(p=>`<option>${p}</option>`).join("")}</select>
+            <input id="compra_cant" type="number" placeholder="Cantidad que llegó">
+            <input id="compra_costo" type="number" placeholder="Costo unitario de compra">
+            <button onclick="registrarCompra()" class="btn w-full mt-2 bg-blue-600">SUMAR AL INVENTARIO</button>
+        </div>
+        <h3 class="font-bold mt-4 text-sm uppercase">Historial de Compras</h3>
+        ${window.state.compras.slice(-5).reverse().map(c=>`<div class="card flex justify-between text-xs"><span>${c.producto} (${c.cantidad})</span><b class="text-blue-600">-$${c.monto.toFixed(2)}</b></div>`).join("")}`;
+    }
+
+    if(window.view == "cobranzas") {
+        let deudores = window.state.ventas.filter(v => !v.pagado);
+        html = `<h2 class="font-bold text-red-600 mb-4 text-center">CLIENTES POR COBRAR</h2>
+        ${deudores.length == 0 ? '<p class="text-center text-gray-400">No hay deudas pendientes</p>' : deudores.map(v=>`
+            <div class="card flex justify-between items-center">
+                <div><p class="font-bold">${v.cliente}</p><p class="text-xs text-gray-500">${v.fecha}</p></div>
+                <div class="text-right">
+                    <p class="text-red-600 font-bold">$${v.total.toFixed(2)}</p>
+                    <button onclick="marcarPagado(${v.id})" class="text-[10px] bg-green-600 text-white px-2 py-1 rounded">MARCAR PAGADO</button>
+                </div>
+            </div>
+        `).join("")}`;
     }
 
     if(window.view == "inventario") {
-        html = `<h2 class="font-bold mb-4">Control de Inventario</h2>
+        html = `<h2 class="font-bold mb-4 text-center">ESTADO DE ALMACÉN</h2>
         ${Object.entries(window.state.inventario).map(([k,v])=>`
             <div class="card">
-                <b>${k}</b>
+                <div class="flex justify-between"><b>${k}</b> <span class="${v.stock < 10 ? 'text-red-600 font-bold' : 'text-green-600'}">${v.stock} disp.</span></div>
                 <div class="grid grid-cols-2 gap-2 mt-2">
-                    <input id="s-${k}" type="number" value="${v.stock}" title="Stock">
-                    <input id="c-${k}" type="number" value="${v.costo}" title="Costo">
+                    <input id="s-${k}" type="number" value="${v.stock}" step="0.01">
+                    <input id="c-${k}" type="number" value="${v.costo}" step="0.01">
                 </div>
-                <button onclick="guardarInventario('${k}')" class="btn w-full mt-2 bg-blue-600">Actualizar</button>
+                <button onclick="guardarInv('${k}')" class="btn w-full mt-1 bg-gray-500 text-xs">AJUSTE MANUAL</button>
             </div>
         `).join("")}`;
-        app.innerHTML = html;
     }
-    
-    if(window.view == "gastos") {
-        html = `<div class="card">
-            <h2 class="font-bold mb-2">Nuevo Gasto</h2>
-            <input id="gn" placeholder="Concepto (Ej: Alquiler, Luz)">
-            <input id="ga" type="number" placeholder="Monto $">
-            <button onclick="agregarGasto()" class="btn w-full mt-2 bg-red-600">Guardar Gasto</button>
-        </div>
-        ${window.state.gastos.slice(-10).reverse().map(g=>`<div class="card flex justify-between"><span>${g.name}</span><b class="text-red-500">-$${g.amount.toFixed(2)}</b></div>`).join("")}`;
-        app.innerHTML = html;
-    }
+
+    app.innerHTML = html;
 }
 </script>
 </body>
