@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>GhostPrint PRO</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-slate-100 font-sans">
+
+<div class="bg-gradient-to-r from-purple-700 to-purple-500 text-white p-4 shadow flex justify-between">
+    <h1 class="text-xl font-bold">👻 GhostPrint PRO</h1>
+    <span>Sistema Cloud</span>
+</div>
+
+<div class="p-4 flex gap-2 flex-wrap">
+    <button onclick="setView('dashboard')" class="btn">Dashboard</button>
+    <button onclick="setView('ventas')" class="btn">Ventas</button>
+    <button onclick="setView('cobranzas')" class="btn">Cobranzas</button>
+    <button onclick="setView('compras')" class="btn">Compras / Catálogo</button>
+    <button onclick="setView('gastos')" class="btn">Gastos</button>
+    <button onclick="setView('inventario')" class="btn">Inventario</button>
+    <button onclick="setView('reporte')" class="btn">Reporte</button>
+</div>
+
+<div id="app" class="p-6 max-w-4xl mx-auto"></div>
+
+<style>
+    .btn{background:#6d28d9;color:white;padding:8px 14px;border-radius:8px;cursor:pointer;border:none}
+    .btn:hover{background:#5b21b6}
+    .card{background:white;padding:15px;margin:10px 0;border-radius:12px;box-shadow:0 4px 10px rgba(0,0,0,0.08)}
+    input,select{border:1px solid #ddd;padding:10px;margin:6px 0;border-radius:8px;width:100%}
+    label{font-size:13px;color:#555;font-weight:bold}
+    .alert{background:#fee2e2;color:#991b1b;padding:10px;border-radius:8px;margin-bottom:10px}
+    .hidden{display:none}
+</style>
+
+<script type="module">
+// IMPORTAR FIREBASE
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+const firebaseConfig = {
+    apiKey: "AIzaSyBCm5JlhTxvvtlwjA1EYEtLvxb1AH5v1WI",
+    authDomain: "ghost-print-contabilidad.firebaseapp.com",
+    projectId: "ghost-print-contabilidad",
+    storageBucket: "ghost-print-contabilidad.firebasestorage.app",
+    messagingSenderId: "867057362556",
+    appId: "1:867057362556:web:6bd2a461817219a4000bf9"
+};
+
+const appFirebase = initializeApp(firebaseConfig);
+const db = getFirestore(appFirebase);
+const docRef = doc(db, "sistema", "datos_principales");
+
+// STATE INICIAL
+let state = {
+    ventas:[],
+    compras:[],
+    gastos:[],
+    serviciosExtra: [],
+    inventario:{
+        "VINIL GLOSSY":{stock:68,costo:3},
+        "BANNER":{stock:175,costo:3.6},
+        "KIT DE TINTA":{stock:40
