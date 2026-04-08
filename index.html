@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GhostPrint ERP v7.6 - Stock Fix</title>
+    <title>GhostPrint ERP v7.7 - Contabilidad Real</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -61,7 +61,7 @@ const appF = initializeApp(firebaseConfig);
 const db = getFirestore(appF);
 const docRef = doc(db, "sistema", "datos_principales");
 
-window.state = { ventas: [], gastos: [], inventario: {}, serviciosExtra: [], mermas: [] };
+window.state = { ventas: [], gastos: [], inventario: {}, serviciosExtra: [], mermas: [], comprasInversion: [] };
 window.view = "dashboard";
 window.reportMonth = new Date().getMonth();
 window.reportYear = new Date().getFullYear();
@@ -100,7 +100,7 @@ window.render = function() {
             <div class="card !m-0 bg-amber-500 text-white text-center p-4"><p class="text-[9px] font-bold uppercase opacity-80">Por Cobrar</p><b class="text-xl">$${(totalV - dineroC).toFixed(2)}</b></div>
         </div>
         <div class="card !m-0 mb-4 bg-slate-900 border-l-8 border-purple-500 p-4">
-            <p class="text-purple-400 text-[9px] font-black uppercase">Balance Neto</p>
+            <p class="text-purple-400 text-[9px] font-black uppercase">Utilidad Operativa (Ventas - Gastos)</p>
             <h2 class="text-white text-3xl font-black italic">$${(totalV - totalG).toFixed(2)}</h2>
         </div>
         <div class="card"><canvas id="chartDash" height="180"></canvas></div>`;
@@ -143,9 +143,9 @@ window.render = function() {
     }
 
     if(window.view === "gastos"){
-        html = `<div class="card"><h2 class="font-black text-[10px] uppercase mb-2">Nuevo Gasto</h2>
+        html = `<div class="card"><h2 class="font-black text-[10px] uppercase mb-2">Gastos Operativos (No compras)</h2>
             <label>Fecha</label><input id="gFecha" type="date" value="${getToday()}">
-            <input id="gNom" placeholder="DESCRIPCIÓN"><input id="gMon" type="number" placeholder="MONTO $"><button onclick="regG()" class="btn w-full bg-red-600 mt-2">Cargar</button></div>
+            <input id="gNom" placeholder="ALQUILER, LUZ, COMIDA, ETC..."><input id="gMon" type="number" placeholder="MONTO $"><button onclick="regG()" class="btn w-full bg-red-600 mt-2">Cargar Gasto</button></div>
         ${(window.state.gastos || []).slice().reverse().map(g=>`
             <div class="card flex justify-between py-2 border-l-4 border-red-500">
                 <div><span class="text-[8px] font-black text-purple-500 uppercase">${fmtDate(g.id)}</span><br><small class="uppercase font-bold">${g.name}</small><br><b>$${g.amount.toFixed(2)}</b></div>
@@ -154,10 +154,10 @@ window.render = function() {
     }
 
     if(window.view === "compras"){
-        html = `<div class="card border-l-4 border-blue-600"><h3 class="font-black text-[10px] uppercase mb-2">Entrada de Stock</h3>
+        html = `<div class="card border-l-4 border-blue-600"><h3 class="font-black text-[10px] uppercase mb-2">Ingresar Material (Inversión)</h3>
             <label>Fecha</label><input id="fCom" type="date" value="${getToday()}">
             <select id="mCom">${Object.keys(window.state.inventario).map(p=>`<option value="${p}">${p}</option>`).join("")}</select>
-            <input id="qCom" type="number" placeholder="Cantidad (Metros)"><input id="vCom" type="number" placeholder="Costo total en $"><button onclick="regCom()" class="btn w-full bg-blue-700 mt-2">Registrar</button></div>
+            <input id="qCom" type="number" placeholder="Cantidad (Metros)"><input id="vCom" type="number" placeholder="Inversión total $"><button onclick="regCom()" class="btn w-full bg-blue-700 mt-2">Registrar en Stock</button></div>
         <div class="card border-l-4 border-red-600 mt-4"><h3 class="font-black text-[10px] uppercase mb-2 text-red-700">Merma / Error</h3>
             <label>Fecha</label><input id="fMerma" type="date" value="${getToday()}">
             <select id="mMerma">${Object.keys(window.state.inventario).map(p=>`<option value="${p}">${p}</option>`).join("")}</select>
@@ -170,10 +170,12 @@ window.render = function() {
     if(window.view === "reportes"){
         let fVentas = (window.state.ventas || []).filter(v => { let d = new Date(v.id); return d.getMonth() == window.reportMonth && d.getFullYear() == window.reportYear; });
         let fGastos = (window.state.gastos || []).filter(g => { let d = new Date(g.id); return d.getMonth() == window.reportMonth && d.getFullYear() == window.reportYear; });
+        let fCompras = (window.state.comprasInversion || []).filter(c => { let d = new Date(c.id); return d.getMonth() == window.reportMonth && d.getFullYear() == window.reportYear; });
+        
         let totalV = fVentas.reduce((a,b)=>a+b.total, 0);
         let totalG = fGastos.reduce((a,b)=>a+b.amount, 0);
-        let clientMap = fVentas.reduce((a, b) => { a[b.cliente] = (a[b.cliente] || 0) + b.total; return a; }, {});
-        let sortedClients = Object.entries(clientMap).sort((a,b) => b[1] - a[1]).slice(0, 5);
+        let totalC = fCompras.reduce((a,b)=>a+b.amount, 0);
+
         html = `
         <div class="card bg-indigo-900 text-white p-4">
             <div class="grid grid-cols-2 gap-2">
@@ -186,16 +188,13 @@ window.render = function() {
                 </select>
             </div>
         </div>
-        <div class="grid grid-cols-2 gap-2">
-            <div class="card !m-0 text-center border-b-4 border-green-500 p-4"><p class="text-[9px] font-bold uppercase">Ventas</p><b class="text-lg">$${totalV.toFixed(2)}</b></div>
-            <div class="card !m-0 text-center border-b-4 border-red-500 p-4"><p class="text-[9px] font-bold uppercase">Gastos</p><b class="text-lg text-red-600">$${totalG.toFixed(2)}</b></div>
+        <div class="grid grid-cols-3 gap-2">
+            <div class="card !m-0 text-center border-b-4 border-green-500 p-2"><p class="text-[8px] font-bold uppercase">Ventas</p><b class="text-sm">$${totalV.toFixed(2)}</b></div>
+            <div class="card !m-0 text-center border-b-4 border-red-500 p-2"><p class="text-[8px] font-bold uppercase">Gastos</p><b class="text-sm text-red-600">$${totalG.toFixed(2)}</b></div>
+            <div class="card !m-0 text-center border-b-4 border-blue-500 p-2"><p class="text-[8px] font-bold uppercase">Inversión</p><b class="text-sm text-blue-600">$${totalC.toFixed(2)}</b></div>
         </div>
-        <div class="card mt-3"><h3 class="font-black uppercase text-[10px] mb-2 border-b">Top Clientes Mes</h3>
-            ${sortedClients.map(([n, t]) => `<div class="flex justify-between py-1 text-[11px] border-b"><span>${n}</span><b>$${t.toFixed(2)}</b></div>`).join("") || '<p class="text-[10px] text-center italic">Sin datos</p>'}
-        </div>
-        <div class="card mt-3 bg-red-50"><h3 class="font-black uppercase text-red-700 text-[10px] mb-2 border-b">Mermas (Pérdidas)</h3>
-            ${(window.state.mermas || []).filter(m => { let d = new Date(m.id); return d.getMonth() == window.reportMonth && d.getFullYear() == window.reportYear; })
-            .map(m => `<div class="py-1 border-b text-[10px] flex justify-between"><span><b class="opacity-50">${fmtDate(m.id)}</b> ${m.name}</span><b class="text-red-600">-${m.qty}m</b></div>`).join("") || '<p class="text-[10px] text-center italic">Sin mermas</p>'}
+        <div class="card mt-3 bg-green-50"><h3 class="font-black uppercase text-[10px] mb-2 border-b">Utilidad Real: $${(totalV - totalG).toFixed(2)}</h3>
+            <p class="text-[9px] opacity-70">Nota: La inversión en material no resta de tu utilidad operativa porque es capital en stock.</p>
         </div>`;
     }
 
@@ -212,9 +211,10 @@ window.render = function() {
     app.innerHTML = html;
 };
 
-// --- LOGICA REINTEGRADA ---
+// --- LOGICA DE PROCESOS ---
 window.editStock = async (n) => { 
-    let v = parseFloat(prompt(`Ajustar stock de ${n}:`, window.state.inventario[n].stock)); 
+    let actual = window.state.inventario[n].stock || 0;
+    let v = parseFloat(prompt(`Ajustar stock de ${n} (Actual: ${actual}):`, actual)); 
     if(!isNaN(v)){ 
         window.state.inventario[n].stock = v; 
         await window.save(); 
@@ -279,7 +279,14 @@ window.regG = async () => {
 
 window.regCom = async () => {
     let m = document.getElementById("mCom").value, q = parseFloat(document.getElementById("qCom").value), v = parseFloat(document.getElementById("vCom").value), f = document.getElementById("fCom").value;
-    if(q > 0) { let ts = f ? new Date(f + "T12:00:00").getTime() : Date.now(); window.state.inventario[m].stock += q; window.state.gastos.push({id: ts, name:`COMPRA: ${m} (${q}m)`, amount: v}); await window.save(); render(); }
+    if(q > 0) { 
+        let ts = f ? new Date(f + "T12:00:00").getTime() : Date.now();
+        window.state.inventario[m].stock += q; 
+        if(!window.state.comprasInversion) window.state.comprasInversion = [];
+        window.state.comprasInversion.push({id: ts, name:`${m} (${q}m)`, amount: v}); 
+        await window.save(); 
+        render(); 
+    }
 };
 
 window.addC = async (t) => {
