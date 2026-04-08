@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>GhostPrint PRO v14.7 - Stock Control</title>
+    <title>GhostPrint PRO v14.8 - Gestión Total</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
         body { background-color: #05050a; color: #e2e8f0; font-family: 'Inter', sans-serif; padding-bottom: 90px; }
         .card-pro { background: #161625; border: 1px solid #2d2d44; border-radius: 20px; padding: 18px; margin-bottom: 12px; }
-        nav { background: #11111d; display: flex; gap: 8px; overflow-x: auto; padding: 12px; position: sticky; top: 0; z-index: 100; border-bottom: 1px solid #334155; }
-        .btn-nav { background: #26263d; color: #94a3b8; padding: 10px 14px; border-radius: 12px; font-size: 10px; font-weight: 800; white-space: nowrap; cursor: pointer; }
+        nav { background: #11111d; display: flex; gap: 6px; overflow-x: auto; padding: 12px; position: sticky; top: 0; z-index: 100; border-bottom: 1px solid #334155; }
+        .btn-nav { background: #26263d; color: #94a3b8; padding: 10px 14px; border-radius: 12px; font-size: 9px; font-weight: 800; white-space: nowrap; cursor: pointer; text-transform: uppercase; }
         .active { background: #6d28d9 !important; color: white !important; box-shadow: 0 0 15px rgba(109, 40, 217, 0.4); }
         input, select { background: #0a0a14; border: 1px solid #334155; color: white; padding: 12px; border-radius: 12px; width: 100%; margin: 5px 0; font-weight: 700; }
         .btn-main { background: linear-gradient(to right, #6d28d9, #4c1d95); color: white; padding: 16px; border-radius: 16px; width: 100%; font-weight: 900; text-transform: uppercase; cursor: pointer; border: none; }
@@ -19,18 +19,18 @@
 <body>
 
 <header class="p-4 bg-[#1e1e2f] border-b-2 border-purple-600 flex justify-between items-center">
-    <h1 class="text-xl font-black italic text-purple-400 uppercase tracking-tighter text-shadow-sm">GhostPrint PRO</h1>
-    <span class="text-[9px] font-black uppercase bg-blue-600 text-white px-3 py-1 rounded-full shadow-[0_0_10px_#2563eb]">v14.7 Stock Fix</span>
+    <h1 class="text-xl font-black italic text-purple-400 uppercase tracking-tighter">GhostPrint PRO</h1>
+    <span class="text-[9px] font-black uppercase bg-blue-600 text-white px-3 py-1 rounded-full">v14.8 Master</span>
 </header>
 
 <nav id="main-nav">
-    <div onclick="setView('inicio')" class="btn-nav active" id="n-inicio">🏠 INICIO</div>
-    <div onclick="setView('ventas')" class="btn-nav" id="n-ventas">💵 VENTAS</div>
-    <div onclick="setView('reportes')" class="btn-nav" id="n-reportes">📊 REPORTES</div>
-    <div onclick="setView('inventario')" class="btn-nav" id="n-inventario">📦 STOCK</div>
-    <div onclick="setView('cobros')" class="btn-nav" id="n-cobros">⏳ COBROS</div>
-    <div onclick="setView('gastos')" class="btn-nav" id="n-gastos">📉 GASTOS</div>
-    <div onclick="setView('config')" class="btn-nav" id="n-config">⚙️ CONFIG</div>
+    <div onclick="setView('inicio')" class="btn-nav active" id="n-inicio">🏠 Inicio</div>
+    <div onclick="setView('ventas')" class="btn-nav" id="n-ventas">💵 Ventas</div>
+    <div onclick="setView('compras')" class="btn-nav" id="n-compras">🛒 Compras</div>
+    <div onclick="setView('inventario')" class="btn-nav" id="n-inventario">📦 Stock</div>
+    <div onclick="setView('reportes')" class="btn-nav" id="n-reportes">📊 Reportes</div>
+    <div onclick="setView('cobros')" class="btn-nav" id="n-cobros">⏳ Cobros</div>
+    <div onclick="setView('gastos')" class="btn-nav" id="n-gastos">📉 Gastos</div>
 </nav>
 
 <div id="app" class="p-4 max-w-2xl mx-auto"></div>
@@ -52,11 +52,11 @@
     const db = firebase.firestore();
     const docRef = db.collection("sistema").doc("datos_principales");
 
-    window.state = JSON.parse(localStorage.getItem('gp_v14_7')) || { ventas: [], gastos: [], inventario: {}, serviciosExtra: [], comprasInversion: [] };
+    window.state = JSON.parse(localStorage.getItem('gp_v14_8')) || { ventas: [], gastos: [], inventario: {}, serviciosExtra: [], comprasInversion: [] };
     window.currentView = "inicio";
 
     window.sync = async function() {
-        localStorage.setItem('gp_v14_7', JSON.stringify(window.state));
+        localStorage.setItem('gp_v14_8', JSON.stringify(window.state));
         await docRef.set(window.state).catch(e => console.log("Offline"));
     };
 
@@ -93,53 +93,73 @@
             html = `
             <div class="card-pro border-l-4 border-green-500 shadow-xl shadow-green-900/10">
                 <p class="text-[10px] font-black text-green-400 uppercase tracking-widest">Utilidad Neta del Mes</p>
-                <h2 class="text-5xl font-black italic text-white leading-tight">$${uN.toFixed(2)}</h2>
+                <h2 class="text-5xl font-black italic text-white">$${uN.toFixed(2)}</h2>
             </div>
-            <div class="card-pro border-l-4 border-purple-500">
-                <p class="text-[10px] font-black text-purple-400 uppercase tracking-widest">Ventas Totales</p>
-                <h2 class="text-3xl font-black text-white">$${tV.toFixed(2)}</h2>
-            </div>
-            <div class="grid grid-cols-2 gap-2">
-                <div class="bg-red-900/20 p-4 rounded-2xl border border-red-500/20">
-                    <p class="text-[8px] font-black text-red-400 uppercase">Egresos Operat.</p>
-                    <b class="text-lg font-black text-white">$${tG.toFixed(2)}</b>
+            <div class="grid grid-cols-1 gap-2">
+                <div class="card-pro border-l-4 border-purple-500 !mb-0">
+                    <p class="text-[10px] font-black text-purple-400 uppercase tracking-widest">Ventas</p>
+                    <b class="text-2xl text-white">$${tV.toFixed(2)}</b>
                 </div>
-                <div class="bg-blue-900/20 p-4 rounded-2xl border border-blue-500/20">
-                    <p class="text-[8px] font-black text-blue-400 uppercase">Inversión Stock</p>
-                    <b class="text-lg font-black text-white">$${tC.toFixed(2)}</b>
+                <div class="card-pro border-l-4 border-red-500 !mb-0">
+                    <p class="text-[10px] font-black text-red-400 uppercase tracking-widest">Gastos Ops.</p>
+                    <b class="text-2xl text-white">$${tG.toFixed(2)}</b>
+                </div>
+                <div class="card-pro border-l-4 border-blue-500 !mb-0">
+                    <p class="text-[10px] font-black text-blue-400 uppercase tracking-widest">Compras Material</p>
+                    <b class="text-2xl text-white">$${tC.toFixed(2)}</b>
+                </div>
+            </div>`;
+        }
+
+        if(window.currentView === "compras") {
+            html = `
+            <div class="card-pro">
+                <h2 class="text-lg font-black text-blue-400 italic mb-4 uppercase text-center">Registrar Salida de Dinero (Compra)</h2>
+                <input type="date" id="fC" value="${new Date().toISOString().split('T')[0]}">
+                <select id="mInv">${Object.keys(window.state.inventario || {}).map(m=>`<option value="${m}">${m}</option>`).join("")}</select>
+                <div class="grid grid-cols-2 gap-2">
+                    <input id="qInv" type="number" placeholder="Cant. Metros">
+                    <input id="pInv" type="number" placeholder="Costo Total $">
+                </div>
+                <button onclick="saveInv()" class="btn-main !from-blue-600 !to-blue-800 mt-2">Guardar Gasto de Compra</button>
+            </div>
+
+            <div class="card-pro">
+                <h3 class="text-[10px] font-black text-blue-300 uppercase mb-4 tracking-widest text-center">Historial de Compras (Salida de Caja)</h3>
+                <div class="space-y-2">
+                    ${cM.reverse().map(c => `
+                        <div class="flex justify-between items-center bg-white/5 p-3 rounded-xl border border-white/5">
+                            <div>
+                                <p class="text-[8px] opacity-40 uppercase">${new Date(c.id).toLocaleDateString()}</p>
+                                <b class="text-xs uppercase">${c.material}</b>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <b class="text-blue-400">$${c.amount.toFixed(2)}</b>
+                                <button onclick="delCompra(${c.id})" class="text-red-600 bg-red-600/10 p-2 rounded-lg">🗑️</button>
+                            </div>
+                        </div>
+                    `).join("") || '<p class="text-center py-4 opacity-20 text-xs">Sin registros</p>'}
                 </div>
             </div>`;
         }
 
         if(window.currentView === "inventario") {
             html = `
-            <div class="card-pro">
-                <h2 class="text-lg font-black text-blue-400 italic mb-4 uppercase text-center">Registrar Compra de Material</h2>
-                <input type="date" id="fC" value="${new Date().toISOString().split('T')[0]}">
-                <select id="mInv">${Object.keys(window.state.inventario || {}).map(m=>`<option value="${m}">${m}</option>`).join("")}</select>
-                <div class="grid grid-cols-2 gap-2">
-                    <input id="qInv" type="number" placeholder="Metros">
-                    <input id="pInv" type="number" placeholder="Precio Total $">
-                </div>
-                <button onclick="saveInv()" class="btn-main !from-blue-600 !to-blue-800 mt-2 font-black italic">Guardar Compra</button>
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-2xl font-black italic text-blue-400 uppercase tracking-tighter">Stock Actual</h2>
             </div>
-
-            <div class="card-pro">
-                <h3 class="text-[10px] font-black text-blue-300 uppercase mb-4 tracking-widest">Historial de Compras (Mes)</h3>
-                <div class="space-y-2">
-                    ${cM.reverse().map(c => `
-                        <div class="flex justify-between items-center bg-black/20 p-3 rounded-xl border border-white/5">
-                            <div>
-                                <p class="text-[8px] opacity-40 uppercase">${new Date(c.id).toLocaleDateString()}</p>
-                                <b class="text-xs uppercase">${c.material || 'Compra Stock'}</b>
-                            </div>
-                            <div class="flex items-center gap-3">
-                                <b class="text-blue-400 text-sm">$${c.amount.toFixed(2)}</b>
-                                <button onclick="delCompra(${c.id})" class="text-red-600 bg-red-600/10 p-2 rounded-lg">🗑️</button>
-                            </div>
+            <div class="grid grid-cols-1 gap-3">
+                ${Object.entries(window.state.inventario || {}).map(([n, i])=>`
+                    <div class="card-pro flex justify-between items-center border-l-4 border-blue-500">
+                        <div>
+                            <p class="text-[10px] font-black opacity-40 uppercase tracking-widest">${n}</p>
+                            <h4 class="text-3xl font-black text-white">${(i.stock || 0).toFixed(2)} <span class="text-sm font-normal text-blue-400 italic">mts</span></h4>
                         </div>
-                    `).join("") || '<p class="text-center py-4 opacity-20 text-xs italic font-bold">Sin compras este mes</p>'}
-                </div>
+                        <div class="bg-blue-500/10 p-4 rounded-2xl">
+                            <span class="text-2xl">📦</span>
+                        </div>
+                    </div>
+                `).join("")}
             </div>`;
         }
 
@@ -149,52 +169,49 @@
             const topCli = Object.entries(cliMap).sort((a,b)=>b[1]-a[1]).slice(0, 5);
 
             html = `
-            <div class="flex justify-between items-center mb-4"><h2 class="text-2xl font-black italic text-purple-400 uppercase tracking-tighter">Reporte Maestro</h2></div>
             <div class="card-pro border-t-4 border-purple-500">
-                <h3 class="text-[10px] font-black text-purple-300 uppercase mb-4 tracking-widest">🏆 Top 5 Clientes</h3>
-                <div class="space-y-2">
-                    ${topCli.map(([name, total], i) => `<div class="flex justify-between bg-white/5 p-2 rounded-lg text-xs"><b>${i+1}. ${name}</b><b class="text-purple-400">$${total.toFixed(2)}</b></div>`).join("")}
-                </div>
+                <h3 class="text-[10px] font-black text-purple-300 uppercase mb-4 tracking-widest">🏆 Top Clientes</h3>
+                ${topCli.map(([name, total], i) => `<div class="flex justify-between bg-white/5 p-2 rounded-lg text-xs mb-1"><b>${i+1}. ${name}</b><b class="text-purple-400">$${total.toFixed(2)}</b></div>`).join("")}
             </div>
             <div class="card-pro">
-                <h3 class="text-[10px] font-black text-purple-300 uppercase mb-4 tracking-widest">Detalle de Operaciones</h3>
+                <h3 class="text-[10px] font-black text-purple-300 uppercase mb-4 tracking-widest">Auditoría Mensual</h3>
                 <div class="max-h-80 overflow-y-auto space-y-1 text-[10px]">
                     ${vM.map(v => `<div class="flex justify-between border-b border-white/5 py-1"><span><b class="text-green-500">VTA:</b> ${v.cliente}</span><b>$${v.total.toFixed(2)}</b></div>`).join("")}
                     ${gM.map(g => `<div class="flex justify-between border-b border-white/5 py-1"><span><b class="text-red-500">GST:</b> ${g.name}</span><b>-$${g.amount.toFixed(2)}</b></div>`).join("")}
-                    ${cM.map(c => `<div class="flex justify-between border-b border-white/5 py-1"><span><b class="text-blue-500">STK:</b> ${c.material || 'Material'}</span><b>-$${c.amount.toFixed(2)}</b></div>`).join("")}
+                    ${cM.map(c => `<div class="flex justify-between border-b border-white/5 py-1"><span><b class="text-blue-500">COMP:</b> ${c.material}</span><b>-$${c.amount.toFixed(2)}</b></div>`).join("")}
                 </div>
             </div>`;
         }
 
-        // --- VISTAS RESTANTES IGUALES A v14.6 ---
+        // --- LAS OTRAS VISTAS (VENTAS, GASTOS, COBROS) SE MANTIENEN ---
         if(window.currentView === "ventas") {
-            html = `<div class="card-pro"><h2 class="text-lg font-black text-purple-400 mb-4 uppercase text-center italic">Venta Nueva</h2><input type="date" id="fV" value="${new Date().toISOString().split('T')[0]}"><input id="cli" placeholder="CLIENTE"><input id="tel" type="number" placeholder="WHATSAPP"><div class="bg-white/5 p-4 rounded-xl mt-3 border border-white/10"><div class="grid grid-cols-2 gap-2"><select id="pS"><option value="">Material...</option>${Object.keys(window.state.inventario || {}).map(m=>`<option value="${m}">${m}</option>`).join("")}</select><select id="sS"><option value="">Servicio...</option>${(window.state.serviciosExtra || []).map(s=>`<option value="${s}">${s}</option>`).join("")}</select></div><select id="tC" onchange="document.getElementById('pL').classList.toggle('hidden', this.value !== 'libre')"><option value="detal">DETAL ($9)</option><option value="mayor">MAYOR ($10)</option><option value="libre">PRECIO PERSONALIZADO</option></select><input id="pL" class="hidden" type="number" placeholder="Monto $"><button onclick="addCart()" class="btn-main !p-3 mt-3 shadow-lg">+ Añadir</button></div><div id="cart-list" class="mt-4 space-y-2 text-[10px]"></div><div id="total-disp" class="text-3xl font-black text-center my-6 text-white italic underline uppercase">Total: $0.00</div><button onclick="finalizarVenta()" class="btn-main">Guardar</button></div>`;
+            html = `<div class="card-pro"><h2 class="text-lg font-black text-purple-400 mb-4 uppercase text-center italic">Venta Nueva</h2><input type="date" id="fV" value="${new Date().toISOString().split('T')[0]}"><input id="cli" placeholder="CLIENTE"><input id="tel" type="number" placeholder="WHATSAPP"><div class="bg-white/5 p-4 rounded-xl mt-3 border border-white/10"><div class="grid grid-cols-2 gap-2"><select id="pS"><option value="">Material...</option>${Object.keys(window.state.inventario || {}).map(m=>`<option value="${m}">${m}</option>`).join("")}</select><select id="sS"><option value="">Servicio...</option>${(window.state.serviciosExtra || []).map(s=>`<option value="${s}">${s}</option>`).join("")}</select></div><select id="tC" onchange="document.getElementById('pL').classList.toggle('hidden', this.value !== 'libre')"><option value="detal">DETAL ($9)</option><option value="mayor">MAYOR ($10)</option><option value="libre">PRECIO LIBRE</option></select><input id="pL" class="hidden" type="number" placeholder="Monto $"><button onclick="addCart()" class="btn-main !p-3 mt-3 shadow-lg">+ Añadir</button></div><div id="cart-list" class="mt-4 space-y-2 text-[10px]"></div><div id="total-disp" class="text-3xl font-black text-center my-6 text-white italic underline uppercase">Total: $0.00</div><button onclick="finalizarVenta()" class="btn-main">Guardar</button></div>`;
         }
         if(window.currentView === "gastos") {
-            html = `<div class="card-pro"><h2 class="text-lg font-black text-red-500 italic mb-3 text-center uppercase">Gastos Operativos</h2><input type="date" id="fG" value="${new Date().toISOString().split('T')[0]}"><input id="gNom" placeholder="Ej: Luz, Local"><input id="gMon" type="number" placeholder="Monto $"><button onclick="saveGasto()" class="btn-main !from-red-600 !to-red-800 mt-2">Registrar</button></div><div class="space-y-2">${gM.map(g => `<div class="card-pro !py-3 flex justify-between items-center"><div class="text-[10px] uppercase font-black"><p class="opacity-30">${new Date(g.id).toLocaleDateString()}</p>${g.name}</div><div class="flex items-center gap-2 font-black text-red-400">$${g.amount.toFixed(2)}<button onclick="editGasto(${g.id})" class="text-blue-400">✏️</button><button onclick="delGasto(${g.id})" class="text-red-600 bg-red-600/10 p-2 rounded-lg">🗑️</button></div></div>`).join("")}</div>`;
+            html = `<div class="card-pro"><h2 class="text-lg font-black text-red-500 italic mb-3 text-center uppercase">Gastos Operativos</h2><input type="date" id="fG" value="${new Date().toISOString().split('T')[0]}"><input id="gNom" placeholder="Concepto"><input id="gMon" type="number" placeholder="Monto $"><button onclick="saveGasto()" class="btn-main !from-red-600 !to-red-800 mt-2">Registrar</button></div><div class="space-y-2">${gM.map(g => `<div class="card-pro !py-3 flex justify-between items-center"><div class="text-[10px] uppercase font-black"><p class="opacity-30">${new Date(g.id).toLocaleDateString()}</p>${g.name}</div><div class="flex items-center gap-2 font-black text-red-400">$${g.amount.toFixed(2)}<button onclick="editGasto(${g.id})" class="text-blue-400">✏️</button><button onclick="delGasto(${g.id})" class="text-red-600 bg-red-600/10 p-2 rounded-lg">🗑️</button></div></div>`).join("")}</div>`;
         }
         if(window.currentView === "cobros") {
             let d = (window.state.ventas || []).filter(v => !v.pagado);
-            html = d.map(v => `<div class="card-pro flex justify-between items-center border-l-4 border-amber-500"><div><b class="text-xs uppercase font-black">${v.cliente}</b><br><span class="text-red-400 text-[10px] font-black uppercase">Resta: $${(v.total - (v.abonado || 0)).toFixed(2)}</span></div><div class="flex gap-2"><button onclick="ws('${v.telefono}', ${(v.total-(v.abonado||0))})" class="bg-green-600 p-3 rounded-xl shadow-lg">📱</button><button onclick="abono(${v.id})" class="bg-blue-600 px-3 py-2 rounded-xl text-[10px] font-black uppercase italic italic">Abonar</button></div></div>`).join("") || '<p class="text-center py-20 opacity-30 font-black text-xs uppercase">Cuentas Claras ✌️</p>';
+            html = d.map(v => `<div class="card-pro flex justify-between items-center border-l-4 border-amber-500"><div><b class="text-xs uppercase font-black">${v.cliente}</b><br><span class="text-red-400 text-[10px] font-black uppercase">Resta: $${(v.total - (v.abonado || 0)).toFixed(2)}</span></div><div class="flex gap-2"><button onclick="ws('${v.telefono}', ${(v.total-(v.abonado||0))})" class="bg-green-600 p-3 rounded-xl shadow-lg">📱</button><button onclick="abono(${v.id})" class="bg-blue-600 px-3 py-2 rounded-xl text-[10px] font-black uppercase italic italic">Abonar</button></div></div>`).join("") || '<p class="text-center py-20 opacity-30 font-black text-xs uppercase">Sin deudas ✌️</p>';
         }
         if(window.currentView === "config") {
-            html = `<div class="card-pro text-center"><h2 class="text-lg font-black text-slate-400 mb-4 uppercase italic">Configuración</h2><input id="newM" placeholder="Nombre Material"><button onclick="addMat()" class="btn-main !from-slate-600 !to-slate-800 mt-2">Crear Material</button><input id="newS" class="mt-4" placeholder="Nombre Servicio"><button onclick="addSer()" class="btn-main !from-indigo-600 !to-indigo-800 mt-2">Crear Servicio</button><hr class="my-8 opacity-10"><button onclick="resetData()" class="w-full bg-red-900/10 text-red-600 p-4 rounded-xl text-[10px] font-black uppercase border border-red-900/30">Borrar Todo el Sistema</button></div>`;
+            html = `<div class="card-pro text-center"><h2 class="text-lg font-black text-slate-400 mb-4 uppercase italic">Configuración</h2><input id="newM" placeholder="Material"><button onclick="addMat()" class="btn-main !from-slate-600 !to-slate-800 mt-2">Crear</button><input id="newS" class="mt-4" placeholder="Servicio"><button onclick="addSer()" class="btn-main !from-indigo-600 !to-indigo-800 mt-2">Crear</button><hr class="my-8 opacity-10"><button onclick="resetData()" class="w-full bg-red-900/10 text-red-600 p-4 rounded-xl text-[10px] font-black uppercase border border-red-900/30">Reset Total</button></div>`;
         }
         app.innerHTML = html;
     };
 
-    // Funciones
+    // Lógica
     window.saveInv = async () => {
         const m = document.getElementById("mInv").value, q = parseFloat(document.getElementById("qInv").value), p = parseFloat(document.getElementById("pInv").value), f = document.getElementById("fC").value;
         if(m && q && p) {
             window.state.inventario[m].stock += q;
             if(!window.state.comprasInversion) window.state.comprasInversion = [];
             window.state.comprasInversion.push({ id: new Date(f+"T12:00:00").getTime(), material: m, amount: p, qty: q });
-            await window.sync(); setView('inventario');
+            await window.sync(); setView('compras');
         }
     };
     window.delCompra = async (id) => {
-        if(confirm("¿Eliminar esta compra de stock? El dinero se devolverá al balance.")){
+        if(confirm("¿Borrar compra? El stock se restará automáticamente.")){
             const comp = window.state.comprasInversion.find(c => c.id === id);
             if(comp && window.state.inventario[comp.material]) window.state.inventario[comp.material].stock -= comp.qty;
             window.state.comprasInversion = window.state.comprasInversion.filter(c => c.id !== id);
@@ -230,7 +247,7 @@
     };
     window.addMat = async () => { let n = document.getElementById("newM").value.toUpperCase(); if(n) { if(!window.state.inventario) window.state.inventario = {}; window.state.inventario[n] = {stock: 0}; await window.sync(); render(); } };
     window.addSer = async () => { let n = document.getElementById("newS").value.toUpperCase(); if(n) { if(!window.state.serviciosExtra) window.state.serviciosExtra = []; window.state.serviciosExtra.push(n); await window.sync(); render(); } };
-    window.abono = async (id) => { let v = window.state.ventas.find(x => x.id === id); let m = parseFloat(prompt(`Deuda: $${(v.total-v.abonado).toFixed(2)}. Abono?`)); if(m) { v.abonado = (v.abonado||0) + m; if(v.abonado >= v.total) v.pagado = true; await window.sync(); render(); } };
+    window.abono = async (id) => { let v = window.state.ventas.find(x => x.id === id); let m = parseFloat(prompt(`Abono a deuda de $${(v.total-v.abonado).toFixed(2)}:`)); if(m) { v.abonado = (v.abonado||0) + m; if(v.abonado >= v.total) v.pagado = true; await window.sync(); render(); } };
     window.ws = (t, d) => window.open(`https://api.whatsapp.com/send?phone=${t}&text=GhostPrint: Saldo pendiente $${d.toFixed(2)}`, '_blank');
     window.resetData = async () => { if(confirm("¿RESET TOTAL?")){ window.state = { ventas: [], gastos: [], inventario: {}, serviciosExtra: [], comprasInversion: [] }; await window.sync(); location.reload(); } };
 
