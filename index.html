@@ -66,7 +66,7 @@
     window.sync = async function() { 
         localStorage.setItem('gp_v26_2', JSON.stringify(window.state)); 
         await docRef.set(window.state); 
-        render(); // Forzamos renderizado tras sincronizar
+        render(); 
     };
     
     docRef.onSnapshot(doc => { 
@@ -362,27 +362,30 @@
         const c = window.state.compras[idx];
         if(!c) return;
         
+        // 1. Preguntar por la nueva cantidad
         const nCant = parseFloat(prompt(`EDITAR COMPRA DE ${c.m}\nNueva Cantidad (ML):`, c.c));
         if(isNaN(nCant)) return;
         
+        // 2. Preguntar por el nuevo costo
         const nCosto = parseFloat(prompt(`Nuevo Costo de COMPRA por ML ($):`, c.co));
         if(isNaN(nCosto)) return;
 
-        // NUEVO: Editar precios de venta también en la compra por si hubo error
+        // 3. Preguntar por nuevos precios de venta (opcional corregir aquí)
         const nVentaM2 = parseFloat(prompt(`Nuevo Precio VENTA M2 ($) para ${c.m}:`, window.state.inventario[c.m].precioM2));
         const nVentaML = parseFloat(prompt(`Nuevo Precio VENTA ML ($) para ${c.m}:`, window.state.inventario[c.m].precioML));
 
-        // Actualizar stock basándonos en la diferencia
+        // ACTUALIZACIÓN DE ESTADO
         if (window.state.inventario[c.m]) {
+            // Calcular diferencia para ajustar el stock global
             const diferencia = nCant - c.c;
             window.state.inventario[c.m].stock += diferencia;
             
-            // Actualizar precios de venta en el inventario global
+            // Actualizar precios de venta si se ingresaron
             if(!isNaN(nVentaM2)) window.state.inventario[c.m].precioM2 = nVentaM2;
             if(!isNaN(nVentaML)) window.state.inventario[c.m].precioML = nVentaML;
         }
         
-        // Actualizar registro de la compra
+        // Actualizar el registro de compra específico
         window.state.compras[idx].c = nCant;
         window.state.compras[idx].co = nCosto;
         
