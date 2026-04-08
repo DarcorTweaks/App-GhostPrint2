@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GhostPrint ERP v11.6 - FULL CONTROL</title>
+    <title>GhostPrint ERP v11.7 - ENFOQUE MENSUAL</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -14,17 +14,16 @@
         .card { background: white; padding: 18px; margin: 12px 0; border-radius: 20px; color: #1e293b; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
         input, select { border: 2px solid #e2e8f0; padding: 10px; margin: 5px 0; border-radius: 10px; width: 100%; font-weight: 700; color: #0f172a; background: #f8fafc; }
         label { font-size: 9px; font-weight: 900; color: #64748b; text-transform: uppercase; margin-left: 4px; display: block; }
-        .del-btn { color: #ef4444; font-weight: 900; cursor: pointer; margin-left: 10px; }
     </style>
 </head>
 <body>
 
-<header><h1 class="text-xl font-black italic text-purple-400">GHOSTPRINT v11.6</h1></header>
+<header><h1 class="text-xl font-black italic text-purple-400">GHOSTPRINT v11.7</h1></header>
 
 <nav>
     <button onclick="setView('dashboard')" class="btn">🏠 Inicio</button>
     <button onclick="setView('ventas')" class="btn !bg-green-600">💵 Vender</button>
-    <button onclick="setView('reportes')" class="btn !bg-indigo-600">📊 Reportes</button>
+    <button onclick="setView('reportes')" class="btn !bg-indigo-600">📊 Reporte Mensual</button>
     <button onclick="setView('compras')" class="btn !bg-blue-600">📦 Stock</button>
     <button onclick="setView('gastos')" class="btn !bg-red-600">📉 Gastos</button>
     <button onclick="setView('cobranzas')" class="btn !bg-amber-500">⏳ Cobros</button>
@@ -53,7 +52,6 @@ const docRef = doc(db, "sistema", "datos_principales");
 window.state = { ventas: [], gastos: [], inventario: {}, serviciosExtra: [], comprasInversion: [] };
 window.view = "dashboard";
 let fHoy = new Date().toLocaleDateString('en-CA');
-let carritoVenta = [];
 
 const esMismoMes = (id) => {
     const d = new Date(id); const n = new Date();
@@ -72,6 +70,7 @@ window.render = function() {
     if(!app) return;
     let html = "";
 
+    // --- DASHBOARD ---
     if(window.view === "dashboard"){
         let vM = (window.state.ventas || []).filter(i => esMismoMes(i.id));
         let gM = (window.state.gastos || []).filter(i => esMismoMes(i.id));
@@ -81,62 +80,102 @@ window.render = function() {
         let tI = iM.reduce((a,b)=>a+(b.amount||0),0);
 
         html = `<div class="card !bg-slate-900 text-white text-center border-l-8 border-purple-500">
-            <p class="text-[10px] uppercase text-purple-400 font-black">Ganancia Neta Mes</p>
+            <p class="text-[10px] uppercase text-purple-400 font-black">Ganancia Neta Abril</p>
             <h2 class="text-4xl font-black italic">$${(tV - tG - tI).toFixed(2)}</h2>
             <div class="grid grid-cols-3 gap-1 mt-3 text-[9px] font-bold">
-                <div class="text-green-400">Ingresos: $${tV.toFixed(2)}</div>
-                <div class="text-red-400">Gastos: $${tG.toFixed(2)}</div>
-                <div class="text-blue-400">Inversión: $${tI.toFixed(2)}</div>
+                <div class="text-green-400 text-center">Ingresos<br>$${tV.toFixed(2)}</div>
+                <div class="text-red-400 text-center">Gastos<br>$${tG.toFixed(2)}</div>
+                <div class="text-blue-400 text-center">Inversión<br>$${tI.toFixed(2)}</div>
             </div>
-        </div><div class="card"><canvas id="gD" height="150"></canvas></div>`;
+        </div><div class="card"><canvas id="gD" height="140"></canvas></div>`;
+        
         setTimeout(() => {
             const ctx = document.getElementById('gD');
-            if(ctx) new Chart(ctx, { type: 'bar', data: { labels: ['Ventas', 'Gastos', 'Compras'], datasets: [{ data: [tV, tG, tI], backgroundColor: ['#22c55e', '#ef4444', '#3b82f6'] }] }});
+            if(ctx) new Chart(ctx, { 
+                type: 'doughnut', 
+                data: { labels: ['Ingresos', 'Gastos', 'Inversión'], datasets: [{ data: [tV, tG, tI], backgroundColor: ['#22c55e', '#ef4444', '#3b82f6'] }] }
+            });
         }, 50);
     }
 
+    // --- GASTOS (CON LISTA Y BORRAR) ---
+    if(window.view === "gastos"){
+        let gM = (window.state.gastos || []).filter(i => esMismoMes(i.id)).reverse();
+        html = `<div class="card"><h2 class="font-black text-red-600 border-b mb-2">REGISTRAR GASTO</h2>
+            <input type="date" id="fG" value="${fHoy}">
+            <input id="gN" placeholder="Concepto del gasto">
+            <input id="gM" type="number" placeholder="Monto $">
+            <button onclick="saveG()" class="btn w-full !bg-red-600 mt-2 font-black py-3">GUARDAR GASTO</button>
+        </div>
+        <div class="card"><h3 class="font-bold text-xs uppercase mb-2">Gastos del Mes</h3>
+            ${gM.map(g=>`<div class="flex justify-between items-center py-2 border-b text-xs font-bold">
+                <span>${new Date(g.id).toLocaleDateString('es-ES',{day:'2-digit',month:'short'})} - ${g.name}</span>
+                <div class="flex items-center gap-3">
+                    <span class="text-red-600">$${g.amount.toFixed(2)}</span>
+                    <button onclick="del('g',${g.id})" class="text-red-400 font-black px-2 text-lg">×</button>
+                </div>
+            </div>`).join("") || '<p class="text-center opacity-50 italic">No hay gastos este mes</p>'}
+        </div>`;
+    }
+
+    // --- REPORTE (MENSUAL COMPLETO) ---
+    if(window.view === "reportes"){
+        let vM = (window.state.ventas || []).filter(i => esMismoMes(i.id)).reverse();
+        let gM = (window.state.gastos || []).filter(i => esMismoMes(i.id)).reverse();
+        let iM = (window.state.comprasInversion || []).filter(i => esMismoMes(i.id)).reverse();
+        
+        html = `<div class="card bg-slate-900 text-white text-center">
+            <h2 class="font-black text-lg italic">REPORTE INTEGRAL - ABRIL</h2>
+        </div>
+        <div class="card"><h3 class="text-green-600 font-black border-b mb-2">INGRESOS</h3>
+            ${vM.map(v=>`<div class="flex justify-between text-[11px] py-1 border-b"><span>${v.cliente}</span><b>$${v.total.toFixed(2)}</b></div>`).join("")}
+            <h3 class="text-red-600 font-black border-b mt-4 mb-2">GASTOS</h3>
+            ${gM.map(g=>`<div class="flex justify-between text-[11px] py-1 border-b"><span>${g.name}</span><b class="text-red-600">-$${g.amount.toFixed(2)}</b></div>`).join("")}
+            <h3 class="text-blue-600 font-black border-b mt-4 mb-2">INVERSIÓN STOCK</h3>
+            ${iM.map(i=>`<div class="flex justify-between text-[11px] py-1 border-b"><span>${i.name}</span><b class="text-blue-600">-$${i.amount.toFixed(2)}</b></div>`).join("")}
+        </div>`;
+    }
+
+    // --- COBRANZAS ---
+    if(window.view === "cobranzas"){
+        html = (window.state.ventas || []).filter(v=>!v.pagado).map(v=>`<div class="card flex justify-between items-center border-l-4 border-amber-500 shadow-sm">
+            <div><b class="text-sm">${v.cliente}</b><br><small class="text-red-600 font-bold">DEUDA: $${(v.total-(v.abonado||0)).toFixed(2)}</small></div>
+            <div class="flex gap-2">
+                <button onclick="ws('${v.telefono}',${v.total-(v.abonado||0)})" class="btn !bg-green-600">WS</button>
+                <button onclick="abono(${v.id})" class="btn !bg-blue-600">ABONO</button>
+                <button onclick="del('v',${v.id})" class="btn !bg-red-500">×</button>
+            </div>
+        </div>`).join("") || '<p class="text-center py-10 opacity-50 font-bold">Nada pendiente.</p>';
+    }
+
+    // --- COMPRAS / STOCK ---
+    if(window.view === "compras"){
+        html = `<div class="card"><h2 class="font-black text-blue-600 border-b mb-2 italic uppercase text-sm">Entrada de Material</h2>
+            <input type="date" id="fC" value="${fHoy}">
+            <select id="mC">${Object.keys(window.state.inventario || {}).map(p=>`<option value="${p}">${p}</option>`).join("")}</select>
+            <div class="grid grid-cols-2 gap-2"><input id="qC" type="number" placeholder="Cant. Metros"><input id="pM" type="number" placeholder="Costo $/m"></div>
+            <button onclick="saveC()" class="btn w-full !bg-blue-700 py-3 mt-1 font-black">REGISTRAR COMPRA</button></div>
+            <div class="grid grid-cols-2 gap-2">${Object.entries(window.state.inventario || {}).map(([n, i])=>`<div class="bg-white p-3 rounded-xl border text-center">
+                <b class="text-[9px] uppercase">${n}</b><br><span class="text-xl font-black text-blue-700">${(i.stock || 0).toFixed(2)}m</span><br>
+                <button onclick="adjStock('${n}')" class="text-blue-400 text-[10px] font-bold underline">AJUSTAR</button></div>`).join("")}</div>`;
+    }
+
+    // --- VENTAS ---
     if(window.view === "ventas"){
-        html = `<div class="card"><h2 class="font-black text-green-600 border-b mb-2">VENDER</h2>
+        html = `<div class="card"><h2 class="font-black text-green-600 border-b mb-2 italic">NUEVA VENTA</h2>
             <input type="date" id="fV" value="${fHoy}">
             <input id="cli" placeholder="CLIENTE">
-            <input id="tel" type="number" placeholder="WHATSAPP (Ej: 58412...)">
-            <div class="grid grid-cols-2 gap-2 mt-2">
+            <input id="tel" type="number" placeholder="WHATSAPP">
+            <div class="grid grid-cols-2 gap-2 mt-1">
                 <select id="pS"><option value="">- Material -</option>${Object.keys(window.state.inventario || {}).map(p=>`<option value="${p}">${p}</option>`).join("")}</select>
                 <select id="sS"><option value="">- Servicio -</option>${(window.state.serviciosExtra || []).map(s=>`<option value="${s}">${s}</option>`).join("")}</select>
             </div>
             <select id="tC" onchange="document.getElementById('pL').classList.toggle('hidden', this.value!=='libre')"><option value="detal">DETAL ($9)</option><option value="mayor">MAYOR ($10)</option><option value="libre">PRECIO LIBRE</option></select>
-            <input id="pL" class="hidden" type="number" placeholder="Precio manual $">
-            <div class="flex gap-2"><input id="q" type="number" value="1" step="0.1"><button onclick="addI()" class="btn !bg-blue-600 w-full">+ AÑADIR</button></div>
-            <div id="lC" class="mt-4 border-t pt-2 text-[10px]"></div>
+            <input id="pL" class="hidden" type="number" placeholder="Precio $">
+            <div class="flex gap-2"><input id="q" type="number" value="1" step="0.1"><button onclick="addI()" class="btn !bg-blue-600 w-full">+ ADD</button></div>
+            <div id="lC" class="mt-4 border-t pt-2 text-[10px] italic"></div>
             <div id="tV" class="bg-slate-800 text-white p-3 text-center text-2xl font-black rounded-xl mt-2 italic">TOTAL: $0.00</div>
-            <button onclick="saveV()" class="btn w-full !bg-green-600 py-4 mt-2 font-black">GUARDAR VENTA</button></div>`;
-    }
-
-    if(window.view === "compras"){
-        html = `<div class="card"><h2 class="font-black text-blue-600 border-b mb-2">COMPRAS Y STOCK</h2>
-            <input type="date" id="fC" value="${fHoy}">
-            <select id="mC">${Object.keys(window.state.inventario || {}).map(p=>`<option value="${p}">${p}</option>`).join("")}</select>
-            <div class="grid grid-cols-2 gap-2"><input id="qC" type="number" placeholder="Metros"><input id="pM" type="number" placeholder="$/metro"></div>
-            <button onclick="saveC()" class="btn w-full !bg-blue-700 py-3 mt-2">GUARDAR COMPRA</button></div>
-            <div class="grid grid-cols-2 gap-2">${Object.entries(window.state.inventario || {}).map(([n, i])=>`<div class="bg-white p-3 rounded-xl border text-center shadow-sm">
-                <b class="text-[9px] uppercase">${n}</b><br><span class="text-xl font-black text-blue-700">${(i.stock || 0).toFixed(2)}m</span><br>
-                <button onclick="adjStock('${n}')" class="text-blue-500 text-[9px] underline">AJUSTAR</button></div>`).join("")}</div>`;
-    }
-
-    if(window.view === "reportes"){
-        html = `<div class="card bg-slate-900"><input type="date" id="fR" value="${fHoy}" onchange="detRep(this.value)"></div><div id="aR"></div>`;
-        setTimeout(() => detRep(fHoy), 10);
-    }
-
-    if(window.view === "gastos"){
-        html = `<div class="card"><h2 class="font-black text-red-600 border-b mb-2">GASTOS OPERATIVOS</h2><input type="date" id="fG" value="${fHoy}"><input id="gN" placeholder="Concepto"><input id="gM" type="number" placeholder="Monto $"><button onclick="saveG()" class="btn w-full !bg-red-600 mt-2 font-black py-3">GUARDAR GASTO</button></div>`;
-    }
-
-    if(window.view === "cobranzas"){
-        html = (window.state.ventas || []).filter(v=>!v.pagado).map(v=>`<div class="card flex justify-between items-center border-l-4 border-amber-500">
-            <div><b class="text-xs">${v.cliente}</b><br><small class="text-red-600 font-bold">DEBE: $${((v.total||0)-(v.abonado||0)).toFixed(2)}</small></div>
-            <div class="flex gap-1"><button onclick="ws('${v.telefono}',${v.total-(v.abonado||0)})" class="btn !bg-green-600 text-[8px]">WS</button><button onclick="abono(${v.id})" class="btn !bg-blue-600 text-[8px]">ABONAR</button></div>
-        </div>`).join("") || '<p class="text-center py-10 opacity-50">Sin deudas.</p>';
+            <button onclick="saveV()" class="btn w-full !bg-green-600 py-4 mt-2 font-black">FINALIZAR VENTA</button></div>`;
     }
 
     if(window.view === "config"){
@@ -144,15 +183,16 @@ window.render = function() {
             <div class="flex gap-2"><input id="nP" placeholder="MATERIAL"><button onclick="cat('p')" class="btn">ADD</button></div>
             <div class="flex gap-2 mt-2"><input id="nS" placeholder="SERVICIO"><button onclick="cat('s')" class="btn !bg-purple-600">ADD</button></div></div>
             <div class="grid grid-cols-2 gap-2">
-                <div class="card"><b>MATERIALES</b>${Object.keys(window.state.inventario || {}).map(n=>`<div class="flex justify-between py-1 border-b text-xs"><span>${n}</span><button onclick="delCat('p','${n}')" class="text-red-500 font-bold px-2">X</button></div>`).join("")}</div>
-                <div class="card"><b>SERVICIOS</b>${(window.state.serviciosExtra || []).map((s,i)=>`<div class="flex justify-between py-1 border-b text-xs"><span>${s}</span><button onclick="delCat('s',${i})" class="text-red-500 font-bold px-2">X</button></div>`).join("")}</div>
+                <div class="card text-xs"><b>MATERIALES</b>${Object.keys(window.state.inventario || {}).map(n=>`<div class="flex justify-between py-1 border-b"><span>${n}</span><button onclick="delCat('p','${n}')" class="text-red-500 font-bold px-1">X</button></div>`).join("")}</div>
+                <div class="card text-xs"><b>SERVICIOS</b>${(window.state.serviciosExtra || []).map((s,i)=>`<div class="flex justify-between py-1 border-b"><span>${s}</span><button onclick="delCat('s',${i})" class="text-red-500 font-bold px-1">X</button></div>`).join("")}</div>
             </div>`;
     }
 
     app.innerHTML = html;
 };
 
-// --- FUNCIONES LOGICA ---
+// --- ACCIONES ---
+let carritoVenta = [];
 window.addI = () => {
     let p = document.getElementById("pS").value, s = document.getElementById("sS").value, t = document.getElementById("tC").value, q = parseFloat(document.getElementById("q").value) || 0;
     let pre = (t === "detal") ? 9 : (t === "mayor") ? 10 : parseFloat(document.getElementById("pL").value) || 0;
@@ -165,49 +205,36 @@ window.saveV = async () => {
     let f = document.getElementById("fV").value, c = document.getElementById("cli").value, tel = document.getElementById("tel").value;
     if(!c || !carritoVenta.length) return alert("Faltan datos");
     carritoVenta.forEach(i => { if(i.pk && window.state.inventario[i.pk]) window.state.inventario[i.pk].stock -= i.qty; });
-    window.state.ventas.push({id: new Date(f+"T12:00:00").getTime(), cliente: c.toUpperCase(), telefono: tel, total: carritoVenta.reduce((a,b)=>a+b.sub,0), abonado: 0, pagado: false, detalle: carritoVenta.map(i=>i.nombre).join(", ") });
+    window.state.ventas.push({id: new Date(f+"T12:00:00").getTime(), cliente: c.toUpperCase(), telefono: tel, total: carritoVenta.reduce((a,b)=>a+b.sub,0), abonado: 0, pagado: false });
     await window.save(); carritoVenta = []; setView('dashboard');
 };
 
 window.saveG = async () => {
     let f = document.getElementById("fG").value, n = document.getElementById("gN").value, m = parseFloat(document.getElementById("gM").value);
-    if(n && m) { window.state.gastos.push({id: new Date(f+"T12:00:00").getTime(), name: n.toUpperCase(), amount: m}); await window.save(); setView('dashboard'); }
+    if(n && m) { 
+        if(!window.state.gastos) window.state.gastos = [];
+        window.state.gastos.push({id: new Date(f+"T12:00:00").getTime(), name: n.toUpperCase(), amount: m}); 
+        await window.save(); render(); 
+    }
 };
 
 window.saveC = async () => {
     let q = parseFloat(document.getElementById("qC").value), m = document.getElementById("mC").value, f = document.getElementById("fC").value, p = parseFloat(document.getElementById("pM").value);
-    if(q > 0) { window.state.inventario[m].stock += q; window.state.comprasInversion.push({id: new Date(f+"T12:00:00").getTime(), name: m, amount: q*p}); await window.save(); setView('dashboard'); }
-};
-
-window.detRep = (f) => {
-    const esD = (id, target) => new Date(id).toLocaleDateString('en-CA') === target;
-    let v = (window.state.ventas || []).filter(i => esD(i.id, f));
-    let g = (window.state.gastos || []).filter(i => esD(i.id, f));
-    let i = (window.state.comprasInversion || []).filter(x => esD(x.id, f));
-    document.getElementById("aR").innerHTML = `<div class="card"><h3 class="font-black border-b mb-2 uppercase text-xs">REPORTE DEL DÍA</h3>
-        <div class="mb-2"><b>Ventas:</b> ${v.map(x=>`<div class="flex justify-between py-1"><span>${x.cliente} ($${x.total})</span><b class="del-btn" onclick="del('v',${x.id})">ELIMINAR</b></div>`).join("") || "N/A"}</div>
-        <div class="mb-2"><b>Gastos:</b> ${g.map(x=>`<div class="flex justify-between py-1"><span>${x.name} ($${x.amount})</span><b class="del-btn" onclick="del('g',${x.id})">ELIMINAR</b></div>`).join("") || "N/A"}</div>
-        <div class="mb-2"><b>Compras:</b> ${i.map(x=>`<div class="flex justify-between py-1"><span>${x.name} ($${x.amount})</span><b class="del-btn" onclick="del('i',${x.id})">ELIMINAR</b></div>`).join("") || "N/A"}</div>
-    </div>`;
+    if(q > 0) { window.state.inventario[m].stock += q; if(!window.state.comprasInversion) window.state.comprasInversion = []; window.state.comprasInversion.push({id: new Date(f+"T12:00:00").getTime(), name: m, amount: q*p}); await window.save(); setView('dashboard'); }
 };
 
 window.del = async (type, id) => {
-    if(!confirm("¿Borrar permanentemente?")) return;
+    if(!confirm("¿Borrar definitivamente?")) return;
     if(type==='v') window.state.ventas = window.state.ventas.filter(x=>x.id!==id);
     if(type==='g') window.state.gastos = window.state.gastos.filter(x=>x.id!==id);
-    if(type==='i') window.state.comprasInversion = window.state.comprasInversion.filter(x=>x.id!==id);
     await window.save(); render();
 };
 
-window.abono = async (id) => { 
-    let v = window.state.ventas.find(x=>x.id===id), m = parseFloat(prompt("¿Monto del abono?"));
-    if(m){ v.abonado = (v.abonado||0) + m; if(v.abonado >= v.total) v.pagado = true; await window.save(); render(); }
-};
-
-window.ws = (tel, deuda) => { if(!tel) return alert("Sin número"); window.open(`https://api.whatsapp.com/send?phone=${tel}&text=Hola, tienes una deuda pendiente de $${deuda.toFixed(2)} en GhostPrint.`, '_blank'); };
-window.adjStock = async (n) => { let a = parseFloat(prompt("Nuevo stock?", window.state.inventario[n].stock)); if(!isNaN(a)){ window.state.inventario[n].stock = a; await window.save(); } };
-window.cat = async (t) => { let n = document.getElementById(t==='p'?'nP':'nS').value.toUpperCase(); if(!n) return; if(t==='p') { if(!window.state.inventario) window.state.inventario={}; window.state.inventario[n]={stock:0}; } else { if(!window.state.serviciosExtra) window.state.serviciosExtra=[]; window.state.serviciosExtra.push(n); } await window.save(); };
-window.delCat = async (t, k) => { if(confirm("¿Eliminar?")){ if(t==='p') delete window.state.inventario[k]; else window.state.serviciosExtra.splice(k,1); await window.save(); } };
+window.ws = (tel, d) => window.open(`https://api.whatsapp.com/send?phone=${tel}&text=Hola, recuerda tu deuda pendiente de $${d.toFixed(2)} en GhostPrint.`, '_blank');
+window.abono = async (id) => { let v = window.state.ventas.find(x=>x.id===id), m = parseFloat(prompt("Monto abono?")); if(m){ v.abonado = (v.abonado||0) + m; if(v.abonado >= v.total) v.pagado = true; await window.save(); render(); } };
+window.adjStock = async (n) => { let a = parseFloat(prompt("Ajustar stock?", window.state.inventario[n].stock)); if(!isNaN(a)){ window.state.inventario[n].stock = a; await window.save(); render(); } };
+window.cat = async (t) => { let n = document.getElementById(t==='p'?'nP':'nS').value.toUpperCase(); if(!n) return; if(t==='p') { if(!window.state.inventario) window.state.inventario={}; window.state.inventario[n]={stock:0}; } else { if(!window.state.serviciosExtra) window.state.serviciosExtra=[]; window.state.serviciosExtra.push(n); } await window.save(); render(); };
+window.delCat = async (t, k) => { if(confirm("¿Eliminar?")){ if(t==='p') delete window.state.inventario[k]; else window.state.serviciosExtra.splice(k,1); await window.save(); render(); } };
 
 render();
 </script>
