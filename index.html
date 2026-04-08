@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GhostPrint ERP v6.4 - Catalog Master</title>
+    <title>GhostPrint ERP v6.5 - Pro Reports</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -61,7 +61,8 @@ const docRef = doc(db, "sistema", "datos_principales");
 
 window.state = { ventas: [], gastos: [], inventario: {}, serviciosExtra: [], mermas: [] };
 window.view = "dashboard";
-let carritoVenta = [];
+window.reportMonth = new Date().getMonth();
+window.reportYear = new Date().getFullYear();
 
 onSnapshot(docRef, (snap) => {
     if (snap.exists()) { 
@@ -80,85 +81,95 @@ window.save = async () => { await setDoc(docRef, window.state); };
 window.setView = (v) => { window.view = v; render(); };
 
 window.render = function() {
-    let app = document.getElementById("app"), html = "";
+    let app = document.getElementById("app");
     if(!app) return;
+    let html = "";
 
     if(window.view === "dashboard"){
         let totalV = window.state.ventas.reduce((a,b)=>a+b.total,0);
-        let totalG = window.state.gastos.reduce((a,b)=>a+b.amount,0);
         let dineroC = window.state.ventas.reduce((a,b)=>a+(b.abonado || 0), 0);
         html = `
         <div class="grid grid-cols-2 gap-3 mb-4">
             <div class="card !m-0 bg-green-600 text-white text-center"><p class="text-[9px] font-bold uppercase">Caja Real</p><b class="text-xl">$${dineroC.toFixed(2)}</b></div>
             <div class="card !m-0 bg-amber-500 text-white text-center"><p class="text-[9px] font-bold uppercase">Por Cobrar</p><b class="text-xl">$${(totalV - dineroC).toFixed(2)}</b></div>
         </div>
-        <div class="card !m-0 mb-4 bg-slate-900 border-l-8 border-purple-500 p-4">
-            <p class="text-purple-400 text-[9px] font-black uppercase">Balance Neto</p>
-            <h2 class="text-white text-3xl font-black italic">$${(totalV - totalG).toFixed(2)}</h2>
-        </div>
         <div class="card"><canvas id="chartDash" height="180"></canvas></div>`;
-        setTimeout(() => initDashChart(totalV, totalG, dineroC), 100);
+        setTimeout(() => initDashChart(), 100);
     }
 
-    if(window.view === "config"){
+    if(window.view === "reportes"){
+        // LÓGICA DE FILTRADO POR MES
+        let filteredVentas = window.state.ventas.filter(v => {
+            let d = new Date(v.id);
+            return d.getMonth() == window.reportMonth && d.getFullYear() == window.reportYear;
+        });
+        let filteredGastos = window.state.gastos.filter(g => {
+            let d = new Date(g.id);
+            return d.getMonth() == window.reportMonth && d.getFullYear() == window.reportYear;
+        });
+
+        let totalV = filteredVentas.reduce((a,b)=>a+b.total, 0);
+        let totalG = filteredGastos.reduce((a,b)=>a+b.amount, 0);
+
+        // Ranking Clientes
+        let clientMap = filteredVentas.reduce((a, b) => { a[b.cliente] = (a[b.cliente] || 0) + b.total; return a; }, {});
+        let sortedClients = Object.entries(clientMap).sort((a,b) => b[1] - a[1]).slice(0, 5);
+
         html = `
-        <div class="card border-l-4 border-blue-600">
-            <h2 class="font-black uppercase text-blue-700 mb-4 text-xs italic border-b pb-2">Gestionar Materiales</h2>
-            <label>Nombre del Material (Ej: BANNER 1.37)</label><input id="nP">
-            <button onclick="addC('p')" class="btn bg-blue-600 mt-2 w-full">Agregar al Catálogo</button>
-            <div class="mt-4 space-y-2">
-                ${Object.entries(window.state.inventario).map(([n,i])=>`
-                    <div class="flex justify-between items-center p-2 bg-slate-100 rounded-lg">
-                        <span class="text-[10px] font-bold uppercase">${n}</span>
-                        <div class="flex gap-2">
-                            <button onclick="editStock('${n}')" class="text-blue-600 font-bold text-[9px]">STOCK</button>
-                            <button onclick="deleteMaterial('${n}')" class="text-red-500 font-bold text-[9px]">ELIMINAR</button>
-                        </div>
-                    </div>
-                `).join("")}
+        <div class="card bg-indigo-900 text-white">
+            <h2 class="text-center font-black uppercase italic text-xs mb-4">Analítica de Negocio</h2>
+            <div class="grid grid-cols-2 gap-2">
+                <select id="repM" onchange="window.reportMonth=this.value; render();" class="!m-0 !py-2 !text-xs">
+                    ${['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'].map((m,i)=>`<option value="${i}" ${window.reportMonth==i?'selected':''}>${m}</option>`).join("")}
+                </select>
+                <select id="repY" onchange="window.reportYear=this.value; render();" class="!m-0 !py-2 !text-xs">
+                    <option value="2025">2025</option><option value="2026" selected>2026</option>
+                </select>
             </div>
         </div>
 
-        <div class="card border-l-4 border-purple-600 mt-4">
-            <h2 class="font-black uppercase text-purple-700 mb-4 text-xs italic border-b pb-2">Gestionar Servicios</h2>
-            <label>Nombre del Servicio (Ej: INSTALACIÓN)</label><input id="nS">
-            <button onclick="addC('s')" class="btn bg-purple-600 mt-2 w-full">Agregar al Catálogo</button>
-            <div class="mt-4 space-y-2">
-                ${window.state.serviciosExtra.map((s, idx) => `
-                    <div class="flex justify-between items-center p-2 bg-slate-100 rounded-lg">
-                        <span class="text-[10px] font-bold uppercase">${s}</span>
-                        <button onclick="deleteServicio(${idx})" class="text-red-500 font-bold text-[9px]">ELIMINAR</button>
-                    </div>
-                `).join("")}
+        <div class="grid grid-cols-2 gap-3">
+            <div class="card !m-0 bg-white border-l-4 border-green-500">
+                <p class="text-[9px] font-bold text-slate-400 uppercase">Ventas Mes</p>
+                <b class="text-lg text-green-600">$${totalV.toFixed(2)}</b>
             </div>
-        </div>`;
-    }
+            <div class="card !m-0 bg-white border-l-4 border-red-500">
+                <p class="text-[9px] font-bold text-slate-400 uppercase">Gastos Mes</p>
+                <b class="text-lg text-red-600">$${totalG.toFixed(2)}</b>
+            </div>
+        </div>
 
-    if(window.view === "compras"){
-        html = `
-        <div class="card bg-blue-50 border-l-4 border-blue-600">
-            <h3 class="font-black text-[10px] uppercase mb-2">Entrada de Stock (Compra)</h3>
-            <label>Material</label><select id="mCom">${Object.keys(window.state.inventario).map(p=>`<option value="${p}">${p}</option>`).join("")}</select>
-            <label>Metros/Und</label><input id="qCom" type="number">
-            <label>Costo Total $</label><input id="vCom" type="number">
-            <button onclick="regCom()" class="btn w-full bg-blue-700 mt-2">Cargar Stock</button>
-        </div>
-        <div class="card bg-red-50 border-l-4 border-red-600 mt-4">
-            <h3 class="font-black text-[10px] uppercase mb-2 text-red-700">Reportar Merma</h3>
-            <label>Material Dañado</label><select id="mMerma">${Object.keys(window.state.inventario).map(p=>`<option value="${p}">${p}</option>`).join("")}</select>
-            <label>Metros Perdidos</label><input id="qMerma" type="number">
-            <label>Motivo</label><input id="rMerma" placeholder="Ej: Error de impresión">
-            <button onclick="regMerma()" class="btn w-full bg-red-600 mt-2">Descontar Merma</button>
-        </div>
-        <div class="grid grid-cols-2 gap-2 mt-4">
-            ${Object.entries(window.state.inventario).map(([n,i])=>`
-                <div class="card !m-0 p-3 flex justify-between items-center bg-white">
-                    <div><b class="text-[9px] uppercase text-slate-500">${n}</b><br><span class="text-blue-700 font-black text-lg">${(i.stock || 0).toFixed(2)}</span></div>
+        <div class="card mt-4">
+            <h3 class="font-black uppercase text-purple-700 text-[10px] mb-3 border-b pb-1">Top 5 Clientes del Mes</h3>
+            ${sortedClients.map(([name, total]) => `
+                <div class="flex justify-between py-2 border-b text-[11px]">
+                    <span class="font-bold uppercase">${name}</span>
+                    <span class="text-green-600 font-black">$${total.toFixed(2)}</span>
                 </div>
-            `).join("")}
-        </div>`;
+            `).join("") || '<p class="text-center text-slate-400 text-[10px] py-4">No hay ventas este mes</p>'}
+        </div>
+
+        <div class="card mt-4 bg-red-50">
+            <h3 class="font-black uppercase text-red-700 text-[10px] mb-3 border-b pb-1">Auditoría de Mermas (Pérdidas)</h3>
+            <div class="max-h-60 overflow-y-auto">
+                ${window.state.mermas.filter(m => {
+                    let d = new Date(m.id);
+                    return d.getMonth() == window.reportMonth && d.getFullYear() == window.reportYear;
+                }).map(m => `
+                    <div class="py-2 border-b text-[10px]">
+                        <div class="flex justify-between font-black uppercase">
+                            <span>${m.name}</span>
+                            <span class="text-red-600">-${m.qty}m</span>
+                        </div>
+                        <p class="text-slate-500 italic text-[9px]">${m.reason}</p>
+                    </div>
+                `).join("") || '<p class="text-center text-slate-400 text-[10px] py-4">Sin mermas este mes</p>'}
+            </div>
+        </div>
+        `;
     }
 
+    // --- LAS DEMÁS VISTAS SE MANTIENEN IGUAL (V6.4) ---
     if(window.view === "ventas"){
         html = `<div class="card"><h2 class="font-black mb-4 uppercase text-purple-700 italic border-b pb-2 text-sm">Punto de Venta</h2>
             <label>Cliente</label><input id="cliV" placeholder="NOMBRE">
@@ -174,12 +185,31 @@ window.render = function() {
             <button onclick="procesarV()" class="btn w-full bg-green-600 mt-4 py-4 font-black">REGISTRAR VENTA</button></div>`;
         setTimeout(() => renderCarritoInner(), 10);
     }
-
-    // Mantener las demás vistas (Cobranzas, Gastos, Reportes)
+    if(window.view === "compras"){
+        html = `
+        <div class="card bg-blue-50 border-l-4 border-blue-600"><h3 class="font-black text-[10px] uppercase mb-2 text-blue-800">Cargar Stock</h3>
+            <label>Material</label><select id="mCom">${Object.keys(window.state.inventario).map(p=>`<option value="${p}">${p}</option>`).join("")}</select>
+            <label>Metros/Und</label><input id="qCom" type="number"><label>Costo $</label><input id="vCom" type="number"><button onclick="regCom()" class="btn w-full bg-blue-700 mt-2">Cargar</button>
+        </div>
+        <div class="card bg-red-50 border-l-4 border-red-600 mt-4"><h3 class="font-black text-[10px] uppercase mb-2 text-red-800">Reportar Merma</h3>
+            <label>Material</label><select id="mMerma">${Object.keys(window.state.inventario).map(p=>`<option value="${p}">${p}</option>`).join("")}</select>
+            <label>Metros</label><input id="qMerma" type="number"><label>Motivo</label><input id="rMerma"><button onclick="regMerma()" class="btn w-full bg-red-600 mt-2">Descontar</button>
+        </div>
+        <div class="grid grid-cols-2 gap-2 mt-4">${Object.entries(window.state.inventario).map(([n,i])=>`<div class="card !m-0 p-3 bg-white text-center"><b class="text-[9px] uppercase text-slate-500">${n}</b><br><span class="text-blue-700 font-black text-lg">${(i.stock || 0).toFixed(2)}</span></div>`).join("")}</div>`;
+    }
+    if(window.view === "config"){
+        html = `<div class="card border-l-4 border-blue-600"><h2 class="font-black uppercase text-blue-700 mb-4 text-xs italic border-b pb-2 text-sm">Catálogo de Materiales</h2>
+            <input id="nP" placeholder="EJ: BANNER 1.37"><button onclick="addC('p')" class="btn bg-blue-600 mt-2 w-full">Guardar</button>
+            <div class="mt-4 space-y-2">${Object.entries(window.state.inventario).map(([n,i])=>`<div class="flex justify-between items-center p-2 bg-slate-100 rounded-lg text-[10px] font-bold uppercase"><span>${n}</span><div class="flex gap-2"><button onclick="editStock('${n}')" class="text-blue-600">EDIT</button><button onclick="deleteMaterial('${n}')" class="text-red-500">BORRAR</button></div></div>`).join("")}</div>
+        </div><div class="card border-l-4 border-purple-600 mt-4"><h2 class="font-black uppercase text-purple-700 mb-4 text-xs italic border-b pb-2 text-sm">Servicios Extra</h2>
+            <input id="nS" placeholder="EJ: INSTALACIÓN"><button onclick="addC('s')" class="btn bg-purple-600 mt-2 w-full">Guardar</button>
+            <div class="mt-4 space-y-2">${window.state.serviciosExtra.map((s, idx) => `<div class="flex justify-between items-center p-2 bg-slate-100 rounded-lg text-[10px] font-bold uppercase"><span>${s}</span><button onclick="deleteServicio(${idx})" class="text-red-500">BORRAR</button></div>`).join("")}</div>
+        </div>`;
+    }
     if(window.view === "cobranzas"){
         html = `${window.state.ventas.filter(v=>!v.pagado).reverse().map(v=>`
             <div class="card flex justify-between items-center border-l-4 border-amber-500">
-                <div><b class="uppercase">${v.cliente}</b><br><small class="text-red-600 font-bold italic">Resta: $${(v.total-(v.abonado||0)).toFixed(2)}</small></div>
+                <div><b class="uppercase text-xs">${v.cliente}</b><br><small class="text-red-600 font-bold italic">Resta: $${(v.total-(v.abonado||0)).toFixed(2)}</small></div>
                 <div class="flex gap-1"><button onclick="abonarV(${v.id})" class="bg-blue-600 text-white p-2 rounded text-[8px] font-bold">ABONO</button><button onclick="borrarV(${v.id})" class="bg-red-500 text-white p-2 rounded text-[8px] font-bold italic">X</button></div>
             </div>`).join("")}`;
     }
@@ -187,45 +217,30 @@ window.render = function() {
         html = `<div class="card"><label>Descripción</label><input id="gNom"><label>Monto $</label><input id="gMon" type="number"><button onclick="regG()" class="btn w-full bg-red-600 mt-2">Cargar Gasto</button></div>
         ${window.state.gastos.slice().reverse().map(g=>`<div class="card flex justify-between py-2 border-l-4 border-red-500"><div><small class="uppercase font-bold">${g.name}</small><br><b>$${g.amount.toFixed(2)}</b></div><button onclick="borrarG(${g.id})" class="text-red-500 font-bold text-xs">X</button></div>`).join("")}`;
     }
-    if(window.view === "reportes"){
-        let totalMermas = window.state.mermas.reduce((a,b)=>a+b.qty, 0);
-        html = `<div class="card"><canvas id="chartPie" height="250"></canvas></div>
-        <div class="card mt-4 bg-red-50"><h3 class="font-black uppercase text-red-700 text-[11px] mb-2">Resumen de Mermas</h3>
-            ${window.state.mermas.slice().reverse().map(m => `<div class="flex justify-between text-[10px] border-b py-1 uppercase"><span><b>${m.qty}m</b> - ${m.name}</span><span class="text-slate-500 italic">${m.reason}</span></div>`).join("")}
-        </div>`;
-        setTimeout(() => initReportCharts(), 100);
-    }
 
     app.innerHTML = html;
 };
 
-// --- LÓGICA DE ELIMINACIÓN Y CATÁLOGO ---
-window.deleteMaterial = async (name) => {
-    if(confirm(`¿Eliminar "${name}" del catálogo? Se perderá el stock actual.`)) {
-        delete window.state.inventario[name];
-        await window.save(); render();
-    }
+// --- GRÁFICOS ---
+window.initDashChart = () => {
+    let totalV = window.state.ventas.reduce((a,b)=>a+b.total,0);
+    let totalG = window.state.gastos.reduce((a,b)=>a+b.amount,0);
+    new Chart(document.getElementById('chartDash'), {
+        type: 'bar',
+        data: { labels: ['Ventas Totales', 'Gastos'], datasets: [{ data: [totalV, totalG], backgroundColor: ['#6d28d9', '#ef4444'], borderRadius: 8 }] },
+        options: { plugins: { legend: { display: false } } }
+    });
 };
 
-window.deleteServicio = async (idx) => {
-    if(confirm("¿Eliminar este servicio?")) {
-        window.state.serviciosExtra.splice(idx, 1);
-        await window.save(); render();
-    }
-};
-
+// --- MOTOR DE LÓGICA ---
 window.addC = async (t) => {
-    if(t==='p'){ 
-        let n=document.getElementById("nP").value.toUpperCase(); 
-        if(n && !window.state.inventario[n]) { window.state.inventario[n]={stock:0}; document.getElementById("nP").value = ""; }
-    } else { 
-        let n=document.getElementById("nS").value.toUpperCase(); 
-        if(n) { window.state.serviciosExtra.push(n); document.getElementById("nS").value = ""; }
-    }
+    if(t==='p'){ let n=document.getElementById("nP").value.toUpperCase(); if(n) window.state.inventario[n]={stock:0}; }
+    else { let n=document.getElementById("nS").value.toUpperCase(); if(n) window.state.serviciosExtra.push(n); }
     await window.save(); render();
 };
-
-// --- FUNCIONES MOTOR RESTANTES ---
+window.deleteMaterial = async (n) => { if(confirm(`Eliminar ${n}?`)) { delete window.state.inventario[n]; await window.save(); render(); } };
+window.deleteServicio = async (i) => { if(confirm(`Eliminar?`)) { window.state.serviciosExtra.splice(i,1); await window.save(); render(); } };
+window.editStock = async (n) => { let v = parseFloat(prompt(`Stock de ${n}:`, window.state.inventario[n].stock)); if(!isNaN(v)){ window.state.inventario[n].stock = v; await window.save(); render(); } };
 window.regCom = async () => {
     let m = document.getElementById("mCom").value, q = parseFloat(document.getElementById("qCom").value), v = parseFloat(document.getElementById("vCom").value);
     if(q > 0) { window.state.inventario[m].stock += q; window.state.gastos.push({id:Date.now(), name:`COMPRA: ${m}`, amount: v}); await window.save(); render(); }
@@ -266,14 +281,6 @@ window.procesarV = async () => {
 window.regG = async () => {
     let n = document.getElementById("gNom").value, m = parseFloat(document.getElementById("gMon").value);
     if(n && m) { window.state.gastos.push({id:Date.now(), name:n.toUpperCase(), amount: m}); await window.save(); render(); }
-};
-window.editStock = async (n) => { let v = parseFloat(prompt(`Ajustar Stock de ${n}:`, window.state.inventario[n].stock)); if(!isNaN(v)){ window.state.inventario[n].stock = v; await window.save(); render(); } };
-window.initDashChart = (v, g, c) => { new Chart(document.getElementById('chartDash'), { type: 'bar', data: { labels: ['Vendido', 'Gastado', 'Cobrado'], datasets: [{ data: [v, g, c], backgroundColor: ['#6d28d9', '#ef4444', '#22c55e'], borderRadius: 8 }] }, options: { plugins: { legend: { display: false } } } }); };
-window.initReportCharts = () => {
-    let items = window.state.ventas.map(v => v.items || []).flat();
-    if (items.length === 0) return;
-    let dataMap = items.reduce((a, b) => { a[b.nombre] = (a[b.nombre] || 0) + b.sub; return a; }, {});
-    new Chart(document.getElementById('chartPie'), { type: 'doughnut', data: { labels: Object.keys(dataMap), datasets: [{ data: Object.values(dataMap), backgroundColor: ['#6d28d9', '#22c55e', '#3b82f6', '#f59e0b', '#ec4899'], borderWidth: 0 }] }, options: { plugins: { legend: { position: 'bottom', labels: { font: { size: 10, weight: 'bold' } } } } } });
 };
 window.abonarV = async (id) => {
     let v = window.state.ventas.find(x=>x.id===id), m = parseFloat(prompt("¿Monto?"));
