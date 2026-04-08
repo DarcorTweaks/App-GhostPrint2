@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GhostPrint ERP v6.2 - Merma Control</title>
+    <title>GhostPrint ERP v6.3 - Full Inventory Control</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -100,8 +100,40 @@ window.render = function() {
         setTimeout(() => initDashChart(totalV, totalG, dineroC), 100);
     }
 
+    if(window.view === "compras"){
+        html = `
+        <div class="card bg-blue-50 border-l-4 border-blue-600">
+            <h3 class="font-black text-[10px] uppercase mb-2">Entrada de Stock (Compra)</h3>
+            <label>Material</label><select id="mCom">${Object.keys(window.state.inventario).map(p=>`<option value="${p}">${p}</option>`).join("")}</select>
+            <label>Metros/Und</label><input id="qCom" type="number">
+            <label>Costo Total $</label><input id="vCom" type="number">
+            <button onclick="regCom()" class="btn w-full bg-blue-700 mt-2">Cargar Stock</button>
+        </div>
+        <div class="card bg-red-50 border-l-4 border-red-600 mt-4">
+            <h3 class="font-black text-[10px] uppercase mb-2 text-red-700">Reportar Merma (Pérdida)</h3>
+            <label>Material Dañado</label><select id="mMerma">${Object.keys(window.state.inventario).map(p=>`<option value="${p}">${p}</option>`).join("")}</select>
+            <label>Metros Perdidos</label><input id="qMerma" type="number">
+            <label>Motivo</label><input id="rMerma" placeholder="Ej: Error de impresión">
+            <button onclick="regMerma()" class="btn w-full bg-red-600 mt-2 uppercase">Descontar Merma</button>
+        </div>
+        <div class="grid grid-cols-1 gap-2 mt-4">
+            ${Object.entries(window.state.inventario).map(([n,i])=>`
+                <div class="card !m-0 p-4 flex justify-between items-center bg-white border-b">
+                    <div>
+                        <b class="text-[10px] uppercase text-slate-500">${n}</b><br>
+                        <span class="text-blue-700 font-black text-xl">${(i.stock || 0).toFixed(2)}</span>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="editStock('${n}')" class="bg-blue-100 text-blue-700 p-2 rounded-lg text-[9px] font-black uppercase">Editar</button>
+                        <button onclick="deleteMaterial('${n}')" class="bg-red-100 text-red-600 p-2 rounded-lg text-[9px] font-black uppercase">Eliminar</button>
+                    </div>
+                </div>
+            `).join("")}
+        </div>`;
+    }
+
     if(window.view === "ventas"){
-        html = `<div class="card"><h2 class="font-black mb-4 uppercase text-purple-700 italic border-b pb-2 text-sm">Punto de Venta</h2>
+        html = `<div class="card"><h2 class="font-black mb-4 uppercase text-purple-700 italic border-b pb-2 text-sm">Venta</h2>
             <label>Cliente</label><input id="cliV" placeholder="NOMBRE"><label>WhatsApp</label><input id="telV" type="number" placeholder="58...">
             <div class="grid grid-cols-2 gap-2">
                 <div><label>Material</label><select id="pSel"><option value="">-- Ninguno --</option>${Object.keys(window.state.inventario).map(p=>`<option value="${p}">${p}</option>`).join("")}</select></div>
@@ -116,32 +148,17 @@ window.render = function() {
         setTimeout(() => renderCarritoInner(), 10);
     }
 
-    if(window.view === "compras"){
-        html = `
-        <div class="card bg-blue-50 border-l-4 border-blue-600">
-            <h3 class="font-black text-[10px] uppercase mb-2">Entrada de Stock (Compra)</h3>
-            <label>Material</label><select id="mCom">${Object.keys(window.state.inventario).map(p=>`<option value="${p}">${p}</option>`).join("")}</select>
-            <label>Metros/Und</label><input id="qCom" type="number">
-            <label>Costo Total $</label><input id="vCom" type="number">
-            <button onclick="regCom()" class="btn w-full bg-blue-700 mt-2">Cargar Stock</button>
-        </div>
+    if(window.view === "cobranzas"){
+        html = `${window.state.ventas.filter(v=>!v.pagado).reverse().map(v=>`
+            <div class="card flex justify-between items-center border-l-4 border-amber-500">
+                <div><b class="uppercase">${v.cliente}</b><br><small class="text-red-600 font-bold italic">Resta: $${(v.total-(v.abonado||0)).toFixed(2)}</small></div>
+                <div class="flex gap-1"><button onclick="enviarWS(${v.id})" class="bg-green-600 text-white p-2 rounded text-[8px] font-bold">WS</button><button onclick="abonarV(${v.id})" class="bg-blue-600 text-white p-2 rounded text-[8px] font-bold">ABONO</button><button onclick="borrarV(${v.id})" class="bg-red-500 text-white p-2 rounded text-[8px] font-bold italic">X</button></div>
+            </div>`).join("")}`;
+    }
 
-        <div class="card bg-red-50 border-l-4 border-red-600 mt-4">
-            <h3 class="font-black text-[10px] uppercase mb-2 text-red-700">Reportar Merma (Pérdida)</h3>
-            <label>Material Dañado</label><select id="mMerma">${Object.keys(window.state.inventario).map(p=>`<option value="${p}">${p}</option>`).join("")}</select>
-            <label>Metros Perdidos</label><input id="qMerma" type="number">
-            <label>Motivo</label><input id="rMerma" placeholder="Ej: Error de impresión">
-            <button onclick="regMerma()" class="btn w-full bg-red-600 mt-2 uppercase">Descontar Merma</button>
-        </div>
-
-        <div class="grid grid-cols-2 gap-2 mt-4">
-            ${Object.entries(window.state.inventario).map(([n,i])=>`
-                <div class="card !m-0 p-3 flex justify-between items-center bg-white">
-                    <div><b class="text-[9px] uppercase text-slate-500">${n}</b><br><span class="text-blue-700 font-black text-lg">${(i.stock || 0).toFixed(2)}</span></div>
-                    <button onclick="editStock('${n}')" class="bg-slate-200 p-2 rounded-lg text-[9px] font-bold">EDIT</button>
-                </div>
-            `).join("")}
-        </div>`;
+    if(window.view === "gastos"){
+        html = `<div class="card"><label>Descripción</label><input id="gNom"><label>Monto $</label><input id="gMon" type="number"><button onclick="regG()" class="btn w-full bg-red-600 mt-2">Cargar Gasto</button></div>
+        ${window.state.gastos.slice().reverse().map(g=>`<div class="card flex justify-between py-2 border-l-4 border-red-500"><div><small class="uppercase font-bold">${g.name}</small><br><b>$${g.amount.toFixed(2)}</b></div><button onclick="borrarG(${g.id})" class="text-red-500 font-bold text-xs">X</button></div>`).join("")}`;
     }
 
     if(window.view === "reportes"){
@@ -163,51 +180,61 @@ window.render = function() {
         setTimeout(() => initReportCharts(), 100);
     }
 
-    // Mantengo el resto de vistas igual
-    if(window.view === "cobranzas"){
-        html = `${window.state.ventas.filter(v=>!v.pagado).reverse().map(v=>`
-            <div class="card flex justify-between items-center border-l-4 border-amber-500">
-                <div><b class="uppercase">${v.cliente}</b><br><small class="text-red-600 font-bold italic">Resta: $${(v.total-(v.abonado||0)).toFixed(2)}</small></div>
-                <div class="flex gap-1"><button onclick="enviarWS(${v.id})" class="bg-green-600 text-white p-2 rounded text-[8px] font-bold">WS</button><button onclick="abonarV(${v.id})" class="bg-blue-600 text-white p-2 rounded text-[8px] font-bold">ABONO</button><button onclick="borrarV(${v.id})" class="bg-red-500 text-white p-2 rounded text-[8px] font-bold italic">X</button></div>
-            </div>`).join("")}`;
-    }
-    if(window.view === "gastos"){
-        html = `<div class="card"><label>Descripción</label><input id="gNom"><label>Monto $</label><input id="gMon" type="number"><button onclick="regG()" class="btn w-full bg-red-600 mt-2">Cargar Gasto</button></div>
-        ${window.state.gastos.slice().reverse().map(g=>`<div class="card flex justify-between py-2 border-l-4 border-red-500"><div><small class="uppercase font-bold">${g.name}</small><br><b>$${g.amount.toFixed(2)}</b></div><button onclick="borrarG(${g.id})" class="text-red-500 font-bold text-xs">X</button></div>`).join("")}`;
-    }
     if(window.view === "config"){
-        html = `<div class="card"><label>Nuevo Material (Banner 1.37, Vinil 1.52, etc)</label><input id="nP"><button onclick="addC('p')" class="btn bg-blue-600 mt-2 w-full uppercase">Guardar Material</button><hr class="my-6"><label>Nuevo Servicio (Instalación, Diseño, etc)</label><input id="nS"><button onclick="addC('s')" class="btn bg-purple-600 mt-2 w-full uppercase">Guardar Servicio</button></div>`;
+        html = `
+        <div class="card">
+            <h2 class="font-black uppercase text-blue-700 mb-4 text-sm italic border-b pb-2">Configuración de Catálogo</h2>
+            <label>Nuevo Material (Ej: BANNER 1.37)</label><input id="nP">
+            <button onclick="addC('p')" class="btn bg-blue-600 mt-2 w-full uppercase">Guardar Material</button>
+            <hr class="my-6">
+            <label>Nuevo Servicio (Ej: INSTALACIÓN)</label><input id="nS">
+            <button onclick="addC('s')" class="btn bg-purple-600 mt-2 w-full uppercase">Guardar Servicio</button>
+        </div>
+        <div class="card mt-4">
+            <h3 class="font-black text-[10px] uppercase mb-2">Servicios Registrados</h3>
+            ${window.state.serviciosExtra.map((s, idx) => `
+                <div class="flex justify-between items-center py-2 border-b">
+                    <span class="text-xs font-bold uppercase">${s}</span>
+                    <button onclick="deleteServicio(${idx})" class="text-red-500 font-bold text-[10px]">ELIMINAR</button>
+                </div>
+            `).join("")}
+        </div>`;
     }
 
     app.innerHTML = html;
 };
 
-// --- LÓGICA DE MERMAS ---
-window.regMerma = async () => {
-    let m = document.getElementById("mMerma").value;
-    let q = parseFloat(document.getElementById("qMerma").value);
-    let r = document.getElementById("rMerma").value || "Sin motivo";
-
-    if(!m || q <= 0) return alert("Selecciona material y cantidad válida");
-
-    if (window.state.inventario[m].stock < q) {
-        if(!confirm("No hay suficiente stock para descontar esta merma. ¿Continuar de todos modos?")) return;
+// --- NUEVA LÓGICA DE ELIMINACIÓN ---
+window.deleteMaterial = async (name) => {
+    if(confirm(`¿Seguro que quieres eliminar "${name}"? Esto borrará su stock para siempre.`)) {
+        delete window.state.inventario[name];
+        await window.save();
+        render();
     }
-
-    window.state.inventario[m].stock -= q;
-    window.state.mermas.push({ id: Date.now(), name: m, qty: q, reason: r.toUpperCase() });
-    
-    await window.save();
-    alert("Merma descontada del inventario.");
-    render();
 };
 
-// --- RESTO DE FUNCIONES MOTOR (Ventas, Stock, etc) ---
+window.deleteServicio = async (idx) => {
+    if(confirm("¿Eliminar este servicio?")) {
+        window.state.serviciosExtra.splice(idx, 1);
+        await window.save();
+        render();
+    }
+};
+
+// --- FUNCIONES MOTOR EXISTENTES ---
+window.regMerma = async () => {
+    let m = document.getElementById("mMerma").value, q = parseFloat(document.getElementById("qMerma").value), r = document.getElementById("rMerma").value || "Sin motivo";
+    if(!m || q <= 0) return alert("Selecciona material y cantidad válida");
+    window.state.inventario[m].stock -= q;
+    window.state.mermas.push({ id: Date.now(), name: m, qty: q, reason: r.toUpperCase() });
+    await window.save(); render();
+};
+
 window.addItemCarrito = () => {
     let p = document.getElementById("pSel").value, s = document.getElementById("sSel").value, t = document.getElementById("tCli").value, c = parseFloat(document.getElementById("cQty").value) || 0;
     if(!p && !s) return;
-    let uni = "Und", pre = 12;
-    if(t === "detal") { pre = 9; uni = "m²"; } else if(t === "mayor") { pre = 10; uni = "ML"; }
+    let uni = (t === "detal") ? "m²" : (t === "mayor" ? "ML" : "Und");
+    let pre = (t === "detal") ? 9 : (t === "mayor" ? 10 : 12);
     let nom = (p && s) ? `${p} + ${s}` : (p || s);
     carritoVenta.push({ nombre: nom.toUpperCase(), qty: c, unidad: uni, sub: c * pre, esProd: !!p, prodKey: p });
     renderCarritoInner();
@@ -252,7 +279,7 @@ window.addC = async (t) => {
     await window.save(); render();
 };
 
-window.editStock = async (n) => { let v = parseFloat(prompt(`Ajustar ${n}:`, window.state.inventario[n].stock)); if(!isNaN(v)){ window.state.inventario[n].stock = v; await window.save(); render(); } };
+window.editStock = async (n) => { let v = parseFloat(prompt(`Ajustar Stock de ${n}:`, window.state.inventario[n].stock)); if(!isNaN(v)){ window.state.inventario[n].stock = v; await window.save(); render(); } };
 window.initDashChart = (v, g, c) => { new Chart(document.getElementById('chartDash'), { type: 'bar', data: { labels: ['Vendido', 'Gastado', 'Cobrado'], datasets: [{ data: [v, g, c], backgroundColor: ['#6d28d9', '#ef4444', '#22c55e'], borderRadius: 8 }] }, options: { plugins: { legend: { display: false } } } }); };
 window.initReportCharts = () => {
     let items = window.state.ventas.map(v => v.items || []).flat();
