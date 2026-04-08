@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GhostPrint ERP v7.4 - Restauración Completa</title>
+    <title>GhostPrint ERP v7.5 - Reportes Full</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -116,7 +116,7 @@ window.render = function() {
             <label>Cliente</label><input id="cliV" placeholder="NOMBRE DEL CLIENTE" oninput="renderCarritoInner()">
             <div class="grid grid-cols-2 gap-2 mt-2">
                 <select id="pSel"><option value="">-- Material --</option>${Object.keys(window.state.inventario).map(p=>`<option value="${p}">${p}</option>`).join("")}</select>
-                <select id="sSel"><option value="">-- Servicio --</option>${window.state.serviciosExtra.map(s=>`<option value="${s}">${s}</option>`).join("")}</select>
+                <select id="sSel"><option value="">-- Servicio --</option>${(window.state.serviciosExtra || []).map(s=>`<option value="${s}">${s}</option>`).join("")}</select>
             </div>
             <select id="tCli" onchange="toggleLibre()"><option value="detal">DETAL ($9) - m²</option><option value="mayor">MAYOR ($10) - ML</option><option value="libre">LIBRE - Unidad</option></select>
             <div id="divLibre" class="hidden"><label>Precio Unitario $</label><input id="pLibre" type="number" placeholder="Monto $" step="0.01"></div>
@@ -158,6 +158,12 @@ window.render = function() {
             <label>Fecha</label><input id="fCom" type="date" value="${getToday()}">
             <select id="mCom">${Object.keys(window.state.inventario).map(p=>`<option value="${p}">${p}</option>`).join("")}</select>
             <input id="qCom" type="number" placeholder="Cantidad (Metros)"><input id="vCom" type="number" placeholder="Costo total en $"><button onclick="regCom()" class="btn w-full bg-blue-700 mt-2">Registrar</button></div>
+        <div class="card border-l-4 border-red-600 mt-4"><h3 class="font-black text-[10px] uppercase mb-2 text-red-700">Merma / Error</h3>
+            <label>Fecha</label><input id="fMerma" type="date" value="${getToday()}">
+            <select id="mMerma">${Object.keys(window.state.inventario).map(p=>`<option value="${p}">${p}</option>`).join("")}</select>
+            <input id="qMerma" type="number" placeholder="Metros"><input id="rMerma" placeholder="Motivo">
+            <button onclick="regMerma()" class="btn w-full bg-red-600 mt-2">Registrar Merma</button>
+        </div>
         <div class="grid grid-cols-2 gap-2 mt-4">${Object.entries(window.state.inventario).map(([n,i])=>`<div class="card !m-0 p-3 bg-white text-center"><b class="text-[9px] uppercase text-slate-500">${n}</b><br><span class="text-blue-700 font-black text-lg">${(i.stock || 0).toFixed(2)}</span></div>`).join("")}</div>`;
     }
 
@@ -166,14 +172,33 @@ window.render = function() {
         let fGastos = (window.state.gastos || []).filter(g => { let d = new Date(g.id); return d.getMonth() == window.reportMonth && d.getFullYear() == window.reportYear; });
         let totalV = fVentas.reduce((a,b)=>a+b.total, 0);
         let totalG = fGastos.reduce((a,b)=>a+b.amount, 0);
+        
+        // Ranking Clientes
+        let clientMap = fVentas.reduce((a, b) => { a[b.cliente] = (a[b.cliente] || 0) + b.total; return a; }, {});
+        let sortedClients = Object.entries(clientMap).sort((a,b) => b[1] - a[1]).slice(0, 5);
+
         html = `
-        <div class="card bg-indigo-900 text-white p-4"><div class="grid grid-cols-2 gap-2">
-            <select onchange="window.reportMonth=this.value; render();" class="!m-0 !py-1 !text-xs">${['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'].map((m,i)=>`<option value="${i}" ${window.reportMonth==i?'selected':''}>${m}</option>`).join("")}</select>
-            <select onchange="window.reportYear=this.value; render();" class="!m-0 !py-1 !text-xs"><option value="2026" selected>2026</option><option value="2025">2025</option></select>
-        </div></div>
+        <div class="card bg-indigo-900 text-white p-4">
+            <div class="grid grid-cols-2 gap-2">
+                <select onchange="window.reportMonth=this.value; render();" class="!m-0 !py-1 !text-xs">
+                    ${['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'].map((m,i)=>`<option value="${i}" ${window.reportMonth==i?'selected':''}>${m}</option>`).join("")}
+                </select>
+                <select onchange="window.reportYear=this.value; render();" class="!m-0 !py-1 !text-xs">
+                    <option value="2026" ${window.reportYear==2026?'selected':''}>2026</option>
+                    <option value="2025" ${window.reportYear==2025?'selected':''}>2025</option>
+                </select>
+            </div>
+        </div>
         <div class="grid grid-cols-2 gap-2">
             <div class="card !m-0 text-center border-b-4 border-green-500 p-4"><p class="text-[9px] font-bold uppercase">Ventas</p><b class="text-lg">$${totalV.toFixed(2)}</b></div>
             <div class="card !m-0 text-center border-b-4 border-red-500 p-4"><p class="text-[9px] font-bold uppercase">Gastos</p><b class="text-lg text-red-600">$${totalG.toFixed(2)}</b></div>
+        </div>
+        <div class="card mt-3"><h3 class="font-black uppercase text-[10px] mb-2 border-b">Top Clientes Mes</h3>
+            ${sortedClients.map(([n, t]) => `<div class="flex justify-between py-1 text-[11px] border-b"><span>${n}</span><b>$${t.toFixed(2)}</b></div>`).join("") || '<p class="text-[10px] text-center italic">Sin datos</p>'}
+        </div>
+        <div class="card mt-3 bg-red-50"><h3 class="font-black uppercase text-red-700 text-[10px] mb-2 border-b">Mermas (Pérdidas de Material)</h3>
+            ${(window.state.mermas || []).filter(m => { let d = new Date(m.id); return d.getMonth() == window.reportMonth && d.getFullYear() == window.reportYear; })
+            .map(m => `<div class="py-1 border-b text-[10px] flex justify-between"><span><b class="opacity-50">${fmtDate(m.id)}</b> ${m.name}</span><b class="text-red-600">-${m.qty}m</b></div>`).join("") || '<p class="text-[10px] text-center italic">Sin mermas registradas</p>'}
         </div>`;
     }
 
@@ -207,7 +232,7 @@ window.toggleLibre = () => { document.getElementById("divLibre").classList.toggl
 window.addItemCarrito = () => {
     let p = document.getElementById("pSel").value, s = document.getElementById("sSel").value, t = document.getElementById("tCli").value, c = parseFloat(document.getElementById("cQty").value) || 0;
     if(!p && !s) return;
-    let uni = (t === "detal") ? "m²" : (t === "mayor" ? "ML" : "Und"), pre = (t === "detal") ? 9 : (t === "mayor") ? 10 : parseFloat(document.getElementById("pLibre").value) || 0;
+    let uni = (t === "detal") ? "m²" : (t === "mayor") ? "ML" : "Und", pre = (t === "detal") ? 9 : (t === "mayor") ? 10 : parseFloat(document.getElementById("pLibre").value) || 0;
     if(t==="libre" && pre <= 0) return alert("Ponga precio");
     carritoVenta.push({ nombre: ((p && s) ? `${p} + ${s}` : (p || s)).toUpperCase(), qty: c, unidad: uni, sub: c * pre, esProd: !!p, prodKey: p });
     renderCarritoInner();
@@ -228,6 +253,17 @@ window.procesarV = async () => {
     });
     window.state.ventas.push({id: ts, cliente: cli, telefono: document.getElementById("telV").value, total: carritoVenta.reduce((a,b)=>a+b.sub, 0), abonado: 0, pagado: false, items: [...carritoVenta]});
     await window.save(); carritoVenta = []; setView('cobranzas');
+};
+
+window.regMerma = async () => {
+    let m = document.getElementById("mMerma").value, q = parseFloat(document.getElementById("qMerma").value), r = document.getElementById("rMerma").value || "Sin motivo", f = document.getElementById("fMerma").value;
+    if(m && q > 0) { 
+        let ts = f ? new Date(f + "T12:00:00").getTime() : Date.now();
+        window.state.inventario[m].stock -= q; 
+        if(!window.state.mermas) window.state.mermas = [];
+        window.state.mermas.push({id: ts, name:m, qty:q, reason:r.toUpperCase()}); 
+        await window.save(); render(); 
+    }
 };
 
 window.regG = async () => {
