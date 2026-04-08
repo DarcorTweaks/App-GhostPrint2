@@ -116,7 +116,15 @@ window.render = function() {
             <div id="divLibre" style="display:none"><label>Indique Precio Unitario $</label><input id="pMan" type="number" value="0"></div>
             <label>Cantidad / Metros</label><input id="cQty" type="number" value="1">
             <button onclick="addItemCarrito()" class="btn w-full !bg-blue-600 mt-2">+ Agregar Item</button>
-            <div class="mt-4 border-t pt-2">${carritoVenta.map((v,i)=>`<div class="flex justify-between py-1 text-xs"><span>${v.qty}x ${v.nombre}</span><b>$${v.sub.toFixed(2)}</b></div>`).join("")}</div>
+            
+            <div class="mt-4 border-t pt-2">
+                ${carritoVenta.map((v,i)=>`
+                    <div class="flex justify-between items-center py-2 border-b text-xs">
+                        <span>${v.qty}x ${v.nombre} ($${v.sub.toFixed(2)})</span>
+                        <button onclick="removeItemCarrito(${i})" class="text-red-600 font-black px-2">X</button>
+                    </div>`).join("")}
+            </div>
+            
             <div class="p-3 bg-slate-800 text-white text-center font-bold mt-2 rounded-xl text-xl">SUBTOTAL: $${carritoVenta.reduce((a,b)=>a+b.sub,0).toFixed(2)}</div>
             <button onclick="procesarV()" class="btn w-full bg-green-600 mt-4 py-4">Generar Factura</button></div>`;
     }
@@ -129,7 +137,7 @@ window.render = function() {
                 <div class="flex gap-1">
                     <button onclick="enviarWS(${v.id})" class="bg-green-600 text-white p-2 rounded text-[8px] font-bold">WS</button>
                     <button onclick="abonarV(${v.id})" class="bg-blue-600 text-white p-2 rounded text-[8px] font-bold">ABONAR</button>
-                    <button onclick="borrarV(${v.id})" class="bg-red-500 text-white p-2 rounded text-[8px] font-bold">ELIMINAR</button>
+                    <button onclick="borrarV(${v.id})" class="bg-red-500 text-white p-2 rounded text-[8px] font-bold">BORRAR</button>
                 </div>
             </div>`).join("")}`;
     }
@@ -178,6 +186,54 @@ window.render = function() {
     app.innerHTML = html;
 };
 
+// --- LOGICA DE CARRITO ---
+window.addItemCarrito = () => {
+    let p = document.getElementById("pSel").value, s = document.getElementById("sSel").value, t = document.getElementById("tCli").value, c = parseFloat(document.getElementById("cQty").value) || 0;
+    if(!p && !s && t !== "libre") return alert("Elija un producto o servicio");
+    let nombre = (p && s) ? `${p} + ${s}` : (p || s || "MANUAL");
+    let pre = (t === "libre") ? (parseFloat(document.getElementById("pMan").value) || 0) : (p ? (t === "mayor" ? 10 : 9) : 12);
+    carritoVenta.push({ nombre: nombre.toUpperCase(), qty: c, sub: c * pre, esProd: !!p, prodKey: p });
+    render();
+};
+
+window.removeItemCarrito = (index) => {
+    carritoVenta.splice(index, 1);
+    render();
+};
+
+window.procesarV = async () => {
+    let c = document.getElementById("cliV").value, tel = document.getElementById("telV").value;
+    if(!c || carritoVenta.length === 0) return alert("Complete los datos");
+    let total = carritoVenta.reduce((a,b)=>a+b.sub, 0);
+
+    // Descuento de Stock y Tinta
+    carritoVenta.forEach(i => { 
+        if(i.esProd && i.prodKey) {
+            window.state.inventario[i.prodKey].stock -= i.qty;
+            if(window.state.inventario["TINTA"] && i.prodKey !== "TINTA") {
+                window.state.inventario["TINTA"].stock -= (i.qty / 300);
+            }
+        } 
+    });
+
+    let nuevaVenta = {id:Date.now(), cliente:c.toUpperCase(), telefono:tel, total:total, abonado:0, pagado:false, items: [...carritoVenta]};
+    window.state.ventas.push(nuevaVenta);
+    
+    // Generar Nota de Entrega para copiar
+    let nota = `🧾 *NOTA DE ENTREGA - GHOSTPRINT*\n--------------------------------\n👤 Cliente: ${nuevaVenta.cliente}\n📅 Fecha: ${new Date().toLocaleDateString()}\n--------------------------------\n`;
+    nuevaVenta.items.forEach(i => nota += `• ${i.qty}x ${i.nombre}: $${i.sub.toFixed(2)}\n`);
+    nota += `--------------------------------\n💰 *TOTAL A PAGAR: $${nuevaVenta.total.toFixed(2)}*\n--------------------------------\n¡Gracias por su preferencia! 👻`;
+    
+    carritoVenta = []; 
+    await window.save(); 
+    
+    alert("Venta Procesada. Nota de entrega generada.");
+    console.log(nota); // Se puede usar para un prompt de copiado
+    prompt("Copia tu Nota de Entrega para WhatsApp:", nota);
+    setView('cobranzas');
+};
+
+// --- FUNCIONES RESTANTES (WS, ABONOS, GRAFICAS) MANTENIDAS IGUAL ---
 function initDashChart(v, g) {
     new Chart(document.getElementById('chartDash'), {
         type: 'bar',
@@ -185,78 +241,32 @@ function initDashChart(v, g) {
         options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
     });
 }
-
 function initPieChart() {
     let items = window.state.ventas.map(v => v.items || []).flat();
     let data = items.reduce((a,b)=>{a[b.nombre]=(a[b.nombre]||0)+b.sub; return a;},{});
     new Chart(document.getElementById('chartPie'), {
         type: 'doughnut',
         data: { labels: Object.keys(data), datasets: [{ data: Object.values(data), backgroundColor: ['#6d28d9', '#22c55e', '#3b82f6', '#f59e0b', '#ec4899', '#06b6d4'] }] },
-        options: { plugins: { title: { display: true, text: 'Distribución de Ventas' } } }
+        options: { plugins: { title: { display: true, text: 'Ventas por Producto' } } }
     });
 }
-
-window.addItemCarrito = () => {
-    let p = document.getElementById("pSel").value;
-    let s = document.getElementById("sSel").value;
-    let t = document.getElementById("tCli").value;
-    let c = parseFloat(document.getElementById("cQty").value) || 0;
-    if(!p && !s && t !== "libre") return alert("Elija un producto o servicio");
-
-    let nombre = (p && s) ? `${p} + ${s}` : (p || s || "MANUAL");
-    let pre = (t === "libre") ? (parseFloat(document.getElementById("pMan").value) || 0) : (p ? (t === "mayor" ? 10 : 9) : 12);
-
-    carritoVenta.push({ nombre: nombre.toUpperCase(), qty: c, sub: c * pre, esProd: !!p, prodKey: p });
-    render();
-};
-
-window.procesarV = async () => {
-    let c = document.getElementById("cliV").value, tel = document.getElementById("telV").value;
-    if(!c || carritoVenta.length === 0) return alert("Complete los datos de la venta");
-    let total = carritoVenta.reduce((a,b)=>a+b.sub, 0);
-
-    // --- LÓGICA DE DESCUENTO DE STOCK Y TINTA ---
-    carritoVenta.forEach(i => { 
-        if(i.esProd && i.prodKey) {
-            // Descuenta material
-            window.state.inventario[i.prodKey].stock -= i.qty;
-            
-            // Lógica de Tinta (1 kit = 300m)
-            // Solo descuenta si existe el producto "TINTA" en el inventario
-            if(window.state.inventario["TINTA"] && i.prodKey !== "TINTA") {
-                let consumoTinta = i.qty / 300; 
-                window.state.inventario["TINTA"].stock -= consumoTinta;
-            }
-        } 
-    });
-
-    window.state.ventas.push({id:Date.now(), cliente:c.toUpperCase(), telefono:tel, total:total, abonado:0, pagado:false, items: [...carritoVenta]});
-    carritoVenta = []; 
-    await window.save(); 
-    setView('cobranzas');
-};
-
 window.enviarWS = (id) => {
     let v = window.state.ventas.find(x => x.id === id);
     let msg = `Hola ${v.cliente}, tu saldo en GhostPrint es: *$${(v.total-(v.abonado||0)).toFixed(2)}*.`;
     window.open(`https://api.whatsapp.com/send?phone=${v.telefono}&text=${encodeURIComponent(msg)}`, '_blank');
 };
-
 window.abonarV = async (id) => {
     let v = window.state.ventas.find(x=>x.id===id), m = parseFloat(prompt("¿Monto del abono?"));
     if(m){ v.abonado += m; if(v.abonado >= v.total) v.pagado = true; await window.save(); render(); }
 };
-
 window.regCom = async () => {
     let m = document.getElementById("mCom").value, q = parseFloat(document.getElementById("qCom").value), v = parseFloat(document.getElementById("vCom").value);
     if(q > 0) { window.state.inventario[m].stock += q; window.state.gastos.push({id:Date.now(), name:`COMPRA: ${m}`, amount: v}); await window.save(); render(); }
 };
-
 window.regG = async () => {
     let n = document.getElementById("gNom").value, m = parseFloat(document.getElementById("gMon").value);
     if(n && m) { window.state.gastos.push({id:Date.now(), name:n.toUpperCase(), amount: m}); await window.save(); render(); }
 };
-
 window.addC = async (t) => {
     if(t==='p'){
         let n=document.getElementById("nP").value.toUpperCase(), c=parseFloat(document.getElementById("cP").value)||0;
@@ -267,10 +277,9 @@ window.addC = async (t) => {
     }
     await window.save(); render();
 };
-
 window.editStock = async (n) => { let v = parseFloat(prompt(`Ajustar stock para ${n}:`, window.state.inventario[n].stock)); if(!isNaN(v)){ window.state.inventario[n].stock = v; await window.save(); render(); } };
-window.borrarV = async (id) => { if(confirm("¿Eliminar registro de venta?")){ window.state.ventas=window.state.ventas.filter(x=>x.id!==id); await window.save(); render(); } };
-window.borrarG = async (id) => { if(confirm("¿Eliminar registro de gasto?")){ window.state.gastos=window.state.gastos.filter(x=>x.id!==id); await window.save(); render(); } };
+window.borrarV = async (id) => { if(confirm("¿Eliminar registro?")){ window.state.ventas=window.state.ventas.filter(x=>x.id!==id); await window.save(); render(); } };
+window.borrarG = async (id) => { if(confirm("¿Eliminar gasto?")){ window.state.gastos=window.state.gastos.filter(x=>x.id!==id); await window.save(); render(); } };
 
 render();
 </script>
