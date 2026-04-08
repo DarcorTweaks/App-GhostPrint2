@@ -115,7 +115,7 @@ window.render = function() {
             </select>
             <div id="divLibre" style="display:none"><label>Indique Precio Unitario $</label><input id="pMan" type="number" value="0"></div>
             <label>Cantidad / Metros</label><input id="cQty" type="number" value="1">
-            <button onclick="addItemCarrito()" class="btn w-full !bg-blue-600 mt-2">+ Agregar Item</button>
+            <button onclick="addItemCarrito()" class="btn w-full !bg-blue-600 mt-2">+ Agregar a la Lista</button>
             
             <div class="mt-4 border-t pt-2">
                 ${carritoVenta.map((v,i)=>`
@@ -125,7 +125,7 @@ window.render = function() {
                     </div>`).join("")}
             </div>
             
-            <div class="p-3 bg-slate-800 text-white text-center font-bold mt-2 rounded-xl text-xl">SUBTOTAL: $${carritoVenta.reduce((a,b)=>a+b.sub,0).toFixed(2)}</div>
+            <div class="p-3 bg-slate-800 text-white text-center font-bold mt-2 rounded-xl text-xl">TOTAL LISTA: $${carritoVenta.reduce((a,b)=>a+b.sub,0).toFixed(2)}</div>
             <button onclick="procesarV()" class="btn w-full bg-green-600 mt-4 py-4">Generar Factura</button></div>`;
     }
 
@@ -189,9 +189,14 @@ window.render = function() {
 // --- LOGICA DE CARRITO ---
 window.addItemCarrito = () => {
     let p = document.getElementById("pSel").value, s = document.getElementById("sSel").value, t = document.getElementById("tCli").value, c = parseFloat(document.getElementById("cQty").value) || 0;
-    if(!p && !s && t !== "libre") return alert("Elija un producto o servicio");
-    let nombre = (p && s) ? `${p} + ${s}` : (p || s || "MANUAL");
+    
+    // Solo valida que haya algo seleccionado para AGREGAR AL CARRITO
+    if(!p && !s && t !== "libre") return alert("Seleccione un Material o Servicio antes de agregar");
+    if(c <= 0) return alert("Indique una cantidad válida");
+
+    let nombre = (p && s) ? `${p} + ${s}` : (p || s || "VENTA MANUAL");
     let pre = (t === "libre") ? (parseFloat(document.getElementById("pMan").value) || 0) : (p ? (t === "mayor" ? 10 : 9) : 12);
+    
     carritoVenta.push({ nombre: nombre.toUpperCase(), qty: c, sub: c * pre, esProd: !!p, prodKey: p });
     render();
 };
@@ -202,8 +207,13 @@ window.removeItemCarrito = (index) => {
 };
 
 window.procesarV = async () => {
-    let c = document.getElementById("cliV").value, tel = document.getElementById("telV").value;
-    if(!c || carritoVenta.length === 0) return alert("Complete los datos");
+    let c = document.getElementById("cliV").value;
+    let tel = document.getElementById("telV").value;
+
+    // CORRECCIÓN: Aquí solo validamos el CLIENTE y que el CARRITO tenga items.
+    if(!c) return alert("Escriba el nombre del cliente");
+    if(carritoVenta.length === 0) return alert("El carrito está vacío. Agregue items primero");
+
     let total = carritoVenta.reduce((a,b)=>a+b.sub, 0);
 
     // Descuento de Stock y Tinta
@@ -219,21 +229,20 @@ window.procesarV = async () => {
     let nuevaVenta = {id:Date.now(), cliente:c.toUpperCase(), telefono:tel, total:total, abonado:0, pagado:false, items: [...carritoVenta]};
     window.state.ventas.push(nuevaVenta);
     
-    // Generar Nota de Entrega para copiar
-    let nota = `🧾 *NOTA DE ENTREGA - GHOSTPRINT*\n--------------------------------\n👤 Cliente: ${nuevaVenta.cliente}\n📅 Fecha: ${new Date().toLocaleDateString()}\n--------------------------------\n`;
+    // Nota de Entrega
+    let nota = `🧾 *GHOSTPRINT - NOTA DE ENTREGA*\n--------------------------------\n👤 Cliente: ${nuevaVenta.cliente}\n📅 Fecha: ${new Date().toLocaleDateString()}\n--------------------------------\n`;
     nuevaVenta.items.forEach(i => nota += `• ${i.qty}x ${i.nombre}: $${i.sub.toFixed(2)}\n`);
-    nota += `--------------------------------\n💰 *TOTAL A PAGAR: $${nuevaVenta.total.toFixed(2)}*\n--------------------------------\n¡Gracias por su preferencia! 👻`;
+    nota += `--------------------------------\n💰 *TOTAL A PAGAR: $${nuevaVenta.total.toFixed(2)}*\n--------------------------------\n¡Gracias por su compra! 👻`;
     
     carritoVenta = []; 
     await window.save(); 
     
-    alert("Venta Procesada. Nota de entrega generada.");
-    console.log(nota); // Se puede usar para un prompt de copiado
-    prompt("Copia tu Nota de Entrega para WhatsApp:", nota);
+    alert("¡Venta Exitosa!");
+    prompt("Copie la nota para WhatsApp:", nota);
     setView('cobranzas');
 };
 
-// --- FUNCIONES RESTANTES (WS, ABONOS, GRAFICAS) MANTENIDAS IGUAL ---
+// --- RESTO DE FUNCIONES ---
 function initDashChart(v, g) {
     new Chart(document.getElementById('chartDash'), {
         type: 'bar',
@@ -247,7 +256,7 @@ function initPieChart() {
     new Chart(document.getElementById('chartPie'), {
         type: 'doughnut',
         data: { labels: Object.keys(data), datasets: [{ data: Object.values(data), backgroundColor: ['#6d28d9', '#22c55e', '#3b82f6', '#f59e0b', '#ec4899', '#06b6d4'] }] },
-        options: { plugins: { title: { display: true, text: 'Ventas por Producto' } } }
+        options: { plugins: { title: { display: true, text: 'Ventas por Categoría' } } }
     });
 }
 window.enviarWS = (id) => {
