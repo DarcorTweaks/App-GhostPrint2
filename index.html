@@ -12,7 +12,6 @@
         .card { background: white; padding: 15px; margin: 10px 0; border-radius: 18px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid #f1f1f1; }
         input, select { border: 1px solid #e2e8f0; padding: 10px; margin: 5px 0; border-radius: 10px; width: 100%; font-size: 14px; background: #f8fafc; }
         label { font-size: 9px; color: #64748b; font-weight: 800; text-transform: uppercase; display: block; margin-top: 5px; }
-        .badge-red { background: #fee2e2; color: #dc2626; padding: 2px 8px; border-radius: 8px; font-size: 9px; font-weight: 900; }
     </style>
 </head>
 <body class="bg-slate-50 font-sans text-slate-800 pb-24">
@@ -53,13 +52,30 @@ const appF = initializeApp(firebaseConfig);
 const db = getFirestore(appF);
 const docRef = doc(db, "sistema", "datos_principales");
 
+// DATOS CARGADOS DESDE TUS CAPTURAS
 const defaultState = {
     ventas: [], gastos: [], 
     inventario: {
-        "VINIL GLOSSY": {stock: 0}, "BANNER": {stock: 0}, "VINIL MATE": {stock: 0},
-        "MICROPERFORADO": {stock: 0}, "VINIL TRANSPARENTE": {stock: 0}, "TELA": {stock: 0}
+        "VINIL GLOSSY": {stock: 68, costo: 3.00},
+        "BANNER": {stock: 175, costo: 3.60},
+        "KIT DE TINTA": {stock: 400, costo: 0.45},
+        "VINIL CLEAR GLOSSY BRILLANTE": {stock: 50, costo: 3.00},
+        "VINIL CLEAR GLOSSY MATE": {stock: 50, costo: 3.00},
+        "VINIL BLACKOUT": {stock: 0, costo: 3.50},
+        "VINIL BLANCO": {stock: 0, costo: 3.00},
+        "BANNER 137": {stock: 0, costo: 3.60},
+        "BANNER 180": {stock: 0, costo: 4.00},
+        "HOJA BLANCA": {stock: 0, costo: 0.05},
+        "PAPEL FOTOGRAFICO": {stock: 0, costo: 0.50},
+        "PAPEL GLASSE": {stock: 0, costo: 0.30},
+        "RETAZOS": {stock: 0, costo: 0.00}
     },
-    serviciosExtra: ["DISEÑO GRÁFICO", "INSTALACIÓN", "IMPRESIÓN SOLA", "RECORTE DE VINIL"]
+    serviciosExtra: [
+        "DISEÑO, IMPRECION, INSTALACION", "DISEÑO", "IMPRESIÓN", 
+        "DISEÑO, IMPRESIÓN", "INSTALACION", "POP", 
+        "DESINTALACION", "ROTULACION", "LAMINADO", 
+        "LAMINADO. IMPRESIOM", "IMPRESIÓN Y CORTE", "VINIL DE ROTULACION"
+    ]
 };
 
 window.state = JSON.parse(JSON.stringify(defaultState));
@@ -82,7 +98,6 @@ window.calcularVenta = () => {
     if (t === "libre") { document.getElementById("divLibre").classList.remove("hidden"); pre = parseFloat(document.getElementById("pLibre").value) || 0; }
     else {
         document.getElementById("divLibre").classList.add("hidden");
-        // Lógica de precio: Si es material 10/9, si es servicio 12 base (editable)
         pre = (window.state.inventario[p]) ? (t === "mayor" ? 10 : 9) : 12;
     }
     document.getElementById("totalVenta").innerText = (c * pre).toFixed(2);
@@ -95,41 +110,40 @@ window.render = function() {
         let vT = window.state.ventas.reduce((a,b) => a + b.total, 0);
         let gT = window.state.gastos.reduce((a,b) => a + b.amount, 0);
         html = `<div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div class="card bg-green-50">Ingresos Brutos<br><b class="text-2xl text-green-700">$${vT.toFixed(2)}</b></div>
-            <div class="card bg-red-50">Egresos Totales<br><b class="text-2xl text-red-600">$${gT.toFixed(2)}</b></div>
-            <div class="card bg-slate-900 text-white italic">Ganancia Neta<br><b class="text-2xl text-purple-400 font-black">$${(vT-gT).toFixed(2)}</b></div>
+            <div class="card bg-green-50">Ventas<br><b class="text-2xl text-green-700">$${vT.toFixed(2)}</b></div>
+            <div class="card bg-red-50">Gastos<br><b class="text-2xl text-red-600">$${gT.toFixed(2)}</b></div>
+            <div class="card bg-slate-900 text-white italic">Ganancia<br><b class="text-2xl text-purple-400 font-black">$${(vT-gT).toFixed(2)}</b></div>
         </div><div class="card"><canvas id="mainChart" height="200"></canvas></div>`;
         setTimeout(() => {
             new Chart(document.getElementById('mainChart'), {
-                type: 'bar',
-                data: { labels: ['Ventas', 'Gastos'], datasets: [{ label: '$ USD', data: [vT, gT], backgroundColor: ['#22c55e', '#ef4444'] }] }
+                type: 'doughnut',
+                data: { labels: ['Ventas', 'Gastos'], datasets: [{ data: [vT, gT], backgroundColor: ['#4f46e5', '#ef4444'] }] }
             });
         }, 100);
     }
 
     if(window.view === "ventas"){
-        html = `<h2>FACTURAR</h2><div class="card">
+        html = `<h2>REGISTRAR VENTA</h2><div class="card">
             <label>Cliente</label><input id="cli" placeholder="Nombre">
             <label>WhatsApp</label><input id="tel" type="number" placeholder="58...">
-            <label>Seleccionar Ítem</label>
+            <label>Producto / Servicio</label>
             <select id="prod" onchange="calcularVenta()">
-                <option value="">-- SELECCIONE --</option>
-                <optgroup label="MATERIALES (Descontar Stock)">
+                <optgroup label="PRODUCTOS (Inventario)">
                     ${Object.keys(window.state.inventario).map(p=>`<option value="${p}">${p}</option>`).join("")}
                 </optgroup>
-                <optgroup label="SERVICIOS (Solo Mano de Obra)">
+                <optgroup label="SERVICIOS">
                     ${window.state.serviciosExtra.map(s=>`<option value="${s}">${s}</option>`).join("")}
                 </optgroup>
             </select>
-            <label>Tarifa</label><select id="tipoCli" onchange="calcularVenta()"><option value="mayor">Mayorista ($10)</option><option value="detal">Detal ($9)</option><option value="libre">Manual</option></select>
-            <div id="divLibre" class="hidden"><label>Monto $</label><input id="pLibre" type="number" oninput="calcularVenta()"></div>
+            <label>Tarifa</label><select id="tipoCli" onchange="calcularVenta()"><option value="mayor">Mayorista</option><option value="detal">Detal</option><option value="libre">Manual</option></select>
+            <div id="divLibre" class="hidden"><label>Precio Manual $</label><input id="pLibre" type="number" oninput="calcularVenta()"></div>
             <label>Cantidad</label><input id="cant" type="number" value="1" oninput="calcularVenta()">
-            <div class="p-4 bg-slate-100 rounded-xl my-4 text-center font-black">TOTAL: $<span id="totalVenta">0.00</span></div>
-            <button onclick="regVenta()" class="btn w-full bg-indigo-700 py-4 shadow-xl">Confirmar Venta</button></div>`;
+            <div class="p-4 bg-slate-100 rounded-xl my-4 text-center font-bold text-xl">TOTAL: $<span id="totalVenta">0.00</span></div>
+            <button onclick="regVenta()" class="btn w-full bg-green-600 py-4 shadow-xl">Procesar Venta</button></div>`;
     }
 
     if(window.view === "cobranzas"){
-        html = `<h2>DEUDAS</h2>`;
+        html = `<h2>CUENTAS POR COBRAR</h2>`;
         window.state.ventas.filter(v=>!v.pagado).slice().reverse().forEach(v => {
             html += `<div class="card border-l-8 border-amber-500 flex justify-between items-center">
                 <div><b>${v.cliente}</b><br><small class="text-red-600 font-bold">DEBE: $${(v.total-(v.abonado||0)).toFixed(2)}</small></div>
@@ -137,61 +151,59 @@ window.render = function() {
                     <button onclick="enviarWS(${v.id})" class="bg-green-600 text-white p-2 rounded-lg text-[8px]">WS</button>
                     <button onclick="abonar(${v.id})" class="bg-blue-600 text-white p-2 rounded-lg text-[8px]">ABONAR</button>
                     <button onclick="liquidar(${v.id})" class="bg-green-700 text-white p-2 rounded-lg text-[8px]">PAGÓ</button>
-                    <button onclick="borrarV(${v.id})" class="bg-red-500 text-white p-2 rounded-lg text-[8px]">X</button>
                 </div></div>`;
         });
     }
 
     if(window.view === "compras"){
-        html = `<h2>COMPRAS DE MATERIAL</h2><div class="card bg-blue-50">
+        html = `<h2>ENTRADA DE MATERIAL</h2><div class="card bg-blue-50">
             <label>Material</label><select id="matC">${Object.keys(window.state.inventario).map(p=>`<option value="${p}">${p}</option>`).join("")}</select>
-            <label>Cantidad (Metros)</label><input id="canC" type="number">
-            <label>Costo Total $</label><input id="monC" type="number">
-            <button onclick="regCompra()" class="btn w-full bg-blue-700 mt-2">Sumar Stock</button></div>
-            <h3 class="mt-4 font-bold">INVENTARIO REAL</h3><div class="grid grid-cols-2 gap-2">${Object.entries(window.state.inventario).map(([n, i]) => `
-            <div class="card !m-0"><b>${n}</b><br><span class="text-xl">${(i.stock||0).toFixed(2)}</span>m</div>`).join("")}</div>`;
+            <label>Cantidad</label><input id="canC" type="number">
+            <label>Costo Total de Compra $</label><input id="monC" type="number">
+            <button onclick="regCompra()" class="btn w-full bg-blue-700 mt-2">Cargar Stock</button></div>
+            <h3 class="mt-4 font-bold">STOCK ACTUAL</h3><div class="grid grid-cols-2 gap-2 text-[10px] uppercase">
+            ${Object.entries(window.state.inventario).map(([n, i]) => `<div class="card !m-0"><b>${n}</b><br><span class="text-lg text-blue-700">${(i.stock||0).toFixed(2)}</span></div>`).join("")}
+            </div>`;
     }
 
     if(window.view === "gastos"){
-        html = `<h2>OTROS GASTOS</h2><div class="card">
-            <label>Concepto</label><input id="gn" placeholder="Ej: Pago Local">
+        html = `<h2>GASTOS DE CAJA</h2><div class="card">
+            <label>Descripción</label><input id="gn" placeholder="Ej: Comida">
             <label>Monto $</label><input id="ga" type="number">
             <button onclick="regGasto()" class="btn w-full bg-red-600 mt-2">Registrar</button></div>
-            ${window.state.gastos.slice().reverse().map(g=>`<div class="card py-2 flex justify-between"><div><small>${g.name}</small><br><b>$${g.amount}</b></div><button onclick="borrarGasto(${g.id})" class="text-red-500">X</button></div>`).join("")}`;
+            ${window.state.gastos.slice().reverse().map(g=>`<div class="card py-2 flex justify-between"><div><small>${g.name}</small><br><b>$${g.amount}</b></div><button onclick="borrarGasto(${g.id})" class="text-red-500 font-bold">X</button></div>`).join("")}`;
     }
 
     if(window.view === "config"){
-        html = `<h2>CONFIGURACIÓN</h2>
-            <div class="card"><label>Nuevo Material</label><input id="newMat"><button onclick="addItem('mat')" class="btn bg-blue-600 mt-2">Agregar</button></div>
-            <div class="card"><label>Nuevo Servicio</label><input id="newServ"><button onclick="addItem('serv')" class="btn bg-purple-600 mt-2">Agregar</button></div>
-            <div class="card"><h3>Gestionar</h3>
-            ${Object.keys(window.state.inventario).map(m=>`<div class="flex justify-between py-1 border-b"><small>${m}</small><button onclick="deleteItem('mat','${m}')" class="text-red-400">Eliminar</button></div>`).join("")}
-            ${window.state.serviciosExtra.map(s=>`<div class="flex justify-between py-1 border-b"><small>${s}</small><button onclick="deleteItem('serv','${s}')" class="text-red-400">Eliminar</button></div>`).join("")}
-            </div>`;
+        html = `<h2>GESTIÓN DE CATÁLOGO</h2>
+            <div class="card"><label>Nuevo Material</label><input id="newMat"><label>Costo Unitario</label><input id="newCost" type="number"><button onclick="addItem('mat')" class="btn bg-blue-600 mt-2">Guardar Material</button></div>
+            <div class="card"><label>Nuevo Servicio</label><input id="newServ"><button onclick="addItem('serv')" class="btn bg-purple-600 mt-2">Guardar Servicio</button></div>`;
     }
 
     if(window.view === "reportes"){
         let vT = window.state.ventas.reduce((a,b)=>a+b.total,0);
         let gT = window.state.gastos.reduce((a,b)=>a+b.amount,0);
-        html = `<h2>BALANCE DETALLADO</h2>
-            <div class="card bg-green-100 border-green-300"><b>Ventas Brutas:</b> $${vT.toFixed(2)}</div>
-            <div class="card bg-red-100 border-red-300"><b>Gastos/Compras:</b> $${gT.toFixed(2)}</div>
-            <div class="card bg-slate-800 text-white font-black italic"><b>UTILIDAD FINAL: $${(vT-gT).toFixed(2)}</b></div>
-            <div class="card"><h3>TOP CLIENTES</h3>
-            ${Object.entries(window.state.ventas.reduce((a,b)=>{a[b.cliente]=(a[b.cliente]||0)+b.total;return a;},{})).sort((a,b)=>b[1]-a[1]).map(([n,t])=>`<div class="flex justify-between py-1 border-b"><span>${n}</span><b>$${t.toFixed(2)}</b></div>`).join("")}
+        html = `<h2>REPORTE FINANCIERO</h2>
+            <div class="card bg-indigo-900 text-white p-6">
+                <p>Ingresos: $${vT.toFixed(2)}</p>
+                <p>Gastos: $${gT.toFixed(2)}</p>
+                <hr class="my-2 border-indigo-700">
+                <p class="text-xl font-black">UTILIDAD: $${(vT-gT).toFixed(2)}</p>
             </div>`;
     }
 
     app.innerHTML = html;
-    if(window.view === "ventas") calcularVenta();
 };
 
 window.regVenta = async () => {
     let c = document.getElementById("cli").value, t = parseFloat(document.getElementById("totalVenta").innerText), p = document.getElementById("prod").value, can = parseFloat(document.getElementById("cant").value);
     if(c && t > 0){
         if(window.state.inventario[p]) {
-            if(window.state.inventario[p].stock < can) return alert("ERROR: Stock insuficiente de " + p);
+            if(window.state.inventario[p].stock < can) return alert("STOCK INSUFICIENTE");
             window.state.inventario[p].stock -= can;
+            // Registrar costo automático de lo vendido como un gasto de material
+            let costoVenta = window.state.inventario[p].costo * can;
+            window.state.gastos.push({id:Date.now()+1, name:`COSTO MATERIAL: ${p}`, amount:costoVenta, fecha:new Date().toISOString()});
         }
         window.state.ventas.push({id:Date.now(), cliente:c.toUpperCase(), producto:p, total:t, abonado:0, pagado:false, telefono:document.getElementById("tel").value, fecha:new Date().toISOString()});
         await window.save(); setView('cobranzas');
@@ -202,7 +214,7 @@ window.regCompra = async () => {
     let m = document.getElementById("matC").value, q = parseFloat(document.getElementById("canC").value), mon = parseFloat(document.getElementById("monC").value);
     if(q > 0 && mon > 0){
         window.state.inventario[m].stock += q;
-        window.state.gastos.push({id:Date.now(), name: `COMPRA: ${m} (${q}m)`, amount: mon, fecha: new Date().toISOString()});
+        window.state.gastos.push({id:Date.now(), name: `COMPRA: ${m}`, amount: mon, fecha: new Date().toISOString()});
         await window.save(); render();
     }
 };
@@ -213,20 +225,20 @@ window.regGasto = async () => {
 };
 
 window.addItem = async (tipo) => {
-    if(tipo === 'mat') { let n = document.getElementById("newMat").value.toUpperCase(); if(n) window.state.inventario[n] = {stock:0}; }
-    else { let n = document.getElementById("newServ").value.toUpperCase(); if(n) window.state.serviciosExtra.push(n); }
-    await window.save(); render();
-};
-
-window.deleteItem = async (tipo, item) => {
-    if(tipo === 'mat') delete window.state.inventario[item];
-    else window.state.serviciosExtra = window.state.serviciosExtra.filter(s => s !== item);
+    if(tipo === 'mat') { 
+        let n = document.getElementById("newMat").value.toUpperCase(); 
+        let c = parseFloat(document.getElementById("newCost").value) || 0;
+        if(n) window.state.inventario[n] = {stock:0, costo:c}; 
+    } else { 
+        let n = document.getElementById("newServ").value.toUpperCase(); 
+        if(n) window.state.serviciosExtra.push(n); 
+    }
     await window.save(); render();
 };
 
 window.enviarWS = (id) => {
     let v = window.state.ventas.find(x => x.id === id);
-    if(v.telefono) window.open(`https://api.whatsapp.com/send?phone=${v.telefono}&text=Hola *${v.cliente}*, tienes un pendiente de *$${(v.total-(v.abonado||0)).toFixed(2)}* en *GhostPrint* 👻.`, '_blank');
+    if(v.telefono) window.open(`https://api.whatsapp.com/send?phone=${v.telefono}&text=Hola *${v.cliente}*, tienes un saldo de *$${(v.total-(v.abonado||0)).toFixed(2)}* en *GhostPrint* 👻.`, '_blank');
 };
 
 window.abonar = async (id) => {
@@ -235,7 +247,6 @@ window.abonar = async (id) => {
 };
 
 window.liquidar = async (id) => { let v = window.state.ventas.find(x => x.id === id); v.abonado = v.total; v.pagado = true; await window.save(); render(); };
-window.borrarV = async (id) => { if(confirm("¿Borrar?")){ window.state.ventas = window.state.ventas.filter(v=>v.id!==id); await window.save(); render(); } };
 window.borrarGasto = async (id) => { if(confirm("¿Borrar?")){ window.state.gastos = window.state.gastos.filter(g=>g.id!==id); await window.save(); render(); } };
 
 render();
