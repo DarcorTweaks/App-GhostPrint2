@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GhostPrint ERP v7.5 - Reportes Full</title>
+    <title>GhostPrint ERP v7.6 - Stock Fix</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -172,11 +172,8 @@ window.render = function() {
         let fGastos = (window.state.gastos || []).filter(g => { let d = new Date(g.id); return d.getMonth() == window.reportMonth && d.getFullYear() == window.reportYear; });
         let totalV = fVentas.reduce((a,b)=>a+b.total, 0);
         let totalG = fGastos.reduce((a,b)=>a+b.amount, 0);
-        
-        // Ranking Clientes
         let clientMap = fVentas.reduce((a, b) => { a[b.cliente] = (a[b.cliente] || 0) + b.total; return a; }, {});
         let sortedClients = Object.entries(clientMap).sort((a,b) => b[1] - a[1]).slice(0, 5);
-
         html = `
         <div class="card bg-indigo-900 text-white p-4">
             <div class="grid grid-cols-2 gap-2">
@@ -196,9 +193,9 @@ window.render = function() {
         <div class="card mt-3"><h3 class="font-black uppercase text-[10px] mb-2 border-b">Top Clientes Mes</h3>
             ${sortedClients.map(([n, t]) => `<div class="flex justify-between py-1 text-[11px] border-b"><span>${n}</span><b>$${t.toFixed(2)}</b></div>`).join("") || '<p class="text-[10px] text-center italic">Sin datos</p>'}
         </div>
-        <div class="card mt-3 bg-red-50"><h3 class="font-black uppercase text-red-700 text-[10px] mb-2 border-b">Mermas (Pérdidas de Material)</h3>
+        <div class="card mt-3 bg-red-50"><h3 class="font-black uppercase text-red-700 text-[10px] mb-2 border-b">Mermas (Pérdidas)</h3>
             ${(window.state.mermas || []).filter(m => { let d = new Date(m.id); return d.getMonth() == window.reportMonth && d.getFullYear() == window.reportYear; })
-            .map(m => `<div class="py-1 border-b text-[10px] flex justify-between"><span><b class="opacity-50">${fmtDate(m.id)}</b> ${m.name}</span><b class="text-red-600">-${m.qty}m</b></div>`).join("") || '<p class="text-[10px] text-center italic">Sin mermas registradas</p>'}
+            .map(m => `<div class="py-1 border-b text-[10px] flex justify-between"><span><b class="opacity-50">${fmtDate(m.id)}</b> ${m.name}</span><b class="text-red-600">-${m.qty}m</b></div>`).join("") || '<p class="text-[10px] text-center italic">Sin mermas</p>'}
         </div>`;
     }
 
@@ -215,7 +212,16 @@ window.render = function() {
     app.innerHTML = html;
 };
 
-// --- LOGICA DE PROCESOS ---
+// --- LOGICA REINTEGRADA ---
+window.editStock = async (n) => { 
+    let v = parseFloat(prompt(`Ajustar stock de ${n}:`, window.state.inventario[n].stock)); 
+    if(!isNaN(v)){ 
+        window.state.inventario[n].stock = v; 
+        await window.save(); 
+        render(); 
+    } 
+};
+
 window.renderCarritoInner = () => {
     let div = document.getElementById("listaCarrito"), totalDiv = document.getElementById("totalVenta");
     let cliente = document.getElementById("cliV")?.value.toUpperCase() || "";
@@ -284,7 +290,6 @@ window.addC = async (t) => {
 
 window.deleteMaterial = async (n) => { if(confirm(`¿Borrar ${n}?`)) { delete window.state.inventario[n]; await window.save(); render(); } };
 window.deleteServicio = async (i) => { if(confirm("¿Borrar?")) { window.state.serviciosExtra.splice(i,1); await window.save(); render(); } };
-window.editStock = async (n) => { let v = parseFloat(prompt(`Stock de ${n}:`, window.state.inventario[n].stock)); if(!isNaN(v)){ window.state.inventario[n].stock = v; await window.save(); render(); } };
 window.abonarV = async (id) => { let v = window.state.ventas.find(x=>x.id===id), m = parseFloat(prompt("¿Monto?")); if(m){ v.abonado += m; if(v.abonado >= v.total) v.pagado = true; await window.save(); render(); } };
 
 window.borrarV = async (id) => {
