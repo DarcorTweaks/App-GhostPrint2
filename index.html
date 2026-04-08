@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GhostPrint ERP v3 - Stock Fix</title>
+    <title>GhostPrint ERP v3 - Ink Precision</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -96,7 +96,7 @@ window.render = function() {
     }
 
     if(window.view === "ventas"){
-        html = `<div class="card"><h2 class="font-black mb-4 uppercase text-purple-700">Punto de Venta</h2>
+        html = `<div class="card"><h2 class="font-black mb-4 uppercase text-purple-700 text-center">Punto de Venta</h2>
             <label>Cliente</label><input id="cliV" placeholder="NOMBRE">
             <label>WhatsApp</label><input id="telV" type="number" placeholder="58...">
             <div class="grid grid-cols-2 gap-2">
@@ -113,50 +113,51 @@ window.render = function() {
             <label>Cantidad (Metros)</label><input id="cQty" type="number" value="1">
             <button onclick="addItemCarrito()" class="btn w-full !bg-blue-600 mt-2">+ AGREGAR</button>
             <div id="listaCarrito" class="mt-4 border-t pt-2"></div>
-            <div id="totalVenta" class="p-3 bg-slate-800 text-white text-center font-bold mt-2 rounded-xl text-xl">TOTAL: $0.00</div>
-            <button onclick="procesarV()" class="btn w-full bg-green-600 mt-4 py-4">Finalizar Venta</button></div>`;
+            <div id="totalVenta" class="p-3 bg-slate-800 text-white text-center font-bold mt-2 rounded-xl text-xl uppercase">Total: $0.00</div>
+            <button onclick="procesarV()" class="btn w-full bg-green-600 mt-4 py-4 font-black">FINALIZAR VENTA</button></div>`;
         setTimeout(() => renderCarritoInner(), 10);
     }
 
     if(window.view === "cobranzas"){
         html = `${window.state.ventas.filter(v=>!v.pagado).reverse().map(v=>`
             <div class="card flex justify-between items-center border-l-4 border-amber-500">
-                <div><b class="uppercase">${v.cliente}</b><br><small class="text-red-600 font-bold">Debe: $${(v.total-(v.abonado||0)).toFixed(2)}</small></div>
+                <div><b class="uppercase">${v.cliente}</b><br><small class="text-red-600 font-bold">Resta: $${(v.total-(v.abonado||0)).toFixed(2)}</small></div>
                 <div class="flex gap-1">
                     <button onclick="enviarWS(${v.id})" class="bg-green-600 text-white p-2 rounded text-[8px] font-bold">WS</button>
                     <button onclick="abonarV(${v.id})" class="bg-blue-600 text-white p-2 rounded text-[8px] font-bold">ABONAR</button>
-                    <button onclick="borrarV(${v.id})" class="bg-red-500 text-white p-2 rounded text-[8px] font-bold">X</button>
+                    <button onclick="borrarV(${v.id})" class="bg-red-500 text-white p-2 rounded text-[8px] font-bold uppercase">Borrar</button>
                 </div>
             </div>`).join("")}`;
     }
 
     if(window.view === "compras"){
         html = `<div class="card bg-blue-50">
+            <h2 class="font-bold text-blue-800 uppercase text-xs mb-2">Ingreso Almacén</h2>
             <label>Material</label><select id="mCom">${Object.keys(window.state.inventario).map(p=>`<option value="${p}">${p}</option>`).join("")}</select>
-            <label>Metros/Kits</label><input id="qCom" type="number"><label>Costo Inversión $</label><input id="vCom" type="number">
-            <button onclick="regCom()" class="btn w-full bg-blue-700 mt-2">Cargar</button>
+            <label>Metros/Unidades</label><input id="qCom" type="number"><label>Costo $</label><input id="vCom" type="number">
+            <button onclick="regCom()" class="btn w-full bg-blue-700 mt-2">Cargar Inventario</button>
         </div>
         <div class="grid grid-cols-2 gap-2 mt-4">
             ${Object.entries(window.state.inventario).map(([n,i])=>`
             <div class="card !m-0 p-3 flex justify-between items-center">
-                <div><b class="text-[10px] uppercase">${n}</b><br><span class="text-blue-700 font-bold text-lg">${(i.stock || 0).toFixed(2)}</span></div>
-                <button onclick="editStock('${n}')" class="text-blue-500 font-bold text-[10px]">FIX</button>
+                <div><b class="text-[9px] uppercase">${n}</b><br><span class="text-blue-700 font-bold text-lg">${(i.stock || 0).toFixed(2)}</span></div>
+                <button onclick="editStock('${n}')" class="text-blue-500 font-bold text-[9px]">EDIT</button>
             </div>`).join("")}
         </div>`;
     }
 
     if(window.view === "gastos"){
-        html = `<div class="card"><label>Descripción</label><input id="gNom"><label>Monto $</label><input id="gMon" type="number"><button onclick="regG()" class="btn w-full bg-red-600 mt-2">Guardar Gasto</button></div>
-        ${window.state.gastos.slice().reverse().map(g=>`<div class="card flex justify-between py-2 border-l-4 border-red-500"><div><small class="uppercase font-bold">${g.name}</small><br><b>$${g.amount.toFixed(2)}</b></div><button onclick="borrarG(${g.id})" class="text-red-500 font-bold text-xs">X</button></div>`).join("")}`;
+        html = `<div class="card"><label>Descripción</label><input id="gNom"><label>Monto $</label><input id="gMon" type="number"><button onclick="regG()" class="btn w-full bg-red-600 mt-2">Registrar Gasto</button></div>
+        ${window.state.gastos.slice().reverse().map(g=>`<div class="card flex justify-between py-2 border-l-4 border-red-500"><div><small class="uppercase font-bold">${g.name}</small><br><b>$${g.amount.toFixed(2)}</b></div><button onclick="borrarG(${g.id})" class="text-red-500 font-bold text-xs uppercase">Borrar</button></div>`).join("")}`;
     }
 
     if(window.view === "config"){
-        html = `<div class="card"><label>Nuevo Material</label><input id="nP"><button onclick="addC('p')" class="btn bg-blue-600 mt-2 w-full">Añadir</button>
-            <hr class="my-6"><label>Nuevo Servicio</label><input id="nS"><button onclick="addC('s')" class="btn bg-purple-600 mt-2 w-full">Añadir</button></div>`;
+        html = `<div class="card"><label>Material/Insumo</label><input id="nP"><button onclick="addC('p')" class="btn bg-blue-600 mt-2 w-full uppercase">Guardar Material</button>
+            <hr class="my-6"><label>Servicio</label><input id="nS"><button onclick="addC('s')" class="btn bg-purple-600 mt-2 w-full uppercase">Guardar Servicio</button></div>`;
     }
 
     if(window.view === "reportes"){
-        html = `<div class="card bg-indigo-900 text-white italic">DASHBOARD GHOSTPRINT</div><div class="card"><canvas id="chartPie" height="250"></canvas></div>`;
+        html = `<div class="card bg-indigo-900 text-white italic font-bold">ANÁLISIS DE NEGOCIO</div><div class="card"><canvas id="chartPie" height="250"></canvas></div>`;
         setTimeout(() => initPieChart(), 100);
     }
 
@@ -166,7 +167,7 @@ window.render = function() {
 function renderCarritoInner() {
     let div = document.getElementById("listaCarrito"), totalDiv = document.getElementById("totalVenta");
     if(!div) return;
-    div.innerHTML = carritoVenta.map((v,i)=>`<div class="flex justify-between py-1 text-xs border-b"><span>${v.qty}x ${v.nombre}</span><button onclick="removeItemCarrito(${i})" class="text-red-500 font-bold px-2">X</button></div>`).join("");
+    div.innerHTML = carritoVenta.map((v,i)=>`<div class="flex justify-between py-1 text-xs border-b"><span><b>${v.qty}x</b> ${v.nombre}</span><button onclick="removeItemCarrito(${i})" class="text-red-500 font-bold px-2">X</button></div>`).join("");
     totalDiv.innerText = `TOTAL: $${carritoVenta.reduce((a,b)=>a+b.sub,0).toFixed(2)}`;
 }
 
@@ -184,17 +185,18 @@ window.removeItemCarrito = (i) => { carritoVenta.splice(i, 1); renderCarritoInne
 window.procesarV = async () => {
     let cliente = document.getElementById("cliV").value.toUpperCase();
     let tel = document.getElementById("telV").value;
-    if(!cliente || carritoVenta.length === 0) return alert("Falta cliente o productos");
+    if(!cliente || carritoVenta.length === 0) return alert("Falta el Cliente o la Lista está vacía");
 
-    // DESCUENTO REAL DE STOCK Y TINTA
+    // LÓGICA DE DESCUENTO 1 A 1
     carritoVenta.forEach(i => {
         if (i.esProd && i.prodKey && window.state.inventario[i.prodKey]) {
-            // Resta el material seleccionado
+            // 1. Resta el material (Vinil, Banner, etc.)
             window.state.inventario[i.prodKey].stock -= i.qty;
             
-            // Si el material no es TINTA, descuenta el proporcional de tinta
+            // 2. Descuento de Tinta 1 a 1 (1 metro = 1 unidad de tinta)
+            // Solo si el material no es la propia tinta
             if (i.prodKey !== "TINTA" && window.state.inventario["TINTA"]) {
-                window.state.inventario["TINTA"].stock -= (i.qty / 300);
+                window.state.inventario["TINTA"].stock -= i.qty; 
             }
         }
     });
@@ -207,17 +209,17 @@ window.procesarV = async () => {
     nuevaVenta.items.forEach(i => nota += `• ${i.qty}x ${i.nombre}: $${i.sub.toFixed(2)}\n`);
     nota += `------------------\n💰 *TOTAL: $${nuevaVenta.total.toFixed(2)}*`;
 
-    await window.save(); // GUARDA CAMBIOS EN FIREBASE
+    await window.save(); 
     carritoVenta = [];
-    alert("Venta y Descuento de Stock realizados");
-    prompt("Nota WhatsApp:", nota);
+    alert("¡Venta Exitosa! Stock y Tinta actualizados.");
+    prompt("Nota para enviar:", nota);
     setView('cobranzas');
 };
 
 function initDashChart(v, g) {
     new Chart(document.getElementById('chartDash'), {
         type: 'bar',
-        data: { labels: ['Ventas', 'Gastos'], datasets: [{ data: [v, g], backgroundColor: ['#22c55e', '#ef4444'] }] }
+        data: { labels: ['Ventas', 'Gastos'], datasets: [{ label: '$', data: [v, g], backgroundColor: ['#22c55e', '#ef4444'], borderRadius: 8 }] }
     });
 }
 function initPieChart() {
@@ -225,16 +227,16 @@ function initPieChart() {
     let data = items.reduce((a,b)=>{a[b.nombre]=(a[b.nombre]||0)+b.sub; return a;},{});
     new Chart(document.getElementById('chartPie'), {
         type: 'doughnut',
-        data: { labels: Object.keys(data), datasets: [{ data: Object.values(data), backgroundColor: ['#6d28d9', '#22c55e', '#3b82f6', '#f59e0b'] }] }
+        data: { labels: Object.keys(data), datasets: [{ data: Object.values(data), backgroundColor: ['#6d28d9', '#22c55e', '#3b82f6', '#f59e0b', '#ec4899'] }] }
     });
 }
 window.enviarWS = (id) => {
     let v = window.state.ventas.find(x => x.id === id);
-    let msg = `Hola ${v.cliente}, resta pagar: *$${(v.total-(v.abonado||0)).toFixed(2)}*.`;
+    let msg = `Hola ${v.cliente}, tu resta en GhostPrint es: *$${(v.total-(v.abonado||0)).toFixed(2)}*.`;
     window.open(`https://api.whatsapp.com/send?phone=${v.telefono}&text=${encodeURIComponent(msg)}`, '_blank');
 };
 window.abonarV = async (id) => {
-    let v = window.state.ventas.find(x=>x.id===id), m = parseFloat(prompt("¿Monto?"));
+    let v = window.state.ventas.find(x=>x.id===id), m = parseFloat(prompt("¿Monto del abono?"));
     if(m){ v.abonado += m; if(v.abonado >= v.total) v.pagado = true; await window.save(); render(); }
 };
 window.regCom = async () => {
@@ -255,9 +257,9 @@ window.addC = async (t) => {
     }
     await window.save(); render();
 };
-window.editStock = async (n) => { let v = parseFloat(prompt(`Ajustar ${n}:`, window.state.inventario[n].stock)); if(!isNaN(v)){ window.state.inventario[n].stock = v; await window.save(); render(); } };
-window.borrarV = async (id) => { if(confirm("¿Borrar?")){ window.state.ventas=window.state.ventas.filter(x=>x.id!==id); await window.save(); render(); } };
-window.borrarG = async (id) => { if(confirm("¿Borrar?")){ window.state.gastos=window.state.gastos.filter(x=>x.id!==id); await window.save(); render(); } };
+window.editStock = async (n) => { let v = parseFloat(prompt(`Ajustar stock de ${n}:`, window.state.inventario[n].stock)); if(!isNaN(v)){ window.state.inventario[n].stock = v; await window.save(); render(); } };
+window.borrarV = async (id) => { if(confirm("¿Borrar venta?")){ window.state.ventas=window.state.ventas.filter(x=>x.id!==id); await window.save(); render(); } };
+window.borrarG = async (id) => { if(confirm("¿Borrar gasto?")){ window.state.gastos=window.state.gastos.filter(x=>x.id!==id); await window.save(); render(); } };
 
 render();
 </script>
