@@ -19,9 +19,6 @@
         label { font-size: 10px; color: #64748b; font-weight: 800; text-transform: uppercase; display: block; margin-top: 8px; }
         header { background: linear-gradient(to right, #4c1d95, #000); color: white; padding: 16px; display: flex; justify-content: space-between; position: sticky; top: 0; z-index: 50; }
         nav { padding: 8px; display: flex; gap: 8px; overflow-x: auto; background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px); position: sticky; top: 72px; z-index: 40; }
-        .table-ghost { width: 100%; border-collapse: collapse; font-size: 12px; }
-        .table-ghost th { background: #f1f5f9; padding: 10px; text-align: left; text-transform: uppercase; color: #64748b; }
-        .table-ghost td { padding: 10px; border-bottom: 1px solid #f1f1f1; }
     </style>
 </head>
 <body>
@@ -89,10 +86,9 @@ window.render = function() {
     let gT = window.state.gastos.reduce((a,b)=>a+b.amount,0);
 
     if(window.view === "dashboard"){
-        html = `
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
-            <div class="card !m-0 bg-green-50 border-b-4 border-green-500">Ventas Total<br><b class="text-2xl">$${vT.toFixed(2)}</b></div>
-            <div class="card !m-0 bg-red-50 border-b-4 border-red-500">Gastos Total<br><b class="text-2xl">$${gT.toFixed(2)}</b></div>
+        html = `<div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
+            <div class="card !m-0 bg-green-50 border-b-4 border-green-500">Ventas<br><b class="text-2xl">$${vT.toFixed(2)}</b></div>
+            <div class="card !m-0 bg-red-50 border-b-4 border-red-500">Egresos<br><b class="text-2xl">$${gT.toFixed(2)}</b></div>
             <div class="card !m-0 bg-slate-900 text-white italic">Balance<br><b class="text-2xl text-purple-400">$${(vT-gT).toFixed(2)}</b></div>
         </div>
         <div class="card"><canvas id="chartDash" height="200"></canvas></div>`;
@@ -101,84 +97,62 @@ window.render = function() {
 
     if(window.view === "ventas"){
         html = `<div class="card"><h2 class="font-black mb-4 uppercase text-purple-700">Punto de Venta</h2>
-            <label>Cliente</label><input id="cliV" placeholder="Nombre del Cliente">
-            <label>WhatsApp</label><input id="telV" type="number" placeholder="Ej: 584120000000">
+            <label>Nombre del Cliente</label><input id="cliV" placeholder="CLIENTE">
+            <label>WhatsApp</label><input id="telV" type="number" placeholder="58...">
             <div class="grid grid-cols-2 gap-2">
-                <div><label>Material</label><select id="pSel"><option value="">-- Seleccionar --</option>${Object.keys(window.state.inventario).map(p=>`<option value="${p}">${p}</option>`).join("")}</select></div>
-                <div><label>Servicio</label><select id="sSel"><option value="">-- Seleccionar --</option>${window.state.serviciosExtra.map(s=>`<option value="${s}">${s}</option>`).join("")}</select></div>
+                <div><label>Material</label><select id="pSel"><option value="">-- Ver --</option>${Object.keys(window.state.inventario).map(p=>`<option value="${p}">${p}</option>`).join("")}</select></div>
+                <div><label>Servicio</label><select id="sSel"><option value="">-- Ver --</option>${window.state.serviciosExtra.map(s=>`<option value="${s}">${s}</option>`).join("")}</select></div>
             </div>
-            <label>Tarifa Aplicada</label>
+            <label>Tarifa</label>
             <select id="tCli" onchange="document.getElementById('divLibre').style.display = (this.value==='libre'?'block':'none')">
-                <option value="detal">Precio Detal ($9)</option>
-                <option value="mayor">Precio Mayor ($10)</option>
-                <option value="libre">Precio Manual (Libre)</option>
+                <option value="detal">Detal ($9)</option>
+                <option value="mayor">Mayor ($10)</option>
+                <option value="libre">Manual</option>
             </select>
-            <div id="divLibre" style="display:none"><label>Indique Precio Unitario $</label><input id="pMan" type="number" value="0"></div>
-            <label>Cantidad / Metros</label><input id="cQty" type="number" value="1">
-            <button onclick="addItemCarrito()" class="btn w-full !bg-blue-600 mt-2">+ Agregar a la Lista</button>
-            
-            <div class="mt-4 border-t pt-2">
-                ${carritoVenta.map((v,i)=>`
-                    <div class="flex justify-between items-center py-2 border-b text-xs">
-                        <span>${v.qty}x ${v.nombre} ($${v.sub.toFixed(2)})</span>
-                        <button onclick="removeItemCarrito(${i})" class="text-red-600 font-black px-2">X</button>
-                    </div>`).join("")}
-            </div>
-            
-            <div class="p-3 bg-slate-800 text-white text-center font-bold mt-2 rounded-xl text-xl">TOTAL LISTA: $${carritoVenta.reduce((a,b)=>a+b.sub,0).toFixed(2)}</div>
+            <div id="divLibre" style="display:none"><label>Precio $</label><input id="pMan" type="number" value="0"></div>
+            <label>Cantidad</label><input id="cQty" type="number" value="1">
+            <button onclick="addItemCarrito()" class="btn w-full !bg-blue-600 mt-2">+ Añadir</button>
+            <div class="mt-4 border-t pt-2">${carritoVenta.map((v,i)=>`<div class="flex justify-between py-1 text-xs"><span>${v.qty}x ${v.nombre}</span><button onclick="removeItemCarrito(${i})" class="text-red-500 font-bold px-2">X</button></div>`).join("")}</div>
+            <div class="p-3 bg-slate-800 text-white text-center font-bold mt-2 rounded-xl text-xl">TOTAL: $${carritoVenta.reduce((a,b)=>a+b.sub,0).toFixed(2)}</div>
             <button onclick="procesarV()" class="btn w-full bg-green-600 mt-4 py-4">Generar Factura</button></div>`;
     }
 
     if(window.view === "cobranzas"){
-        html = `<h2 class="font-bold text-white mb-2 uppercase">Cuentas Pendientes</h2>
-        ${window.state.ventas.filter(v=>!v.pagado).reverse().map(v=>`
+        html = `${window.state.ventas.filter(v=>!v.pagado).reverse().map(v=>`
             <div class="card flex justify-between items-center border-l-4 border-amber-500">
-                <div><b class="uppercase">${v.cliente}</b><br><small class="text-red-600 font-bold text-lg">Debe: $${(v.total-(v.abonado||0)).toFixed(2)}</small></div>
+                <div><b class="uppercase">${v.cliente}</b><br><small class="text-red-600 font-bold">Resta: $${(v.total-(v.abonado||0)).toFixed(2)}</small></div>
                 <div class="flex gap-1">
                     <button onclick="enviarWS(${v.id})" class="bg-green-600 text-white p-2 rounded text-[8px] font-bold">WS</button>
                     <button onclick="abonarV(${v.id})" class="bg-blue-600 text-white p-2 rounded text-[8px] font-bold">ABONAR</button>
-                    <button onclick="borrarV(${v.id})" class="bg-red-500 text-white p-2 rounded text-[8px] font-bold">BORRAR</button>
+                    <button onclick="borrarV(${v.id})" class="bg-red-500 text-white p-2 rounded text-[8px] font-bold">X</button>
                 </div>
             </div>`).join("")}`;
     }
 
     if(window.view === "compras"){
-        html = `<div class="card bg-blue-50 border-b-4 border-blue-600">
-            <h2 class="font-bold uppercase text-blue-800 mb-2">Entrada de Almacén</h2>
-            <label>Material / Insumo</label><select id="mCom">${Object.keys(window.state.inventario).map(p=>`<option value="${p}">${p}</option>`).join("")}</select>
-            <label>Cantidad (Metros o Kits)</label><input id="qCom" type="number">
-            <label>Inversión Total $</label><input id="vCom" type="number">
-            <button onclick="regCom()" class="btn w-full bg-blue-700 mt-2">Registrar Compra</button>
+        html = `<div class="card bg-blue-50">
+            <label>Material</label><select id="mCom">${Object.keys(window.state.inventario).map(p=>`<option value="${p}">${p}</option>`).join("")}</select>
+            <label>Cantidad</label><input id="qCom" type="number"><label>Costo $</label><input id="vCom" type="number">
+            <button onclick="regCom()" class="btn w-full bg-blue-700 mt-2">Cargar</button>
         </div>
         <div class="grid grid-cols-2 gap-2 mt-4">
             ${Object.entries(window.state.inventario).map(([n,i])=>`
-            <div class="card !m-0 p-3 flex justify-between items-center">
-                <div><b class="text-[10px] uppercase">${n}</b><br><span class="${n === 'TINTA' ? 'text-purple-600' : 'text-blue-700'} font-bold text-lg">${(i.stock || 0).toFixed(2)}${n === 'TINTA' ? ' Kit' : 'm'}</span></div>
-                <button onclick="editStock('${n}')" class="text-blue-500 font-bold text-[10px]">AJUSTE</button>
-            </div>`).join("")}
+            <div class="card !m-0 p-3"><div><b class="text-[10px] uppercase">${n}</b><br><span class="text-blue-700 font-bold text-lg">${(i.stock || 0).toFixed(2)}</span></div></div>`).join("")}
         </div>`;
     }
 
     if(window.view === "gastos"){
-        html = `<div class="card"><label>Gasto / Motivo</label><input id="gNom"><label>Monto $</label><input id="gMon" type="number"><button onclick="regG()" class="btn w-full bg-red-600 mt-2">Registrar Gasto</button></div>
-        ${window.state.gastos.slice().reverse().map(g=>`<div class="card flex justify-between py-2 border-l-4 border-red-500"><div><small class="uppercase font-bold text-[9px]">${g.name}</small><br><b>$${g.amount.toFixed(2)}</b></div><button onclick="borrarG(${g.id})" class="text-red-500 font-bold text-xs">BORRAR</button></div>`).join("")}`;
+        html = `<div class="card"><label>Motivo</label><input id="gNom"><label>Monto $</label><input id="gMon" type="number"><button onclick="regG()" class="btn w-full bg-red-600 mt-2">Registrar</button></div>
+        ${window.state.gastos.slice().reverse().map(g=>`<div class="card flex justify-between py-2 border-l-4 border-red-500"><div><small class="uppercase font-bold">${g.name}</small><br><b>$${g.amount.toFixed(2)}</b></div><button onclick="borrarG(${g.id})" class="text-red-500 font-bold text-xs">X</button></div>`).join("")}`;
     }
 
     if(window.view === "config"){
-        html = `<div class="card"><h2 class="font-bold mb-4 uppercase">Configuración de Catálogo</h2>
-            <label>Nuevo Material (Vinil, Banner, TINTA, etc.)</label><input id="nP">
-            <label>Costo Unitario Inversión $</label><input id="cP" type="number">
-            <button onclick="addC('p')" class="btn bg-blue-600 mt-2 w-full">Guardar Material</button>
-            <hr class="my-6">
-            <label>Nuevo Servicio</label><input id="nS">
-            <button onclick="addC('s')" class="btn bg-purple-600 mt-2 w-full">Guardar Servicio</button></div>`;
+        html = `<div class="card"><label>Material</label><input id="nP"><label>Costo Inversión $</label><input id="cP" type="number"><button onclick="addC('p')" class="btn bg-blue-600 mt-2 w-full">Añadir</button>
+            <hr class="my-6"><label>Servicio</label><input id="nS"><button onclick="addC('s')" class="btn bg-purple-600 mt-2 w-full">Añadir</button></div>`;
     }
 
     if(window.view === "reportes"){
-        let topClientes = Object.entries(window.state.ventas.reduce((a,b)=>{a[b.cliente]=(a[b.cliente]||0)+b.total;return a;},{})).sort((a,b)=>b[1]-a[1]);
-        html = `
-        <div class="card bg-indigo-900 text-white"><h2 class="text-purple-300 font-black italic">ESTADÍSTICAS</h2>Rendimiento Tinta Sugerido: 300m / Kit</div>
-        <div class="card"><h3>TOP VENTAS CLIENTE</h3><table class="table-ghost mt-2"><thead><tr><th>Cliente</th><th>Total $</th></tr></thead><tbody>${topClientes.map(c=>`<tr><td>${c[0]}</td><td class="font-bold">$${c[1].toFixed(2)}</td></tr>`).join("")}</tbody></table></div>
+        html = `<div class="card bg-indigo-900 text-white"><h3>UTILIDAD: $${(vT-gT).toFixed(2)}</h3></div>
         <div class="card"><canvas id="chartPie" height="250"></canvas></div>`;
         setTimeout(() => initPieChart(), 100);
     }
@@ -186,37 +160,34 @@ window.render = function() {
     app.innerHTML = html;
 };
 
-// --- LOGICA DE CARRITO ---
 window.addItemCarrito = () => {
     let p = document.getElementById("pSel").value, s = document.getElementById("sSel").value, t = document.getElementById("tCli").value, c = parseFloat(document.getElementById("cQty").value) || 0;
-    
-    // Solo valida que haya algo seleccionado para AGREGAR AL CARRITO
-    if(!p && !s && t !== "libre") return alert("Seleccione un Material o Servicio antes de agregar");
-    if(c <= 0) return alert("Indique una cantidad válida");
-
-    let nombre = (p && s) ? `${p} + ${s}` : (p || s || "VENTA MANUAL");
+    if(!p && !s && t !== "libre") return alert("Seleccione algo");
+    let nombre = (p && s) ? `${p} + ${s}` : (p || s || "MANUAL");
     let pre = (t === "libre") ? (parseFloat(document.getElementById("pMan").value) || 0) : (p ? (t === "mayor" ? 10 : 9) : 12);
-    
     carritoVenta.push({ nombre: nombre.toUpperCase(), qty: c, sub: c * pre, esProd: !!p, prodKey: p });
     render();
 };
 
-window.removeItemCarrito = (index) => {
-    carritoVenta.splice(index, 1);
-    render();
-};
+window.removeItemCarrito = (i) => { carritoVenta.splice(i, 1); render(); };
 
 window.procesarV = async () => {
-    let c = document.getElementById("cliV").value;
-    let tel = document.getElementById("telV").value;
+    // CAPTURA FUERTE: Buscamos el valor de nuevo por si acaso
+    let inputNombre = document.getElementById("cliV");
+    let nombreCliente = inputNombre ? inputNombre.value.trim() : "";
+    let tel = document.getElementById("telV") ? document.getElementById("telV").value : "";
 
-    // CORRECCIÓN: Aquí solo validamos el CLIENTE y que el CARRITO tenga items.
-    if(!c) return alert("Escriba el nombre del cliente");
-    if(carritoVenta.length === 0) return alert("El carrito está vacío. Agregue items primero");
+    if(nombreCliente === "" || nombreCliente.length < 2) {
+        return alert("⚠️ Por favor, escribe el NOMBRE DEL CLIENTE");
+    }
+    
+    if(carritoVenta.length === 0) {
+        return alert("⚠️ La lista de productos está vacía");
+    }
 
     let total = carritoVenta.reduce((a,b)=>a+b.sub, 0);
 
-    // Descuento de Stock y Tinta
+    // Descuento stock y tinta
     carritoVenta.forEach(i => { 
         if(i.esProd && i.prodKey) {
             window.state.inventario[i.prodKey].stock -= i.qty;
@@ -226,28 +197,26 @@ window.procesarV = async () => {
         } 
     });
 
-    let nuevaVenta = {id:Date.now(), cliente:c.toUpperCase(), telefono:tel, total:total, abonado:0, pagado:false, items: [...carritoVenta]};
+    let nuevaVenta = {id:Date.now(), cliente:nombreCliente.toUpperCase(), telefono:tel, total:total, abonado:0, pagado:false, items: [...carritoVenta]};
     window.state.ventas.push(nuevaVenta);
     
     // Nota de Entrega
     let nota = `🧾 *GHOSTPRINT - NOTA DE ENTREGA*\n--------------------------------\n👤 Cliente: ${nuevaVenta.cliente}\n📅 Fecha: ${new Date().toLocaleDateString()}\n--------------------------------\n`;
     nuevaVenta.items.forEach(i => nota += `• ${i.qty}x ${i.nombre}: $${i.sub.toFixed(2)}\n`);
-    nota += `--------------------------------\n💰 *TOTAL A PAGAR: $${nuevaVenta.total.toFixed(2)}*\n--------------------------------\n¡Gracias por su compra! 👻`;
+    nota += `--------------------------------\n💰 *TOTAL: $${nuevaVenta.total.toFixed(2)}*\n--------------------------------`;
     
     carritoVenta = []; 
     await window.save(); 
     
-    alert("¡Venta Exitosa!");
-    prompt("Copie la nota para WhatsApp:", nota);
+    alert("Venta guardada correctamente");
+    prompt("Copia la Nota de Entrega:", nota);
     setView('cobranzas');
 };
 
-// --- RESTO DE FUNCIONES ---
 function initDashChart(v, g) {
     new Chart(document.getElementById('chartDash'), {
         type: 'bar',
-        data: { labels: ['Ventas', 'Gastos'], datasets: [{ label: 'Efectivo $', data: [v, g], backgroundColor: ['#22c55e', '#ef4444'], borderRadius: 10 }] },
-        options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+        data: { labels: ['Ventas', 'Gastos'], datasets: [{ label: '$', data: [v, g], backgroundColor: ['#22c55e', '#ef4444'] }] }
     });
 }
 function initPieChart() {
@@ -255,8 +224,7 @@ function initPieChart() {
     let data = items.reduce((a,b)=>{a[b.nombre]=(a[b.nombre]||0)+b.sub; return a;},{});
     new Chart(document.getElementById('chartPie'), {
         type: 'doughnut',
-        data: { labels: Object.keys(data), datasets: [{ data: Object.values(data), backgroundColor: ['#6d28d9', '#22c55e', '#3b82f6', '#f59e0b', '#ec4899', '#06b6d4'] }] },
-        options: { plugins: { title: { display: true, text: 'Ventas por Categoría' } } }
+        data: { labels: Object.keys(data), datasets: [{ data: Object.values(data), backgroundColor: ['#6d28d9', '#22c55e', '#3b82f6', '#f59e0b'] }] }
     });
 }
 window.enviarWS = (id) => {
@@ -265,7 +233,7 @@ window.enviarWS = (id) => {
     window.open(`https://api.whatsapp.com/send?phone=${v.telefono}&text=${encodeURIComponent(msg)}`, '_blank');
 };
 window.abonarV = async (id) => {
-    let v = window.state.ventas.find(x=>x.id===id), m = parseFloat(prompt("¿Monto del abono?"));
+    let v = window.state.ventas.find(x=>x.id===id), m = parseFloat(prompt("¿Monto?"));
     if(m){ v.abonado += m; if(v.abonado >= v.total) v.pagado = true; await window.save(); render(); }
 };
 window.regCom = async () => {
@@ -286,9 +254,8 @@ window.addC = async (t) => {
     }
     await window.save(); render();
 };
-window.editStock = async (n) => { let v = parseFloat(prompt(`Ajustar stock para ${n}:`, window.state.inventario[n].stock)); if(!isNaN(v)){ window.state.inventario[n].stock = v; await window.save(); render(); } };
-window.borrarV = async (id) => { if(confirm("¿Eliminar registro?")){ window.state.ventas=window.state.ventas.filter(x=>x.id!==id); await window.save(); render(); } };
-window.borrarG = async (id) => { if(confirm("¿Eliminar gasto?")){ window.state.gastos=window.state.gastos.filter(x=>x.id!==id); await window.save(); render(); } };
+window.borrarV = async (id) => { if(confirm("¿Borrar?")){ window.state.ventas=window.state.ventas.filter(x=>x.id!==id); await window.save(); render(); } };
+window.borrarG = async (id) => { if(confirm("¿Borrar?")){ window.state.gastos=window.state.gastos.filter(x=>x.id!==id); await window.save(); render(); } };
 
 render();
 </script>
