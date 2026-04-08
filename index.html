@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GhostPrint ERP v12.0 - CLEAN & FIX</title>
+    <title>GhostPrint ERP v12.1 - GANANCIA REAL</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -13,11 +13,12 @@
         .btn { background: #6d28d9; color: white; padding: 10px 14px; border-radius: 12px; font-size: 10px; font-weight: 800; text-transform: uppercase; white-space: nowrap; cursor: pointer; border:none; }
         .card { background: white; padding: 18px; margin: 12px 0; border-radius: 20px; color: #1e293b; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
         input, select { border: 2px solid #e2e8f0; padding: 10px; margin: 5px 0; border-radius: 10px; width: 100%; font-weight: 700; color: #0f172a; background: #f8fafc; }
+        .label-micro { font-size: 9px; font-weight: 900; color: #94a3b8; text-transform: uppercase; }
     </style>
 </head>
 <body>
 
-<header><h1 class="text-xl font-black italic text-purple-400">GHOSTPRINT v12.0</h1></header>
+<header><h1 class="text-xl font-black italic text-purple-400">GHOSTPRINT v12.1</h1></header>
 
 <nav>
     <button onclick="setView('dashboard')" class="btn">🏠 Inicio</button>
@@ -52,9 +53,11 @@ window.state = { ventas: [], gastos: [], inventario: {}, serviciosExtra: [], com
 window.view = "dashboard";
 let fHoy = new Date().toLocaleDateString('en-CA');
 
-const esMismoMes = (id) => {
-    const d = new Date(id); const n = new Date();
-    return d.getMonth() === n.getMonth() && d.getFullYear() === n.getFullYear();
+// Filtro estricto para que solo cuente lo de Abril 2026
+const esEsteMes = (id) => {
+    if(!id) return false;
+    const d = new Date(id);
+    return d.getMonth() === 3 && d.getFullYear() === 2026; // Mes 3 es Abril
 };
 
 window.save = async () => { await setDoc(docRef, window.state); };
@@ -69,93 +72,94 @@ window.render = function() {
     if(!app) return;
     let html = "";
 
-    // --- INICIO: CALCULO DE GANANCIA ---
+    // --- INICIO: ENFOQUE EN GANANCIA ---
     if(window.view === "dashboard"){
-        let vM = (window.state.ventas || []).filter(i => esMismoMes(i.id));
-        let gM = (window.state.gastos || []).filter(i => esMismoMes(i.id));
-        let cM = (window.state.comprasInversion || []).filter(i => esMismoMes(i.id));
+        let vM = (window.state.ventas || []).filter(i => esEsteMes(i.id));
+        let gM = (window.state.gastos || []).filter(i => esEsteMes(i.id));
+        let cM = (window.state.comprasInversion || []).filter(i => esEsteMes(i.id));
         
-        let tVentas = vM.reduce((a,b)=>a+(b.total||0),0);
-        let tGastos = gM.reduce((a,b)=>a+(b.amount||0),0);
-        let tInversion = cM.reduce((a,b)=>a+(b.amount||0),0);
-        let neta = tVentas - tGastos - tInversion;
+        let tV = vM.reduce((a,b)=>a+(b.total||0),0);
+        let tG = gM.reduce((a,b)=>a+(b.amount||0),0);
+        let tI = cM.reduce((a,b)=>a+(b.amount||0),0);
+        let gananciaNeta = tV - tG - tI;
 
         html = `
-        <div class="card !bg-slate-900 text-white border-l-8 ${neta >= 0 ? 'border-green-500' : 'border-red-500'}">
-            <p class="text-[10px] uppercase font-black text-slate-400">Ganancia Neta (Mes Actual)</p>
-            <h2 class="text-4xl font-black italic">$${neta.toFixed(2)}</h2>
+        <div class="card !bg-slate-900 text-white border-b-8 ${gananciaNeta >= 0 ? 'border-green-500' : 'border-red-500'} shadow-2xl">
+            <p class="text-[10px] uppercase font-black text-purple-400 tracking-tighter">Resultado Neto Abril 2026</p>
+            <h2 class="text-5xl font-black italic ${gananciaNeta < 0 ? 'text-red-400' : 'text-white'}">$${gananciaNeta.toFixed(2)}</h2>
+            <p class="text-[9px] mt-2 opacity-60 font-bold">GANANCIA = VENTAS - GASTOS - INVERSIÓN</p>
         </div>
 
         <div class="grid grid-cols-3 gap-2 mt-4">
-            <div class="bg-white p-3 rounded-2xl text-center shadow-md">
-                <p class="text-[8px] font-black text-green-600 uppercase">Ventas</p>
-                <b class="text-slate-800">$${tVentas.toFixed(2)}</b>
+            <div class="bg-white p-4 rounded-3xl text-center shadow-lg border-b-4 border-green-500">
+                <p class="label-micro text-green-600">Ventas</p>
+                <b class="text-xl text-slate-800 font-black">$${tV.toFixed(2)}</b>
             </div>
-            <div class="bg-white p-3 rounded-2xl text-center shadow-md">
-                <p class="text-[8px] font-black text-red-600 uppercase">Gastos</p>
-                <b class="text-slate-800">$${tGastos.toFixed(2)}</b>
+            <div class="bg-white p-4 rounded-3xl text-center shadow-lg border-b-4 border-red-500">
+                <p class="label-micro text-red-600">Gastos</p>
+                <b class="text-xl text-slate-800 font-black">$${tG.toFixed(2)}</b>
             </div>
-            <div class="bg-white p-3 rounded-2xl text-center shadow-md">
-                <p class="text-[8px] font-black text-blue-600 uppercase">Inversión</p>
-                <b class="text-slate-800">$${tInversion.toFixed(2)}</b>
+            <div class="bg-white p-4 rounded-3xl text-center shadow-lg border-b-4 border-blue-500">
+                <p class="label-micro text-blue-600">Inversión</p>
+                <b class="text-xl text-slate-800 font-black">$${tI.toFixed(2)}</b>
             </div>
         </div>
         
-        <div class="card mt-4"><canvas id="dashChart" height="150"></canvas></div>`;
+        <div class="card mt-4"><canvas id="mainChart" height="150"></canvas></div>`;
         
         setTimeout(() => {
-            const ctx = document.getElementById('dashChart');
+            const ctx = document.getElementById('mainChart');
             if(ctx) new Chart(ctx, {
                 type: 'bar',
-                data: { labels: ['Ingresos', 'Gastos', 'Inversión'], datasets: [{ data: [tVentas, tGastos, tInversion], backgroundColor: ['#22c55e', '#ef4444', '#3b82f6'] }] },
-                options: { plugins: { legend: { display: false } } }
+                data: { labels: ['Ventas', 'Gastos', 'Inversión'], datasets: [{ data: [tV, tG, tI], backgroundColor: ['#22c55e', '#ef4444', '#3b82f6'], borderRadius: 10 }] },
+                options: { plugins: { legend: { display: false } }, scales: { y: { display: false } } }
             });
         }, 50);
     }
 
-    // --- REPORTE: TOP CLIENTES Y DETALLE ---
+    // --- REPORTE: DETALLE Y TOP ---
     if(window.view === "reportes"){
-        let vM = (window.state.ventas || []).filter(i => esMismoMes(i.id));
+        let vM = (window.state.ventas || []).filter(i => esEsteMes(i.id));
         let clientesMap = {};
         vM.forEach(v => { clientesMap[v.cliente] = (clientesMap[v.cliente] || 0) + v.total; });
         let topClientes = Object.entries(clientesMap).sort((a,b) => b[1] - a[1]).slice(0, 5);
 
         html = `
-        <div class="card bg-indigo-900 text-white text-center py-2"><h2 class="font-black italic">REPORTE ABRIL</h2></div>
+        <div class="card bg-purple-900 text-white text-center py-3"><h2 class="font-black italic uppercase">Reporte Operativo</h2></div>
         
-        <div class="card"><h3 class="font-black text-indigo-600 border-b mb-2 text-xs uppercase">🏆 Top Clientes</h3>
-            ${topClientes.map(([nom, total]) => `<div class="flex justify-between py-2 border-b text-sm font-bold"><span>${nom}</span><span class="text-indigo-600">$${total.toFixed(2)}</span></div>`).join("") || '<p class="text-center opacity-40 italic py-2">Sin ventas</p>'}
+        <div class="card"><h3 class="font-black text-purple-600 border-b mb-3 text-xs uppercase">🏆 Top 5 Clientes</h3>
+            ${topClientes.map(([nom, total], idx) => `<div class="flex justify-between py-2 border-b text-sm font-bold"><span><span class="text-purple-400 mr-2">#${idx+1}</span> ${nom}</span><span class="text-slate-800 font-black">$${total.toFixed(2)}</span></div>`).join("") || '<p class="text-center opacity-40 py-4 italic">No hay datos</p>'}
         </div>
 
-        <div class="card"><h3 class="font-black text-slate-500 border-b mb-2 text-xs uppercase">Detalle Mensual</h3>
-            <div class="flex justify-between py-1 text-xs"><span>Ventas Totales:</span><b>$${vM.reduce((a,b)=>a+b.total,0).toFixed(2)}</b></div>
-            <div class="flex justify-between py-1 text-xs"><span>Gastos Operativos:</span><b class="text-red-500">-$${(window.state.gastos || []).filter(i => esMismoMes(i.id)).reduce((a,b)=>a+b.amount,0).toFixed(2)}</b></div>
-            <div class="flex justify-between py-1 text-xs"><span>Compra Material:</span><b class="text-blue-500">-$${(window.state.comprasInversion || []).filter(i => esMismoMes(i.id)).reduce((a,b)=>a+b.amount,0).toFixed(2)}</b></div>
+        <div class="card"><h3 class="font-black text-slate-400 border-b mb-2 text-xs uppercase">Cifras del Mes</h3>
+            <div class="flex justify-between py-1 text-xs"><span>Ventas Brutas:</span><b class="text-green-600">$${vM.reduce((a,b)=>a+b.total,0).toFixed(2)}</b></div>
+            <div class="flex justify-between py-1 text-xs"><span>Gastos Registrados:</span><b class="text-red-500">-$${(window.state.gastos || []).filter(i => esEsteMes(i.id)).reduce((a,b)=>a+b.amount,0).toFixed(2)}</b></div>
+            <div class="flex justify-between py-1 text-xs"><span>Inversión en Rollos:</span><b class="text-blue-500">-$${(window.state.comprasInversion || []).filter(i => esEsteMes(i.id)).reduce((a,b)=>a+b.amount,0).toFixed(2)}</b></div>
         </div>`;
     }
 
     // --- VENTAS ---
     if(window.view === "ventas"){
-        html = `<div class="card"><h2 class="font-black text-green-600 border-b mb-2 italic">VENDER</h2>
-            <input type="date" id="fV" value="${fHoy}"><input id="cli" placeholder="CLIENTE"><input id="tel" type="number" placeholder="WhatsApp">
+        html = `<div class="card"><h2 class="font-black text-green-600 border-b mb-2 italic uppercase">Nueva Venta</h2>
+            <input type="date" id="fV" value="${fHoy}"><input id="cli" placeholder="NOMBRE DEL CLIENTE"><input id="tel" type="number" placeholder="WhatsApp">
             <div class="bg-slate-50 p-3 rounded-xl border mt-2">
                 <select id="pS"><option value="">- Material -</option>${Object.keys(window.state.inventario || {}).map(p=>`<option value="${p}">${p}</option>`).join("")}</select>
                 <select id="sS"><option value="">- Servicio -</option>${(window.state.serviciosExtra || []).map(s=>`<option value="${s}">${s}</option>`).join("")}</select>
-                <select id="tC" onchange="document.getElementById('pL').classList.toggle('hidden', this.value!=='libre')"><option value="detal">DETAL ($9)</option><option value="mayor">MAYOR ($10)</option><option value="libre">LIBRE</option></select>
+                <select id="tC" onchange="document.getElementById('pL').classList.toggle('hidden', this.value!=='libre')"><option value="detal">DETAL ($9)</option><option value="mayor">MAYOR ($10)</option><option value="libre">PRECIO LIBRE</option></select>
                 <input id="pL" class="hidden" type="number" placeholder="Precio $">
                 <div class="flex gap-2"><input id="q" type="number" value="1" step="0.1"><button onclick="addI()" class="btn !bg-blue-600 w-full">+ ADD</button></div>
             </div>
             <div id="lC" class="mt-3 border-t pt-2 text-[10px] font-bold"></div>
-            <div id="tV" class="bg-slate-800 text-white p-3 text-center text-2xl font-black rounded-xl mt-2 italic">TOTAL: $0.00</div>
-            <button onclick="saveV()" class="btn w-full !bg-green-600 py-4 mt-2 font-black">GUARDAR VENTA</button></div>`;
+            <div id="tV" class="bg-slate-800 text-white p-4 text-center text-3xl font-black rounded-2xl mt-2 italic shadow-md">TOTAL: $0.00</div>
+            <button onclick="saveV()" class="btn w-full !bg-green-600 py-4 mt-3 font-black shadow-lg">FINALIZAR VENTA</button></div>`;
     }
 
     // --- STOCK ---
     if(window.view === "compras"){
-        html = `<div class="card"><h2 class="font-black text-blue-600 border-b mb-2 uppercase text-xs">Entrada de Rollo</h2>
+        html = `<div class="card"><h2 class="font-black text-blue-600 border-b mb-2 uppercase text-xs">Entrada de Material (Inversión)</h2>
             <input type="date" id="fC" value="${fHoy}"><select id="mC">${Object.keys(window.state.inventario || {}).map(p=>`<option value="${p}">${p}</option>`).join("")}</select>
             <div class="grid grid-cols-2 gap-2"><input id="qC" type="number" placeholder="Metros" oninput="calcC()"><input id="pM" type="number" placeholder="$/m" oninput="calcC()"></div>
-            <div id="resC" class="bg-blue-50 p-2 text-center my-1 font-black text-blue-800 rounded-lg text-sm italic">TOTAL: $0.00</div>
+            <div id="resC" class="bg-blue-50 p-2 text-center my-1 font-black text-blue-800 rounded-lg text-sm">INVERSIÓN TOTAL: $0.00</div>
             <button onclick="saveC()" class="btn w-full !bg-blue-700 py-3 font-black">REGISTRAR COMPRA</button></div>
             <div class="grid grid-cols-2 gap-2">${Object.entries(window.state.inventario || {}).map(([n, i])=>`<div class="bg-white p-3 rounded-xl border text-center shadow-sm">
                 <b class="text-[9px] uppercase text-slate-400">${n}</b><br><span class="text-xl font-black text-blue-700">${(i.stock || 0).toFixed(2)}m</span><br>
@@ -164,23 +168,23 @@ window.render = function() {
 
     // --- GASTOS ---
     if(window.view === "gastos"){
-        let gM = (window.state.gastos || []).filter(i => esMismoMes(i.id)).reverse();
-        html = `<div class="card"><h2 class="font-black text-red-600 border-b mb-2 uppercase text-xs">Registrar Gasto</h2>
-            <input type="date" id="fG" value="${fHoy}"><input id="gN" placeholder="Concepto"><input id="gM" type="number" placeholder="Monto $">
+        let gM = (window.state.gastos || []).filter(i => esEsteMes(i.id)).reverse();
+        html = `<div class="card"><h2 class="font-black text-red-600 border-b mb-2 uppercase text-xs italic">Registrar Gasto Administrativo</h2>
+            <input type="date" id="fG" value="${fHoy}"><input id="gN" placeholder="¿En qué se gastó?"><input id="gM" type="number" placeholder="Monto $">
             <button onclick="saveG()" class="btn w-full !bg-red-600 mt-2 font-black py-3">GUARDAR GASTO</button></div>
-            <div class="card">${gM.map(g=>`<div class="flex justify-between py-2 border-b text-xs font-bold"><span>${g.name}</span><div class="flex gap-4"><span>$${g.amount}</span><button onclick="del('g',${g.id})" class="text-red-500 font-black text-lg">×</button></div></div>`).join("")}</div>`;
+            <div class="card">${gM.map(g=>`<div class="flex justify-between py-3 border-b text-xs font-bold"><span>${g.name}</span><div class="flex gap-4"><span>$${g.amount}</span><button onclick="del('g',${g.id})" class="text-red-500 font-black text-xl">×</button></div></div>`).join("")}</div>`;
     }
 
     // --- COBROS ---
     if(window.view === "cobranzas"){
         html = (window.state.ventas || []).filter(v=>!v.pagado).map(v=>`<div class="card flex justify-between items-center border-l-4 border-amber-500">
-            <div><b class="text-sm uppercase">${v.cliente}</b><br><small class="text-red-600 font-bold">RESTA: $${(v.total-(v.abonado||0)).toFixed(2)}</small></div>
+            <div><b class="text-sm uppercase">${v.cliente}</b><br><small class="text-red-600 font-bold">DEUDA: $${(v.total-(v.abonado||0)).toFixed(2)}</small></div>
             <div class="flex gap-2"><button onclick="ws('${v.telefono}',${v.total-(v.abonado||0)})" class="btn !bg-green-600">WS</button><button onclick="abono(${v.id})" class="btn !bg-blue-600">ABONO</button><button onclick="del('v',${v.id})" class="btn !bg-red-500 px-2">×</button></div>
-        </div>`).join("") || '<p class="text-center py-10 opacity-50 font-bold italic">No hay cuentas pendientes.</p>';
+        </div>`).join("") || '<p class="text-center py-10 opacity-50 font-bold italic">Nada pendiente por cobrar.</p>';
     }
 
     if(window.view === "config"){
-        html = `<div class="card"><h2 class="font-black border-b mb-4 text-xs">CATÁLOGO</h2><div class="flex gap-2"><input id="nP" placeholder="MATERIAL"><button onclick="cat('p')" class="btn">ADD</button></div><div class="flex gap-2 mt-2"><input id="nS" placeholder="SERVICIO"><button onclick="cat('s')" class="btn !bg-purple-600">ADD</button></div></div>
+        html = `<div class="card"><h2 class="font-black border-b mb-4 text-xs">CONFIGURACIÓN DE CATÁLOGO</h2><div class="flex gap-2"><input id="nP" placeholder="MATERIAL"><button onclick="cat('p')" class="btn">AÑADIR</button></div><div class="flex gap-2 mt-2"><input id="nS" placeholder="SERVICIO"><button onclick="cat('s')" class="btn !bg-purple-600">AÑADIR</button></div></div>
         <div class="grid grid-cols-2 gap-2">
             <div class="card text-[10px]"><b>MATERIALES</b>${Object.keys(window.state.inventario || {}).map(n=>`<div class="flex justify-between py-1 border-b"><span>${n}</span><button onclick="delCat('p','${n}')" class="text-red-500 font-black">×</button></div>`).join("")}</div>
             <div class="card text-[10px]"><b>SERVICIOS</b>${(window.state.serviciosExtra || []).map((s,i)=>`<div class="flex justify-between py-1 border-b"><span>${s}</span><button onclick="delCat('s',${i})" class="text-red-500 font-black">×</button></div>`).join("")}</div>
@@ -190,7 +194,7 @@ window.render = function() {
     app.innerHTML = html;
 };
 
-// --- LOGICA ---
+// --- ACCIONES ---
 let carritoVenta = [];
 window.addI = () => {
     let p = document.getElementById("pS").value, s = document.getElementById("sS").value, t = document.getElementById("tC").value, q = parseFloat(document.getElementById("q").value) || 0;
@@ -208,7 +212,7 @@ window.saveV = async () => {
     await window.save(); carritoVenta = []; setView('dashboard');
 };
 
-window.calcC = () => { document.getElementById("resC").innerText = "TOTAL: $" + ((parseFloat(document.getElementById("qC").value)||0)*(parseFloat(document.getElementById("pM").value)||0)).toFixed(2); };
+window.calcC = () => { document.getElementById("resC").innerText = "INVERSIÓN TOTAL: $" + ((parseFloat(document.getElementById("qC").value)||0)*(parseFloat(document.getElementById("pM").value)||0)).toFixed(2); };
 
 window.saveC = async () => {
     let q = parseFloat(document.getElementById("qC").value), p = parseFloat(document.getElementById("pM").value), m = document.getElementById("mC").value, f = document.getElementById("fC").value;
