@@ -1,136 +1,12 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GhostPrint ERP v3 - Fix Cantidad</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-        body {
-            background-color: #0d0d1a;
-            background-image: radial-gradient(at 10% 10%, rgba(109, 40, 217, 0.2) 0px, transparent 50%), radial-gradient(at 90% 90%, rgba(79, 70, 229, 0.15) 0px, transparent 50%);
-            background-attachment: fixed; background-size: cover;
-            font-family: ui-sans-serif, system-ui; color: #e2e8f0; padding-bottom: 96px;
-        }
-        .btn { background: #6d28d9; color: white; padding: 10px 14px; border-radius: 12px; cursor: pointer; font-weight: 700; border: none; transition: 0.2s; text-transform: uppercase; font-size: 10px; }
-        .card { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(5px); padding: 20px; margin: 12px 0; border-radius: 20px; color: #1e293b; }
-        input, select { border: 1px solid #e2e8f0; padding: 12px; margin: 8px 0; border-radius: 12px; width: 100%; background: #f8fafc; color: #1e293b; }
-        label { font-size: 10px; color: #64748b; font-weight: 800; text-transform: uppercase; display: block; margin-top: 8px; }
-        header { background: linear-gradient(to right, #4c1d95, #000); color: white; padding: 16px; display: flex; justify-content: space-between; position: sticky; top: 0; z-index: 50; }
-        nav { padding: 8px; display: flex; gap: 8px; overflow-x: auto; background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px); position: sticky; top: 72px; z-index: 40; }
-        .table-ghost { width: 100%; border-collapse: collapse; font-size: 11px; }
-        .table-ghost th { background: #f1f5f9; padding: 8px; text-align: left; color: #64748b; }
-        .table-ghost td { padding: 8px; border-bottom: 1px solid #f1f1f1; }
-    </style>
-</head>
-<body>
-
-<header>
-    <div>
-        <h1 class="text-2xl font-black italic uppercase">GhostPrint ERP</h1>
-        <p id="sync-status" class="text-[9px] font-bold text-amber-300 uppercase">Sincronizando...</p>
-    </div>
-</header>
-
-<nav>
-    <button onclick="setView('dashboard')" class="btn">🏠 Inicio</button>
-    <button onclick="setView('ventas')" class="btn !bg-green-600">💵 Vender</button>
-    <button onclick="setView('cobranzas')" class="btn !bg-amber-500">⏳ Cobros</button>
-    <button onclick="setView('compras')" class="btn !bg-blue-600">📦 Compras</button>
-    <button onclick="setView('gastos')" class="btn !bg-red-600">📉 Gastos</button>
-    <button onclick="setView('config')" class="btn !bg-slate-700">⚙️ Catálogo</button>
-    <button onclick="setView('reportes')" class="btn !bg-indigo-600">📊 Reportes</button>
-</nav>
-
-<div id="app" class="p-4 max-w-4xl mx-auto"></div>
-
 <script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+// ... (resto del código igual hasta la función addItemCarrito)
 
-const firebaseConfig = {
-    apiKey: "AIzaSyBCm5JlhTxvvtlwjA1EYEtLvxb1AH5v1WI",
-    authDomain: "ghost-print-contabilidad.firebaseapp.com",
-    projectId: "ghost-print-contabilidad",
-    storageBucket: "ghost-print-contabilidad.firebasestorage.app",
-    messagingSenderId: "867057362556",
-    appId: "1:867057362556:web:6bd2a461817219a4000bf9"
-};
-
-const appF = initializeApp(firebaseConfig);
-const db = getFirestore(appF);
-const docRef = doc(db, "sistema", "datos_principales");
-
-window.state = { ventas: [], gastos: [], inventario: {}, serviciosExtra: [] };
-window.view = "dashboard";
-let carritoVenta = [];
-
-onSnapshot(docRef, (snap) => {
-    if (snap.exists()) { window.state = snap.data(); document.getElementById("sync-status").innerText = "Sincronizado ✓"; }
-    render();
-});
-
-window.save = async () => { await setDoc(docRef, window.state); };
-window.setView = (v) => { window.view = v; render(); };
-
-window.render = function() {
-    let app = document.getElementById("app"), html = "";
-    const mesIdx = new Date().getMonth();
-
-    if(window.view === "dashboard"){
-        const vM = window.state.ventas.filter(v=>new Date(v.id).getMonth()===mesIdx).reduce((a,b)=>a+b.total,0);
-        const gM = window.state.gastos.filter(g=>new Date(g.id).getMonth()===mesIdx).reduce((a,b)=>a+b.amount,0);
-        html = `
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
-            <div class="card !m-0 bg-green-50 border-b-4 border-green-500">Ventas Mes<br><b class="text-2xl">$${vM.toFixed(2)}</b></div>
-            <div class="card !m-0 bg-red-50 border-b-4 border-red-500">Gastos Mes<br><b class="text-2xl">$${gM.toFixed(2)}</b></div>
-            <div class="card !m-0 bg-slate-900 text-white italic">Utilidad<br><b class="text-2xl text-purple-400">$${(vM-gM).toFixed(2)}</b></div>
-        </div>
-        <div class="card"><canvas id="chartDash" height="180"></canvas></div>`;
-        setTimeout(() => initDashChart(vM, gM), 100);
-    }
-
-    if(window.view === "ventas"){
-        html = `<div class="card"><h2 class="font-black mb-4 uppercase">Facturar</h2>
-            <label>Cliente</label><input id="cliV" placeholder="CLIENTE">
-            <label>WhatsApp</label><input id="telV" type="number" placeholder="58...">
-            <div class="grid grid-cols-2 gap-2">
-                <div><label>Materiales</label><select id="pSel"><option value="">-- Ver --</option>${Object.keys(window.state.inventario).map(p=>`<option value="${p}">${p}</option>`).join("")}</select></div>
-                <div><label>Servicios</label><select id="sSel"><option value="">-- Ver --</option>${window.state.serviciosExtra.map(s=>`<option value="${s}">${s}</option>`).join("")}</select></div>
-            </div>
-            <label>Tarifa</label><select id="tCli" onchange="render()"><option value="detal">Detal ($9)</option><option value="mayor">Mayor ($10)</option><option value="libre">Manual / Libre</option></select>
-            <div id="divLibre" class="${document.getElementById('tCli')?.value==='libre'?'':'hidden'}"><label>Precio Unitario $</label><input id="pMan" type="number" placeholder="0.00"></div>
-            <label>Cantidad / Metros</label><input id="cQty" type="number" value="1">
-            <button onclick="addItemCarrito()" class="btn w-full !bg-blue-600 mt-2">+ Agregar Item</button>
-            <div class="mt-4 border-t pt-2">${carritoVenta.map((v,i)=>`<div class="flex justify-between py-1 text-xs border-b"><span>${v.qty}x ${v.nombre}</span><b>$${v.sub.toFixed(2)}</b><button onclick="carritoVenta.splice(${i},1);render()" class="text-red-500 ml-2 font-bold">X</button></div>`).join("")}</div>
-            <div class="p-4 bg-slate-900 text-white text-center font-black mt-3 rounded-2xl text-xl">TOTAL: $${carritoVenta.reduce((a,b)=>a+b.sub,0).toFixed(2)}</div>
-            <button onclick="procesarV()" class="btn w-full bg-green-600 mt-4 py-4 text-sm shadow-xl">GENERAR VENTA</button></div>`;
-    }
-
-    // El resto de las vistas se mantienen igual para no afectar funcionalidad...
-    if(window.view === "cobranzas"){
-        html = `<h2 class="font-bold text-white mb-4">CUENTAS POR COBRAR</h2>${window.state.ventas.filter(v=>!v.pagado).slice().reverse().map(v=>`<div class="card flex justify-between items-center border-l-4 border-amber-500"><div><b>${v.cliente}</b><br><small class="text-red-600 font-bold text-lg">Debe: $${(v.total-(v.abonado||0)).toFixed(2)}</small></div><div class="flex gap-1"><button onclick="enviarWS(${v.id})" class="bg-green-600 text-white p-2 rounded text-[8px] font-bold">WS</button><button onclick="abonarV(${v.id})" class="bg-blue-600 text-white p-2 rounded text-[8px] font-bold">ABONAR</button><button onclick="borrarV(${v.id})" class="bg-red-500 text-white p-2 rounded text-[8px] font-bold">X</button></div></div>`).join("")}`;
-    }
-    
-    // ... (vistas de compras, gastos, config, reportes iguales al anterior)
-
-    app.innerHTML = html;
-};
-
-// LÓGICA DE GRÁFICOS (Igual al anterior)
-function initDashChart(v, g) {
-    const ctx = document.getElementById('chartDash'); if(!ctx) return;
-    new Chart(ctx, { type: 'bar', data: { labels: ['Ventas', 'Gastos'], datasets: [{ data: [v, g], backgroundColor: ['#10b981', '#ef4444'], borderRadius: 12 }] }, options: { plugins: { legend: { display: false } } } });
-}
-
-// --- CORRECCIÓN CLAVE AQUÍ ---
 window.addItemCarrito = () => {
     const p = document.getElementById("pSel").value;
     const s = document.getElementById("sSel").value;
-    const t = document.getElementById("tCli").value;
+    const t = document.getElementById("tCli").value; // "mayor", "detal" o "libre"
     const inputQty = document.getElementById("cQty");
-    const cant = parseFloat(inputQty.value) || 0; // Lee exactamente lo que pusiste
+    const cant = parseFloat(inputQty.value) || 0;
     
     if(cant <= 0) return alert("Ingresa una cantidad válida");
 
@@ -142,23 +18,29 @@ window.addItemCarrito = () => {
     else return alert("Selecciona material o servicio");
 
     let precioUnitario = 0;
+
     if (t === "libre") {
         precioUnitario = parseFloat(document.getElementById("pMan").value) || 0;
     } else {
-        // Si es producto usa tarifa 9 o 10. Si es solo servicio (como Diseño) usa tarifa fija de 12.
-        precioUnitario = (window.state.inventario[p]) ? (t === "mayor" ? 10 : 9) : 12;
+        // CORRECCIÓN: Si hay un producto (p), aplicamos la tarifa elegida (9 o 10)
+        // Si no hay producto pero hay servicio (s), cobramos la base de 12
+        if (p && window.state.inventario[p]) {
+            precioUnitario = (t === "mayor") ? 10 : 9;
+        } else {
+            precioUnitario = 12; // Tarifa base para servicios solos
+        }
     }
     
-    // Agregamos al carrito SIN acumular basura
     carritoVenta.push({ 
         nombre: nombreItem, 
         qty: cant, 
         precio: precioUnitario, 
         sub: cant * precioUnitario, 
-        esProd: !!window.state.inventario[p] 
+        esProd: p ? !!window.state.inventario[p] : false,
+        prodBase: p // Guardamos el nombre del producto para descontar stock luego
     });
 
-    // Limpiamos campos para la siguiente entrada
+    // Limpieza
     document.getElementById("pSel").value = "";
     document.getElementById("sSel").value = "";
     inputQty.value = "1";
@@ -169,30 +51,36 @@ window.addItemCarrito = () => {
 window.procesarV = async () => {
     let c = document.getElementById("cliV").value;
     if(!c || carritoVenta.length === 0) return alert("Faltan datos");
+    
     let total = carritoVenta.reduce((a,b)=>a+b.sub, 0);
-    carritoVenta.forEach(i => { if(i.esProd) { 
-        // Descontar stock solo si es producto
-        let nombreLimpio = i.nombre.split(" + ")[0];
-        if(window.state.inventario[nombreLimpio]){
-            window.state.inventario[nombreLimpio].stock -= i.qty; 
-            window.state.gastos.push({id:Date.now()+Math.random(), name:`COSTO: ${nombreLimpio}`, amount: (window.state.inventario[nombreLimpio].costo || 0) * i.qty}); 
+
+    carritoVenta.forEach(i => { 
+        if(i.esProd && i.prodBase) { 
+            // Usamos prodBase para asegurar que descontamos el stock del material correcto
+            if(window.state.inventario[i.prodBase]){
+                window.state.inventario[i.prodBase].stock -= i.qty; 
+                window.state.gastos.push({
+                    id: Date.now() + Math.random(), 
+                    name: `COSTO: ${i.prodBase}`, 
+                    amount: (window.state.inventario[i.prodBase].costo || 0) * i.qty
+                }); 
+            }
         }
-    }});
-    window.state.ventas.push({id:Date.now(), cliente:c.toUpperCase(), telefono:document.getElementById("telV").value, total:total, abonado:0, pagado:false, items: [...carritoVenta]});
-    carritoVenta = []; await window.save(); setView('cobranzas');
+    });
+
+    window.state.ventas.push({
+        id: Date.now(), 
+        cliente: c.toUpperCase(), 
+        telefono: document.getElementById("telV").value, 
+        total: total, 
+        abonado: 0, 
+        pagado: false, 
+        items: [...carritoVenta]
+    });
+
+    carritoVenta = []; 
+    await window.save(); 
+    setView('cobranzas');
 };
-
-// Resto de funciones auxiliares...
-window.editStock = async (n) => { let v = parseFloat(prompt(`Ajustar stock para ${n}:`, window.state.inventario[n].stock)); if(!isNaN(v)){ window.state.inventario[n].stock = v; await window.save(); render(); } };
-window.regCom = async () => { let m = document.getElementById("mCom").value, q = parseFloat(document.getElementById("qCom").value), v = parseFloat(document.getElementById("vCom").value); if(q > 0) { window.state.inventario[m].stock += q; window.state.gastos.push({id:Date.now(), name:`COMPRA: ${m}`, amount: v}); await window.save(); render(); } };
-window.regG = async () => { let n = document.getElementById("gNom").value, m = parseFloat(document.getElementById("gMon").value); if(n && m) { window.state.gastos.push({id:Date.now(), name:n.toUpperCase(), amount: m}); await window.save(); render(); } };
-window.addC = async (t) => { if(t==='p'){ let n=document.getElementById("nP").value.toUpperCase(), c=parseFloat(document.getElementById("cP").value)||0; if(n) window.state.inventario[n]={stock:0, costo:c}; } else { let n=document.getElementById("nS").value.toUpperCase(); if(n) window.state.serviciosExtra.push(n); } await window.save(); render(); };
-window.enviarWS = (id) => { let v = window.state.ventas.find(x => x.id === id); window.open(`https://api.whatsapp.com/send?phone=${v.telefono}&text=Saldo pendiente: *$${(v.total-(v.abonado||0)).toFixed(2)}*.`, '_blank'); };
-window.abonarV = async (id) => { let v=window.state.ventas.find(x=>x.id===id), m=parseFloat(prompt("Monto abono?")); if(m){ v.abonado=(v.abonado||0)+m; if(v.abonado>=v.total) v.pagado=true; await window.save(); render(); } };
-window.borrarV = async (id) => { if(confirm("Borrar?")){ window.state.ventas=window.state.ventas.filter(x=>x.id!==id); await window.save(); render(); } };
-window.borrarG = async (id) => { if(confirm("Borrar?")){ window.state.gastos=window.state.gastos.filter(x=>x.id!==id); await window.save(); render(); } };
-
-render();
+// ... (resto del código igual)
 </script>
-</body>
-</html>
