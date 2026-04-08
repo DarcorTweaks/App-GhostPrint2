@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>GhostPrint PRO v14.0</title>
+    <title>GhostPrint PRO v14.1</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
@@ -14,19 +14,18 @@
         .active { background: #6d28d9 !important; color: white !important; box-shadow: 0 0 15px rgba(109, 40, 217, 0.4); }
         input, select { background: #0a0a14; border: 1px solid #334155; color: white; padding: 12px; border-radius: 12px; width: 100%; margin: 5px 0; font-weight: 700; }
         .btn-main { background: linear-gradient(to right, #6d28d9, #4c1d95); color: white; padding: 16px; border-radius: 16px; width: 100%; font-weight: 900; text-transform: uppercase; cursor: pointer; border: none; }
-        .status-pill { font-size: 9px; font-weight: 900; padding: 4px 10px; border-radius: 20px; text-transform: uppercase; }
     </style>
 </head>
 <body>
 
 <header class="p-4 bg-[#1e1e2f] border-b-2 border-purple-600 flex justify-between items-center">
     <div>
-        <h1 class="text-xl font-black italic text-purple-400 tracking-tighter uppercase leading-none">GhostPrint PRO</h1>
-        <p class="text-[8px] font-bold opacity-40">DARCOR TECH SOLUTIONS v14.0</p>
+        <h1 class="text-xl font-black italic text-purple-400 uppercase leading-none">GhostPrint PRO</h1>
+        <p class="text-[8px] font-bold opacity-40 uppercase">Ajuste v14.1</p>
     </div>
     <div id="status-box" class="flex items-center gap-2">
-        <div id="dot" class="w-2 h-2 rounded-full bg-orange-500 animate-pulse"></div>
-        <span id="st-text" class="status-pill bg-white/5">Cargando...</span>
+        <div id="dot" class="w-2 h-2 rounded-full bg-green-500"></div>
+        <span id="st-text" class="text-[9px] font-black uppercase">Sistema Listo</span>
     </div>
 </header>
 
@@ -39,14 +38,12 @@
     <div onclick="setView('config')" class="btn-nav" id="n-config">⚙️ CONFIG</div>
 </nav>
 
-<div id="app" class="p-4 max-w-xl mx-auto">
-    </div>
+<div id="app" class="p-4 max-w-xl mx-auto"></div>
 
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 
 <script>
-    // Configuración
     const firebaseConfig = {
         apiKey: "AIzaSyBCm5JlhTxvvtlwjA1EYEtLvxb1AH5v1WI",
         authDomain: "ghost-print-contabilidad.firebaseapp.com",
@@ -60,47 +57,17 @@
     const db = firebase.firestore();
     const docRef = db.collection("sistema").doc("datos_principales");
 
-    // Datos maestros
-    window.state = JSON.parse(localStorage.getItem('gp_v14_final')) || { 
-        ventas: [], gastos: [], inventario: {}, serviciosExtra: [], comprasInversion: [] 
-    };
+    window.state = JSON.parse(localStorage.getItem('gp_v14_1')) || { ventas: [], gastos: [], inventario: {}, serviciosExtra: [], comprasInversion: [] };
     window.currentView = "inicio";
     let cart = [];
 
-    // Motor de guardado
     window.sync = async function() {
-        localStorage.setItem('gp_v14_final', JSON.stringify(window.state));
-        try {
-            await docRef.set(window.state);
-            updateStatus("online");
-        } catch(e) {
-            updateStatus("local");
-        }
+        localStorage.setItem('gp_v14_1', JSON.stringify(window.state));
+        try { await docRef.set(window.state); } catch(e) { console.log("Local"); }
     };
 
-    function updateStatus(mode) {
-        const dot = document.getElementById("dot");
-        const txt = document.getElementById("st-text");
-        if(mode === "online") {
-            dot.className = "w-2 h-2 rounded-full bg-green-500";
-            txt.innerText = "Sincronizado";
-        } else {
-            dot.className = "w-2 h-2 rounded-full bg-yellow-500";
-            txt.innerText = "Modo Local";
-        }
-    }
+    docRef.onSnapshot(doc => { if(doc.exists) { window.state = doc.data(); render(); } });
 
-    // Escucha Realtime
-    docRef.onSnapshot(doc => {
-        if(doc.exists) {
-            window.state = doc.data();
-            localStorage.setItem('gp_v14_final', JSON.stringify(window.state));
-            render();
-            updateStatus("online");
-        }
-    });
-
-    // Navegación
     window.setView = function(v) {
         window.currentView = v;
         document.querySelectorAll('.btn-nav').forEach(b => b.classList.remove('active'));
@@ -108,7 +75,6 @@
         render();
     };
 
-    // Renderizado
     window.render = function() {
         const app = document.getElementById("app");
         const mes = new Date().getMonth();
@@ -118,156 +84,170 @@
             let vM = (window.state.ventas || []).filter(v => new Date(v.id).getMonth() === mes);
             let gM = (window.state.gastos || []).filter(g => new Date(g.id).getMonth() === mes);
             let cM = (window.state.comprasInversion || []).filter(c => new Date(c.id).getMonth() === mes);
-            
             let tV = vM.reduce((a,b)=>a+(b.total||0),0);
             let tG = gM.reduce((a,b)=>a+(b.amount||0),0);
             let tI = cM.reduce((a,b)=>a+(b.amount||0),0);
             let neta = tV - tG - tI;
+            let porc = tV > 0 ? (tG / tV) * 100 : 0;
 
             html = `
-            <div class="card-pro border-l-4 border-purple-500 shadow-xl shadow-purple-900/10">
-                <p class="text-[9px] font-black text-purple-400 uppercase tracking-widest">Balance Neto Mensual</p>
-                <h2 class="text-5xl font-black italic">$${neta.toFixed(2)}</h2>
+            <div class="card-pro border-l-4 border-purple-500 shadow-xl">
+                <p class="text-[9px] font-black text-purple-400 uppercase tracking-widest">Utilidad Neta (Este Mes)</p>
+                <h2 class="text-5xl font-black italic text-white">$${neta.toFixed(2)}</h2>
+            </div>
+            <div class="card-pro">
+                <div class="flex justify-between text-[10px] font-bold mb-2 uppercase italic"><span>Gastos vs Ventas</span><span>${porc.toFixed(0)}%</span></div>
+                <div class="w-full bg-white/5 h-3 rounded-full overflow-hidden border border-white/5">
+                    <div class="bg-purple-600 h-full shadow-[0_0_10px_#6d28d9]" style="width: ${Math.min(porc, 100)}%"></div>
+                </div>
             </div>
             <div class="grid grid-cols-1 gap-2">
-                <div class="bg-green-600/10 p-4 rounded-2xl flex justify-between border border-green-500/20">
-                    <span class="text-xs font-bold text-green-200 uppercase">Ventas</span><b class="text-green-400 font-black">$${tV.toFixed(2)}</b>
-                </div>
-                <div class="bg-red-600/10 p-4 rounded-2xl flex justify-between border border-red-500/20">
-                    <span class="text-xs font-bold text-red-200 uppercase">Gastos Op</span><b class="text-red-400 font-black">-$${tG.toFixed(2)}</b>
-                </div>
-                <div class="bg-blue-600/10 p-4 rounded-2xl flex justify-between border border-blue-500/20">
-                    <span class="text-xs font-bold text-blue-200 uppercase">Inversión Stock</span><b class="text-blue-400 font-black">-$${tI.toFixed(2)}</b>
-                </div>
+                <div class="bg-green-600/10 p-4 rounded-2xl flex justify-between border border-green-500/20"><span>Ventas</span><b class="text-green-400">$${tV.toFixed(2)}</b></div>
+                <div class="bg-red-600/10 p-4 rounded-2xl flex justify-between border border-red-500/20"><span>Gastos</span><b class="text-red-400">-$${tG.toFixed(2)}</b></div>
+                <div class="bg-blue-600/10 p-4 rounded-2xl flex justify-between border border-blue-500/20"><span>Compras Stock</span><b class="text-blue-400">-$${tI.toFixed(2)}</b></div>
             </div>`;
         }
 
         if(window.currentView === "ventas") {
             html = `<div class="card-pro">
-                <h2 class="text-lg font-black text-purple-400 italic mb-4">REGISTRAR VENTA</h2>
+                <h2 class="text-lg font-black text-purple-400 italic mb-4 uppercase">Nueva Venta</h2>
                 <input type="date" id="fV" value="${new Date().toISOString().split('T')[0]}">
-                <input id="cli" placeholder="NOMBRE DEL CLIENTE">
-                <input id="tel" type="number" placeholder="TELÉFONO WHATSAPP">
+                <input id="cli" placeholder="CLIENTE"><input id="tel" type="number" placeholder="WHATSAPP">
                 
                 <div class="bg-white/5 p-4 rounded-xl mt-3 border border-white/10">
-                    <select id="pS"><option value="">Seleccionar Material...</option>${Object.keys(window.state.inventario || {}).map(m=>`<option value="${m}">${m}</option>`).join("")}</select>
+                    <div class="grid grid-cols-2 gap-2">
+                        <select id="pS"><option value="">Material...</option>${Object.keys(window.state.inventario || {}).map(m=>`<option value="${m}">${m}</option>`).join("")}</select>
+                        <select id="sS"><option value="">Servicio...</option>${(window.state.serviciosExtra || []).map(s=>`<option value="${s}">${s}</option>`).join("")}</select>
+                    </div>
                     <select id="tC" onchange="toggleLibre(this.value)">
-                        <option value="detal">PRECIO DETAL ($9)</option><option value="mayor">PRECIO MAYOR ($10)</option><option value="libre">PRECIO PERSONALIZADO</option>
+                        <option value="detal">DETAL ($9)</option><option value="mayor">MAYOR ($10)</option><option value="libre">PRECIO LIBRE</option>
                     </select>
-                    <input id="pL" class="hidden" type="number" placeholder="Introducir monto $">
-                    <button onclick="addCart()" class="btn-main !p-3 mt-3">+ AÑADIR AL PEDIDO</button>
+                    <input id="pL" class="hidden" type="number" placeholder="Monto $">
+                    <button onclick="addCart()" class="btn-main !p-3 mt-3">+ AÑADIR ITEM</button>
                 </div>
-
                 <div id="cart-list" class="mt-4 space-y-2"></div>
-                <div id="total-disp" class="text-3xl font-black text-center my-6 italic text-white">TOTAL: $0.00</div>
+                <div id="total-disp" class="text-3xl font-black text-center my-6 italic">TOTAL: $0.00</div>
                 <button onclick="finalizarVenta()" class="btn-main">GUARDAR VENTA</button>
             </div>`;
         }
 
         if(window.currentView === "inventario") {
             html = `<div class="card-pro">
-                <h2 class="text-lg font-black text-blue-400 italic mb-3 uppercase">Cargar Material</h2>
+                <h2 class="text-lg font-black text-blue-400 italic mb-3">CARGA DE MATERIAL</h2>
+                <input type="date" id="fC" value="${new Date().toISOString().split('T')[0]}">
                 <select id="mInv">${Object.keys(window.state.inventario || {}).map(m=>`<option value="${m}">${m}</option>`).join("")}</select>
                 <div class="grid grid-cols-2 gap-2">
-                    <input id="qInv" type="number" placeholder="Cantidad Mts">
-                    <input id="pInv" type="number" placeholder="Precio $/m">
+                    <input id="qInv" type="number" placeholder="Mts"><input id="pInv" type="number" placeholder="$/m">
                 </div>
-                <button onclick="saveInv()" class="btn-main !from-blue-600 !to-blue-800 mt-2">REGISTRAR COMPRA</button>
+                <button onclick="saveInv()" class="btn-main !from-blue-600 !to-blue-800 mt-2">REGISTRAR ENTRADA</button>
             </div>
             <div class="grid grid-cols-2 gap-2">
                 ${Object.entries(window.state.inventario || {}).map(([n, i])=>`<div class="card-pro text-center">
                     <p class="text-[8px] font-black opacity-50 uppercase">${n}</p>
                     <h4 class="text-2xl font-black text-white">${(i.stock || 0).toFixed(2)}m</h4>
-                    <button onclick="adjStock('${n}')" class="text-blue-500 text-[9px] font-bold underline italic mt-1">CORREGIR</button>
+                </div>`).join("")}
+            </div>`;
+        }
+
+        if(window.currentView === "gastos") {
+            let gM = (window.state.gastos || []).filter(g => new Date(g.id).getMonth() === mes).reverse();
+            html = `<div class="card-pro">
+                <h2 class="text-lg font-black text-red-500 italic mb-3">GASTOS</h2>
+                <input type="date" id="fG" value="${new Date().toISOString().split('T')[0]}">
+                <input id="gNom" placeholder="Concepto"><input id="gMon" type="number" placeholder="Monto $">
+                <button onclick="saveGasto()" class="btn-main !from-red-600 !to-red-800 mt-2">GUARDAR</button>
+            </div>
+            <div class="space-y-2">
+                ${gM.map(g => `<div class="card-pro !py-3 flex justify-between items-center text-xs">
+                    <div>
+                        <p class="text-[8px] opacity-40 font-bold">${new Date(g.id).toLocaleDateString()}</p>
+                        <b class="uppercase">${g.name}</b>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <b class="text-red-400">$${g.amount}</b>
+                        <button onclick="editGasto(${g.id})" class="text-blue-400">✏️</button>
+                        <button onclick="delGasto(${g.id})" class="text-red-600">🗑️</button>
+                    </div>
                 </div>`).join("")}
             </div>`;
         }
 
         if(window.currentView === "cobros") {
             let deudas = (window.state.ventas || []).filter(v => !v.pagado);
-            html = `<div class="card-pro border-amber-500/50 text-center uppercase font-black text-amber-500 italic">Cuentas por Cobrar</div>
-            ${deudas.map(v => `<div class="card-pro flex justify-between items-center border-l-4 border-amber-500">
-                <div><b class="text-sm uppercase">${v.cliente}</b><br><span class="text-red-400 font-black text-xs">RESTA: $${(v.total - (v.abonado || 0)).toFixed(2)}</span></div>
+            html = deudas.map(v => `<div class="card-pro flex justify-between items-center border-l-4 border-amber-500">
+                <div><b class="text-sm uppercase">${v.cliente}</b><br><span class="text-red-400 font-bold text-xs">DEBE: $${(v.total - (v.abonado || 0)).toFixed(2)}</span></div>
                 <div class="flex gap-2">
                     <button onclick="ws('${v.telefono}', ${(v.total-(v.abonado||0))})" class="bg-green-600 p-3 rounded-xl">📱</button>
                     <button onclick="abono(${v.id})" class="bg-blue-600 px-4 py-2 rounded-xl text-[10px] font-black uppercase">Abono</button>
                 </div>
-            </div>`).join("") || '<p class="text-center py-20 opacity-30 italic">Todo al día</p>'}`;
-        }
-
-        if(window.currentView === "gastos") {
-            html = `<div class="card-pro"><h2 class="text-lg font-black text-red-500 italic mb-3 uppercase">Gastos Operativos</h2>
-                <input id="gNom" placeholder="Ej: Pago Local, Luz, Comida"><input id="gMon" type="number" placeholder="Monto $">
-                <button onclick="saveGasto()" class="btn-main !from-red-600 !to-red-800 mt-2">GUARDAR GASTO</button></div>`;
+            </div>`).join("") || '<p class="text-center py-20 opacity-30 italic">Sin pendientes</p>';
         }
 
         if(window.currentView === "config") {
             html = `<div class="card-pro text-center">
-                <h2 class="text-lg font-black text-slate-400 mb-4 uppercase italic">Configuración de Catálogo</h2>
-                <input id="newM" placeholder="Nombre de Material">
-                <button onclick="addMat()" class="btn-main !from-slate-600 !to-slate-800 mt-2">AÑADIR MATERIAL</button>
-                <button onclick="resetAll()" class="w-full text-red-900 font-black text-[9px] mt-20 tracking-widest uppercase opacity-40">⚠️ Resetear Datos del Sistema</button>
+                <h2 class="text-lg font-black text-slate-400 mb-4 italic uppercase">Catálogo</h2>
+                <input id="newM" placeholder="Material"><button onclick="addMat()" class="btn-main !from-slate-600 !to-slate-800 mt-2">Añadir Material</button>
+                <input id="newS" class="mt-4" placeholder="Servicio"><button onclick="addSer()" class="btn-main !from-indigo-600 !to-indigo-800 mt-2">Añadir Servicio</button>
             </div>`;
         }
-
         app.innerHTML = html;
     };
 
-    // Funciones de Lógica
     window.toggleLibre = (v) => { document.getElementById("pL").className = (v === "libre") ? "block" : "hidden"; };
 
     window.addCart = function() {
-        let m = document.getElementById("pS").value, t = document.getElementById("tC").value, p = (t === "detal") ? 9 : (t === "mayor") ? 10 : parseFloat(document.getElementById("pL").value) || 0;
-        if(m) {
-            cart.push({ m, p });
-            document.getElementById("cart-list").innerHTML = cart.map((c, i) => `<div class="bg-white/5 p-2 rounded-lg flex justify-between text-xs border border-white/5"><span>${c.m}</span><b>$${c.p.toFixed(2)}</b></div>`).join("");
+        let m = document.getElementById("pS").value, s = document.getElementById("sS").value, t = document.getElementById("tC").value;
+        let p = (t === "detal") ? 9 : (t === "mayor") ? 10 : parseFloat(document.getElementById("pL").value) || 0;
+        let desc = (m && s) ? m + " + " + s : m || s;
+        if(desc) {
+            cart.push({ desc, p, mat: m });
+            document.getElementById("cart-list").innerHTML = cart.map((c, i) => `<div class="bg-white/5 p-2 rounded-lg flex justify-between text-xs border border-white/5"><span>${c.desc}</span><b>$${c.p.toFixed(2)} <button onclick="removeFromCart(${i})" class="text-red-500 ml-2">×</button></b></div>`).join("");
             document.getElementById("total-disp").innerText = "TOTAL: $" + cart.reduce((a,b)=>a+b.p,0).toFixed(2);
         }
     };
 
+    window.removeFromCart = (i) => { cart.splice(i, 1); renderCart(); };
+    function renderCart() {
+        document.getElementById("cart-list").innerHTML = cart.map((c, i) => `<div class="bg-white/5 p-2 rounded-lg flex justify-between text-xs border border-white/5"><span>${c.desc}</span><b>$${c.p.toFixed(2)} <button onclick="removeFromCart(${i})" class="text-red-500 ml-2">×</button></b></div>`).join("");
+        document.getElementById("total-disp").innerText = "TOTAL: $" + cart.reduce((a,b)=>a+b.p,0).toFixed(2);
+    }
+
     window.finalizarVenta = async function() {
         let cli = document.getElementById("cli").value, tel = document.getElementById("tel").value, fec = document.getElementById("fV").value;
         if(!cli || !cart.length) return alert("Faltan datos");
-        let total = cart.reduce((a,b)=>a+b.p,0);
-        cart.forEach(c => { if(window.state.inventario[c.m]) window.state.inventario[c.m].stock -= 1; });
-        window.state.ventas.push({ id: new Date(fec+"T12:00:00").getTime(), cliente: cli.toUpperCase(), telefono: tel, total: total, abonado: 0, pagado: false });
+        cart.forEach(c => { if(c.mat && window.state.inventario[c.mat]) window.state.inventario[c.mat].stock -= 1; });
+        window.state.ventas.push({ id: new Date(fec+"T12:00:00").getTime(), cliente: cli.toUpperCase(), telefono: tel, total: cart.reduce((a,b)=>a+b.p,0), abonado: 0, pagado: false });
         await window.sync(); cart = []; setView('inicio');
     };
 
     window.saveInv = async function() {
-        let m = document.getElementById("mInv").value, q = parseFloat(document.getElementById("qInv").value), p = parseFloat(document.getElementById("pInv").value);
+        let m = document.getElementById("mInv").value, q = parseFloat(document.getElementById("qInv").value), p = parseFloat(document.getElementById("pInv").value), f = document.getElementById("fC").value;
         if(m && q && p) {
             window.state.inventario[m].stock += q;
             if(!window.state.comprasInversion) window.state.comprasInversion = [];
-            window.state.comprasInversion.push({ id: Date.now(), amount: q*p });
+            window.state.comprasInversion.push({ id: new Date(f+"T12:00:00").getTime(), amount: q*p });
             await window.sync(); setView('inicio');
         }
     };
 
     window.saveGasto = async function() {
-        let n = document.getElementById("gNom").value, m = parseFloat(document.getElementById("gMon").value);
-        if(n && m) {
-            window.state.gastos.push({ id: Date.now(), name: n.toUpperCase(), amount: m });
-            await window.sync(); setView('inicio');
-        }
+        let n = document.getElementById("gNom").value, m = parseFloat(document.getElementById("gMon").value), f = document.getElementById("fG").value;
+        if(n && m) { window.state.gastos.push({ id: new Date(f+"T12:00:00").getTime(), name: n.toUpperCase(), amount: m }); await window.sync(); render(); }
     };
 
-    window.addMat = async function() {
-        let n = document.getElementById("newM").value.toUpperCase();
-        if(n) { if(!window.state.inventario) window.state.inventario = {}; window.state.inventario[n] = {stock: 0}; await window.sync(); render(); }
+    window.delGasto = async (id) => { if(confirm("¿Eliminar gasto?")){ window.state.gastos = window.state.gastos.filter(g => g.id !== id); await window.sync(); render(); } };
+    window.editGasto = (id) => {
+        let g = window.state.gastos.find(x => x.id === id);
+        let n = prompt("Nuevo concepto:", g.name);
+        let a = parseFloat(prompt("Nuevo monto:", g.amount));
+        if(n && a) { g.name = n.toUpperCase(); g.amount = a; window.sync(); render(); }
     };
 
-    window.abono = async function(id) {
-        let v = window.state.ventas.find(x => x.id === id);
-        let m = parseFloat(prompt(`Saldo: $${(v.total-v.abonado).toFixed(2)}. ¿Monto del abono?`));
-        if(m) { v.abonado = (v.abonado||0) + m; if(v.abonado >= v.total) v.pagado = true; await window.sync(); render(); }
-    };
+    window.addMat = async function() { let n = document.getElementById("newM").value.toUpperCase(); if(n) { if(!window.state.inventario) window.state.inventario = {}; window.state.inventario[n] = {stock: 0}; await window.sync(); render(); } };
+    window.addSer = async function() { let n = document.getElementById("newS").value.toUpperCase(); if(n) { if(!window.state.serviciosExtra) window.state.serviciosExtra = []; window.state.serviciosExtra.push(n); await window.sync(); render(); } };
+    window.abono = async function(id) { let v = window.state.ventas.find(x => x.id === id); let m = parseFloat(prompt(`Deuda: $${(v.total-v.abonado).toFixed(2)}. Abono?`)); if(m) { v.abonado = (v.abonado||0) + m; if(v.abonado >= v.total) v.pagado = true; await window.sync(); render(); } };
+    window.ws = (t, d) => window.open(`https://api.whatsapp.com/send?phone=${t}&text=Hola, saldo pendiente: $${d.toFixed(2)} en GhostPrint.`, '_blank');
 
-    window.ws = (t, d) => window.open(`https://api.whatsapp.com/send?phone=${t}&text=Hola, te escribimos de GhostPrint para recordarte tu saldo pendiente de $${d.toFixed(2)}. ¡Saludos!`, '_blank');
-    window.adjStock = async (n) => { let a = parseFloat(prompt("Stock Real?", window.state.inventario[n].stock)); if(!isNaN(a)){ window.state.inventario[n].stock = a; await window.sync(); render(); } };
-    window.resetAll = async () => { if(confirm("¿RESET TOTAL?")){ window.state.ventas=[]; window.state.gastos=[]; window.state.comprasInversion=[]; await window.sync(); setView('inicio'); } };
-
-    // Inicio forzado para que no tarde nada
     render();
 </script>
 </body>
