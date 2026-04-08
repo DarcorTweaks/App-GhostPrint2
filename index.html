@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GhostPrint ERP v4.2 - Final Stable</title>
+    <title>GhostPrint ERP v4.3 - Unidades Inteligentes</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -26,7 +26,7 @@
 <header>
     <div>
         <h1 class="text-2xl font-black italic uppercase">GhostPrint ERP</h1>
-        <p id="sync-status" class="text-[9px] font-bold text-amber-300 uppercase italic">Conectando...</p>
+        <p id="sync-status" class="text-[9px] font-bold text-amber-300 uppercase italic">Cargando...</p>
     </div>
 </header>
 
@@ -37,7 +37,6 @@
     <button onclick="setView('compras')" class="btn !bg-blue-600">📦 Compra y Stock</button>
     <button onclick="setView('gastos')" class="btn !bg-red-600">📉 Gastos</button>
     <button onclick="setView('config')" class="btn !bg-slate-700">⚙️ Config</button>
-    <button onclick="setView('reportes')" class="btn !bg-indigo-600">📊 Reportes</button>
 </nav>
 
 <div id="app" class="p-4 max-w-4xl mx-auto"></div>
@@ -82,53 +81,62 @@ window.render = function() {
     let app = document.getElementById("app"), html = "";
     if(!app) return;
 
-    let vT = window.state.ventas.reduce((a,b)=>a+b.total,0);
-    let gT = window.state.gastos.reduce((a,b)=>a+b.amount,0);
-
     if(window.view === "dashboard"){
+        let vT = window.state.ventas.reduce((a,b)=>a+b.total,0);
+        let gT = window.state.gastos.reduce((a,b)=>a+b.amount,0);
         html = `<div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
-            <div class="card !m-0 bg-green-50 border-b-4 border-green-500 text-center font-bold">VENTAS: $${vT.toFixed(2)}</div>
-            <div class="card !m-0 bg-red-50 border-b-4 border-red-500 text-center font-bold">GASTOS: $${gT.toFixed(2)}</div>
-            <div class="card !m-0 bg-slate-900 text-white italic text-center text-purple-400 font-bold uppercase italic">Neto: $${(vT-gT).toFixed(2)}</div>
+            <div class="card !m-0 bg-green-50 text-center font-bold italic">INGRESOS: $${vT.toFixed(2)}</div>
+            <div class="card !m-0 bg-red-50 text-center font-bold italic">EGRESOS: $${gT.toFixed(2)}</div>
+            <div class="card !m-0 bg-slate-900 text-purple-400 text-center font-bold uppercase italic">NETO: $${(vT-gT).toFixed(2)}</div>
         </div>
         <div class="card"><canvas id="chartDash" height="200"></canvas></div>`;
         setTimeout(() => initDashChart(vT, gT), 100);
     }
 
     if(window.view === "ventas"){
-        html = `<div class="card"><h2 class="font-black mb-4 uppercase text-purple-700 italic">Punto de Venta</h2>
-            <label>Cliente</label><input id="cliV" placeholder="NOMBRE">
+        html = `<div class="card"><h2 class="font-black mb-4 uppercase text-purple-700 italic border-b pb-2">Nueva Venta</h2>
+            <label>Cliente</label><input id="cliV" placeholder="EJ: JUAN PEREZ">
             <label>WhatsApp</label><input id="telV" type="number" placeholder="58...">
             <div class="grid grid-cols-2 gap-2">
-                <div><label>Material (Stock)</label><select id="pSel"><option value="">-- Ninguno --</option>${Object.keys(window.state.inventario).map(p=>`<option value="${p}">${p}</option>`).join("")}</select></div>
-                <div><label>Servicio (Libre)</label><select id="sSel"><option value="">-- Ninguno --</option>${window.state.serviciosExtra.map(s=>`<option value="${s}">${s}</option>`).join("")}</select></div>
+                <div><label>Material (Descuenta Stock)</label>
+                <select id="pSel" onchange="toggleInputs()"><option value="">-- Ninguno --</option>${Object.keys(window.state.inventario).map(p=>`<option value="${p}">${p}</option>`).join("")}</select></div>
+                <div><label>Servicio (Libre)</label>
+                <select id="sSel" onchange="toggleInputs()"><option value="">-- Ninguno --</option>${window.state.serviciosExtra.map(s=>`<option value="${s}">${s}</option>`).join("")}</select></div>
             </div>
-            <label>Tarifa</label><select id="tCli"><option value="detal">Detal ($9)</option><option value="mayor">Mayor ($10)</option></select>
-            <label>Cantidad / Metros</label><input id="cQty" type="number" value="1">
-            <button onclick="addItemCarrito()" class="btn w-full !bg-blue-600 mt-2">+ AGREGAR A LISTA</button>
-            <div id="listaCarrito" class="mt-4 border-t pt-2"></div>
+            <div id="boxMedidas">
+                <label>Tarifa y Unidad</label>
+                <select id="tCli">
+                    <option value="detal">Detal ($9) - Marcado por m²</option>
+                    <option value="mayor">Mayor ($10) - Marcado por ML</option>
+                </select>
+                <label>Cantidad (Medida)</label><input id="cQty" type="number" value="1" step="0.01">
+            </div>
+            <button onclick="addItemCarrito()" class="btn w-full !bg-blue-600 mt-2">+ AÑADIR A LA LISTA</button>
+            <div id="listaCarrito" class="mt-4 border-t pt-2 space-y-1"></div>
             <div id="totalVenta" class="p-3 bg-slate-800 text-white text-center font-bold mt-2 rounded-xl text-xl uppercase italic">Total: $0.00</div>
-            <button onclick="procesarV()" class="btn w-full bg-green-600 mt-4 py-4 font-black">FINALIZAR VENTA</button></div>`;
+            <button onclick="procesarV()" class="btn w-full bg-green-600 mt-4 py-4 font-black">FINALIZAR Y REGISTRAR</button></div>`;
         setTimeout(() => renderCarritoInner(), 10);
     }
 
     if(window.view === "cobranzas"){
         html = `${window.state.ventas.filter(v=>!v.pagado).reverse().map(v=>`
             <div class="card flex justify-between items-center border-l-4 border-amber-500">
-                <div><b class="uppercase">${v.cliente}</b><br><small class="text-red-600 font-bold italic">Debe: $${(v.total-(v.abonado||0)).toFixed(2)}</small></div>
+                <div><b class="uppercase">${v.cliente}</b><br><small class="text-red-600 font-bold italic">Resta: $${(v.total-(v.abonado||0)).toFixed(2)}</small></div>
                 <div class="flex gap-1">
                     <button onclick="enviarWS(${v.id})" class="bg-green-600 text-white p-2 rounded text-[8px] font-bold">WS</button>
                     <button onclick="abonarV(${v.id})" class="bg-blue-600 text-white p-2 rounded text-[8px] font-bold">ABONO</button>
-                    <button onclick="borrarV(${v.id})" class="bg-red-500 text-white p-2 rounded text-[8px] font-bold uppercase italic">Anular</button>
+                    <button onclick="borrarV(${v.id})" class="bg-red-500 text-white p-2 rounded text-[8px] font-bold">ANULAR</button>
                 </div>
             </div>`).join("")}`;
     }
 
     if(window.view === "compras"){
         html = `<div class="card bg-blue-50">
-            <label>Insumo a Cargar</label><select id="mCom">${Object.keys(window.state.inventario).map(p=>`<option value="${p}">${p}</option>`).join("")}</select>
-            <label>Cantidad</label><input id="qCom" type="number"><label>Costo Inversión $</label><input id="vCom" type="number">
-            <button onclick="regCom()" class="btn w-full bg-blue-700 mt-2">Cargar Inventario</button>
+            <h2 class="font-bold uppercase mb-2 italic">Entrada de Material</h2>
+            <label>Insumo</label><select id="mCom">${Object.keys(window.state.inventario).map(p=>`<option value="${p}">${p}</option>`).join("")}</select>
+            <label>Cantidad</label><input id="qCom" type="number">
+            <label>Inversión $</label><input id="vCom" type="number">
+            <button onclick="regCom()" class="btn w-full bg-blue-700 mt-2">Cargar Stock</button>
         </div>
         <div class="grid grid-cols-2 gap-2 mt-4">
             ${Object.entries(window.state.inventario).map(([n,i])=>`
@@ -140,47 +148,62 @@ window.render = function() {
     }
 
     if(window.view === "gastos"){
-        html = `<div class="card"><h2 class="font-bold uppercase text-red-600 mb-2 italic">Registro de Gastos</h2><label>Descripción</label><input id="gNom"><label>Monto $</label><input id="gMon" type="number"><button onclick="regG()" class="btn w-full bg-red-600 mt-2">Cargar Gasto</button></div>
-        ${window.state.gastos.slice().reverse().map(g=>`<div class="card flex justify-between py-2 border-l-4 border-red-500"><div><small class="uppercase font-bold">${g.name}</small><br><b>$${g.amount.toFixed(2)}</b></div><button onclick="borrarG(${g.id})" class="text-red-500 font-bold text-xs">ELIMINAR</button></div>`).join("")}`;
-    }
-
-    if(window.view === "reportes"){
-        html = `<div class="card bg-indigo-900 text-white italic font-bold text-center uppercase">Estadísticas GhostPrint</div>
-                <div class="card"><canvas id="chartPie" height="250"></canvas></div>
-                <div class="card"><canvas id="chartLines" height="250"></canvas></div>`;
-        setTimeout(() => initReportCharts(), 100);
+        html = `<div class="card"><label>Gasto / Descripción</label><input id="gNom"><label>Monto $</label><input id="gMon" type="number"><button onclick="regG()" class="btn w-full bg-red-600 mt-2">Registrar</button></div>
+        ${window.state.gastos.slice().reverse().map(g=>`<div class="card flex justify-between py-2 border-l-4 border-red-500"><div><small class="uppercase font-bold">${g.name}</small><br><b>$${g.amount.toFixed(2)}</b></div><button onclick="borrarG(${g.id})" class="text-red-500 font-bold text-xs">X</button></div>`).join("")}`;
     }
 
     if(window.view === "config"){
-        html = `<div class="card"><label>Nuevo Material (Stock)</label><input id="nP"><button onclick="addC('p')" class="btn bg-blue-600 mt-2 w-full uppercase">Guardar Material</button>
-            <hr class="my-6"><label>Nuevo Servicio (Libre)</label><input id="nS"><button onclick="addC('s')" class="btn bg-purple-600 mt-2 w-full uppercase">Guardar Servicio</button></div>`;
+        html = `<div class="card"><label>Nuevo Material (Inventario)</label><input id="nP"><button onclick="addC('p')" class="btn bg-blue-600 mt-2 w-full">Guardar Material</button>
+            <hr class="my-6"><label>Nuevo Servicio (Libre)</label><input id="nS"><button onclick="addC('s')" class="btn bg-purple-600 mt-2 w-full">Guardar Servicio</button></div>`;
     }
 
     app.innerHTML = html;
 };
 
+// --- LÓGICA DE UNIDADES ---
+window.addItemCarrito = () => {
+    let p = document.getElementById("pSel").value;
+    let s = document.getElementById("sSel").value;
+    let t = document.getElementById("tCli").value;
+    let c = parseFloat(document.getElementById("cQty").value) || 0;
+
+    if(!p && !s) return alert("Selecciona algo para vender");
+
+    let unidad = (t === "mayor") ? "ML" : "m²";
+    let precio = (t === "mayor") ? 10 : 9;
+    
+    // Si es solo servicio (venta libre), el precio suele ser fijo o diferente
+    if(!p && s) { precio = 12; unidad = "Und"; } 
+
+    let nombreFull = (p && s) ? `${p} + ${s}` : (p || s);
+    
+    carritoVenta.push({ 
+        nombre: nombreFull.toUpperCase(), 
+        qty: c, 
+        unidad: unidad,
+        sub: c * precio, 
+        esProd: !!p, 
+        prodKey: p 
+    });
+    renderCarritoInner();
+};
+
 function renderCarritoInner() {
     let div = document.getElementById("listaCarrito"), totalDiv = document.getElementById("totalVenta");
     if(!div) return;
-    div.innerHTML = carritoVenta.map((v,i)=>`<div class="flex justify-between py-1 text-xs border-b"><span>${v.qty}x ${v.nombre}</span><button onclick="removeItemCarrito(${i})" class="text-red-500 font-bold px-2">X</button></div>`).join("");
+    div.innerHTML = carritoVenta.map((v,i)=>`
+        <div class="flex justify-between items-center py-1 text-[11px] border-b bg-white px-2 rounded">
+            <span><b>${v.qty}${v.unidad}</b> - ${v.nombre}</span>
+            <button onclick="removeItemCarrito(${i})" class="text-red-500 font-bold ml-2">X</button>
+        </div>`).join("");
     totalDiv.innerText = `TOTAL: $${carritoVenta.reduce((a,b)=>a+b.sub,0).toFixed(2)}`;
 }
-
-window.addItemCarrito = () => {
-    let p = document.getElementById("pSel").value, s = document.getElementById("sSel").value, t = document.getElementById("tCli").value, c = parseFloat(document.getElementById("cQty").value) || 0;
-    if(!p && !s) return alert("Selecciona Material o Servicio");
-    let nombre = (p && s) ? `${p} + ${s}` : (p || s);
-    let pre = p ? (t === "mayor" ? 10 : 9) : 12;
-    carritoVenta.push({ nombre: nombre.toUpperCase(), qty: c, sub: c * pre, esProd: !!p, prodKey: p });
-    renderCarritoInner();
-};
 
 window.removeItemCarrito = (i) => { carritoVenta.splice(i, 1); renderCarritoInner(); };
 
 window.procesarV = async () => {
     let cliente = document.getElementById("cliV").value.toUpperCase();
-    let tel = document.getElementById("telV").value;
-    if(!cliente || carritoVenta.length === 0) return alert("Datos incompletos");
+    if(!cliente || carritoVenta.length === 0) return alert("Faltan datos");
 
     let keyTinta = Object.keys(window.state.inventario).find(k => k.toUpperCase().includes("TINTA"));
 
@@ -194,20 +217,18 @@ window.procesarV = async () => {
     });
 
     let total = carritoVenta.reduce((a,b)=>a+b.sub, 0);
-    window.state.ventas.push({id:Date.now(), cliente, telefono:tel, total, abonado:0, pagado:false, items: [...carritoVenta]});
-    
+    window.state.ventas.push({id:Date.now(), cliente, total, abonado:0, pagado:false, items: [...carritoVenta]});
     await window.save(); 
     carritoVenta = [];
-    alert("Venta procesada con éxito.");
+    alert("Venta Exitosa");
     setView('cobranzas');
 };
 
 window.borrarV = async (id) => {
-    if(confirm("¿Anular venta? El stock se devolverá.")){
+    if(confirm("¿Anular? Se devolverá stock y tinta.")){
         let vIdx = window.state.ventas.findIndex(x => x.id === id);
         let venta = window.state.ventas[vIdx];
         let keyTinta = Object.keys(window.state.inventario).find(k => k.toUpperCase().includes("TINTA"));
-
         venta.items.forEach(i => {
             if (i.esProd && i.prodKey && window.state.inventario[i.prodKey]) {
                 window.state.inventario[i.prodKey].stock += i.qty;
@@ -216,47 +237,20 @@ window.borrarV = async (id) => {
                 }
             }
         });
-
         window.state.ventas.splice(vIdx, 1);
         await window.save();
         render();
     }
 };
 
-window.regG = async () => {
-    let n = document.getElementById("gNom").value, m = parseFloat(document.getElementById("gMon").value);
-    if(n && m) { window.state.gastos.push({id:Date.now(), name:n.toUpperCase(), amount: m}); await window.save(); render(); }
-};
-
-window.borrarG = async (id) => { if(confirm("¿Eliminar gasto?")){ window.state.gastos=window.state.gastos.filter(x=>x.id!==id); await window.save(); render(); } };
-
-window.initDashChart = (v, g) => {
-    new Chart(document.getElementById('chartDash'), {
-        type: 'bar',
-        data: { labels: ['Ventas', 'Gastos'], datasets: [{ data: [v, g], backgroundColor: ['#22c55e', '#ef4444'], borderRadius: 10 }] }
-    });
-};
-
-function initReportCharts() {
-    let items = window.state.ventas.map(v => v.items || []).flat();
-    let dataPie = items.reduce((a,b)=>{a[b.nombre]=(a[b.nombre]||0)+b.sub; return a;},{});
-    new Chart(document.getElementById('chartPie'), { type: 'doughnut', data: { labels: Object.keys(dataPie), datasets: [{ data: Object.values(dataPie), backgroundColor: ['#6d28d9', '#22c55e', '#3b82f6', '#f59e0b', '#ec4899'] }] } });
-}
-
-window.enviarWS = (id) => {
-    let v = window.state.ventas.find(x => x.id === id);
-    let msg = `GhostPrint: Hola ${v.cliente}, tu deuda es de *$${(v.total-(v.abonado||0)).toFixed(2)}*.`;
-    window.open(`https://api.whatsapp.com/send?phone=${v.telefono}&text=${encodeURIComponent(msg)}`, '_blank');
-};
-
-window.abonarV = async (id) => {
-    let v = window.state.ventas.find(x=>x.id===id), m = parseFloat(prompt("¿Monto?"));
-    if(m){ v.abonado += m; if(v.abonado >= v.total) v.pagado = true; await window.save(); render(); }
-};
-
 window.regCom = async () => {
     let m = document.getElementById("mCom").value, q = parseFloat(document.getElementById("qCom").value), v = parseFloat(document.getElementById("vCom").value);
     if(q > 0) { window.state.inventario[m].stock += q; window.state.gastos.push({id:Date.now(), name:`COMPRA: ${m}`, amount: v}); await window.save(); render(); }
+};
+
+window.regG = async () => {
+    let n = document.getElementById("gNom").value, m = parseFloat(document.getElementById("gMon").value);
+    if(n && m) { window.state.gastos.push({id:Date.now(), name:n.toUpperCase(), amount: m}); await window.save(); render(); }
 };
 
 window.addC = async (t) => {
@@ -266,6 +260,15 @@ window.addC = async (t) => {
 };
 
 window.editStock = async (n) => { let v = parseFloat(prompt(`Ajustar ${n}:`, window.state.inventario[n].stock)); if(!isNaN(v)){ window.state.inventario[n].stock = v; await window.save(); render(); } };
+
+window.borrarG = async (id) => { if(confirm("¿Borrar?")){ window.state.gastos=window.state.gastos.filter(x=>x.id!==id); await window.save(); render(); } };
+
+function initDashChart(v, g) {
+    new Chart(document.getElementById('chartDash'), {
+        type: 'bar',
+        data: { labels: ['Ventas', 'Gastos'], datasets: [{ data: [v, g], backgroundColor: ['#22c55e', '#ef4444'], borderRadius: 10 }] }
+    });
+}
 
 render();
 </script>
