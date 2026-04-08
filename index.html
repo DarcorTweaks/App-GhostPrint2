@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GhostPrint ERP v5.1 - Report Fix</title>
+    <title>GhostPrint ERP v6.0 - Owner Mode</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -15,6 +15,7 @@
         }
         .btn { background: #6d28d9; color: white; padding: 10px 14px; border-radius: 12px; cursor: pointer; font-weight: 700; border: none; transition: 0.2s; text-transform: uppercase; font-size: 10px; }
         .card { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(5px); padding: 20px; margin: 12px 0; border-radius: 20px; color: #1e293b; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
+        .stat-card { border-radius: 18px; padding: 15px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
         input, select { border: 1px solid #e2e8f0; padding: 12px; margin: 8px 0; border-radius: 12px; width: 100%; background: #f8fafc; color: #1e293b; font-weight: 600; }
         label { font-size: 10px; color: #64748b; font-weight: 800; text-transform: uppercase; display: block; margin-top: 8px; }
         header { background: linear-gradient(to right, #4c1d95, #000); color: white; padding: 16px; display: flex; justify-content: space-between; position: sticky; top: 0; z-index: 50; }
@@ -82,17 +83,55 @@ window.render = function() {
     let app = document.getElementById("app"), html = "";
     if(!app) return;
 
-    let vT = window.state.ventas.reduce((a,b)=>a+b.total,0);
-    let gT = window.state.gastos.reduce((a,b)=>a+b.amount,0);
+    // --- CÁLCULOS DE NEGOCIO ---
+    let totalVendido = window.state.ventas.reduce((a,b)=>a+b.total,0);
+    let totalGastos = window.state.gastos.reduce((a,b)=>a+b.amount,0);
+    let dineroCobrado = window.state.ventas.reduce((a,b)=>a+(b.abonado || 0), 0);
+    let cuentasPorCobrar = totalVendido - dineroCobrado;
+    let balanceNeto = totalVendido - totalGastos;
+    let metaDiaria = 100; // Puedes cambiar este valor
+    let progresoMeta = (totalVendido / metaDiaria) * 100;
 
     if(window.view === "dashboard"){
-        html = `<div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
-            <div class="card !m-0 bg-green-50 font-bold border-b-4 border-green-500 text-center uppercase">Ingresos: $${vT.toFixed(2)}</div>
-            <div class="card !m-0 bg-red-50 font-bold border-b-4 border-red-500 text-center uppercase">Egresos: $${gT.toFixed(2)}</div>
-            <div class="card !m-0 bg-slate-900 text-purple-400 font-bold text-center uppercase italic border-b-4 border-purple-500">Neto: $${(vT-gT).toFixed(2)}</div>
+        html = `
+        <div class="grid grid-cols-2 gap-3 mb-4">
+            <div class="stat-card bg-green-500 text-white">
+                <span class="text-[10px] font-bold uppercase opacity-80">Caja Real (Cobrado)</span>
+                <b class="text-2xl">$${dineroCobrado.toFixed(2)}</b>
+            </div>
+            <div class="stat-card bg-amber-500 text-white">
+                <span class="text-[10px] font-bold uppercase opacity-80">Cuentas por Cobrar</span>
+                <b class="text-2xl">$${cuentasPorCobrar.toFixed(2)}</b>
+            </div>
         </div>
-        <div class="card"><canvas id="chartDash" height="200"></canvas></div>`;
-        setTimeout(() => initDashChart(vT, gT), 100);
+
+        <div class="card !m-0 mb-4 bg-slate-900 border-l-8 border-purple-500">
+            <div class="flex justify-between items-center">
+                <div>
+                    <span class="text-purple-400 text-[10px] font-black uppercase">Ganancia Estimada</span>
+                    <h2 class="text-white text-3xl font-black italic">$${balanceNeto.toFixed(2)}</h2>
+                </div>
+                <div class="text-right">
+                    <span class="text-slate-400 text-[10px] font-bold uppercase">Gastos Totales</span>
+                    <p class="text-red-400 font-bold">$${totalGastos.toFixed(2)}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="flex justify-between text-[10px] font-black uppercase mb-1">
+                <span>Meta Diaria ($${metaDiaria})</span>
+                <span>${progresoMeta.toFixed(0)}%</span>
+            </div>
+            <div class="w-full bg-slate-200 h-4 rounded-full overflow-hidden">
+                <div class="bg-purple-600 h-full transition-all" style="width: ${Math.min(progresoMeta, 100)}%"></div>
+            </div>
+        </div>
+
+        <div class="card mt-4">
+            <canvas id="chartDash" height="180"></canvas>
+        </div>`;
+        setTimeout(() => initDashChart(totalVendido, totalGastos, dineroCobrado), 100);
     }
 
     if(window.view === "ventas"){
@@ -117,22 +156,10 @@ window.render = function() {
         setTimeout(() => renderCarritoInner(), 10);
     }
 
-    if(window.view === "reportes"){
-        html = `<div class="card bg-indigo-900 text-white italic font-bold text-center uppercase">Ventas por Producto</div>
-                <div class="card min-h-[300px] flex items-center justify-center">
-                    <canvas id="chartPie" height="250"></canvas>
-                    <p id="noDataPie" class="hidden text-slate-400 font-bold uppercase italic text-xs">Aún no hay ventas registradas</p>
-                </div>
-                <div class="card bg-indigo-900 text-white italic font-bold text-center uppercase mt-4">Flujo Semanal</div>
-                <div class="card"><canvas id="chartLines" height="250"></canvas></div>`;
-        setTimeout(() => initReportCharts(), 100);
-    }
-
-    // ... (Mantengo las otras vistas Cobranzas, Compras, Gastos, Config igual para no dañar nada)
     if(window.view === "cobranzas"){
         html = `${window.state.ventas.filter(v=>!v.pagado).reverse().map(v=>`
             <div class="card flex justify-between items-center border-l-4 border-amber-500">
-                <div><b class="uppercase">${v.cliente}</b><br><small class="text-red-600 font-bold italic">Debe: $${(v.total-(v.abonado||0)).toFixed(2)}</small></div>
+                <div><b class="uppercase">${v.cliente}</b><br><small class="text-red-600 font-bold italic">Resta: $${(v.total-(v.abonado||0)).toFixed(2)}</small></div>
                 <div class="flex gap-1">
                     <button onclick="enviarWS(${v.id})" class="bg-green-600 text-white p-2 rounded text-[8px] font-bold">WS</button>
                     <button onclick="abonarV(${v.id})" class="bg-blue-600 text-white p-2 rounded text-[8px] font-bold">ABONO</button>
@@ -142,13 +169,21 @@ window.render = function() {
     }
 
     if(window.view === "compras"){
-        html = `<div class="card bg-blue-50"><label>Insumo</label><select id="mCom">${Object.keys(window.state.inventario).map(p=>`<option value="${p}">${p}</option>`).join("")}</select><label>Cantidad</label><input id="qCom" type="number"><label>Inversión $</label><input id="vCom" type="number"><button onclick="regCom()" class="btn w-full bg-blue-700 mt-2">Cargar Stock</button></div>
+        html = `<div class="card bg-blue-50"><label>Insumo</label><select id="mCom">${Object.keys(window.state.inventario).map(p=>`<option value="${p}">${p}</option>`).join("")}</select><label>Cantidad</label><input id="qCom" type="number"><label>Costo $</label><input id="vCom" type="number"><button onclick="regCom()" class="btn w-full bg-blue-700 mt-2">Cargar Stock</button></div>
         <div class="grid grid-cols-2 gap-2 mt-4">${Object.entries(window.state.inventario).map(([n,i])=>`<div class="card !m-0 p-3 flex justify-between items-center"><div><b class="text-[9px] uppercase">${n}</b><br><span class="text-blue-700 font-bold text-lg">${(i.stock || 0).toFixed(2)}</span></div><button onclick="editStock('${n}')" class="text-blue-500 font-bold text-[9px]">EDIT</button></div>`).join("")}</div>`;
     }
 
     if(window.view === "gastos"){
         html = `<div class="card"><label>Descripción</label><input id="gNom"><label>Monto $</label><input id="gMon" type="number"><button onclick="regG()" class="btn w-full bg-red-600 mt-2">Cargar Gasto</button></div>
         ${window.state.gastos.slice().reverse().map(g=>`<div class="card flex justify-between py-2 border-l-4 border-red-500"><div><small class="uppercase font-bold">${g.name}</small><br><b>$${g.amount.toFixed(2)}</b></div><button onclick="borrarG(${g.id})" class="text-red-500 font-bold text-xs">X</button></div>`).join("")}`;
+    }
+
+    if(window.view === "reportes"){
+        html = `<div class="card bg-indigo-900 text-white italic font-bold text-center uppercase">Top Productos</div>
+                <div class="card min-h-[300px] flex items-center justify-center">
+                    <canvas id="chartPie" height="250"></canvas>
+                </div>`;
+        setTimeout(() => initReportCharts(), 100);
     }
 
     if(window.view === "config"){
@@ -158,56 +193,36 @@ window.render = function() {
     app.innerHTML = html;
 };
 
-// --- LÓGICA DE REPORTES CORREGIDA ---
+// --- GRÁFICOS ---
+function initDashChart(v, g, c) {
+    new Chart(document.getElementById('chartDash'), {
+        type: 'bar',
+        data: {
+            labels: ['Vendido', 'Gastado', 'Cobrado'],
+            datasets: [{
+                data: [v, g, c],
+                backgroundColor: ['#6d28d9', '#ef4444', '#22c55e'],
+                borderRadius: 8
+            }]
+        },
+        options: { plugins: { legend: { display: false } } }
+    });
+}
+
 function initReportCharts() {
-    let ctxPie = document.getElementById('chartPie');
-    let noData = document.getElementById('noDataPie');
-    
-    // Agrupar ventas por nombre de producto/servicio
     let items = window.state.ventas.map(v => v.items || []).flat();
-    
-    if (items.length === 0) {
-        if(ctxPie) ctxPie.classList.add('hidden');
-        if(noData) noData.classList.remove('hidden');
-        return;
-    }
-
-    let dataMap = items.reduce((a, b) => {
-        a[b.nombre] = (a[b.nombre] || 0) + b.sub;
-        return a;
-    }, {});
-
-    new Chart(ctxPie, {
+    if (items.length === 0) return;
+    let dataMap = items.reduce((a, b) => { a[b.nombre] = (a[b.nombre] || 0) + b.sub; return a; }, {});
+    new Chart(document.getElementById('chartPie'), {
         type: 'doughnut',
         data: {
             labels: Object.keys(dataMap),
-            datasets: [{
-                data: Object.values(dataMap),
-                backgroundColor: ['#6d28d9', '#22c55e', '#3b82f6', '#f59e0b', '#ec4899', '#06b6d4'],
-                borderWidth: 0
-            }]
-        },
-        options: { plugins: { legend: { position: 'bottom', labels: { font: { weight: 'bold' } } } } }
-    });
-
-    // Gráfico de líneas (Flujo Semanal)
-    new Chart(document.getElementById('chartLines'), {
-        type: 'line',
-        data: {
-            labels: ['Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab', 'Dom'],
-            datasets: [{
-                label: 'Ingresos ($)',
-                data: [0, 0, 0, 0, 0, 0, window.state.ventas.reduce((a,b)=>a+b.total,0)],
-                borderColor: '#22c55e',
-                tension: 0.4,
-                fill: true,
-                backgroundColor: 'rgba(34, 197, 94, 0.1)'
-            }]
+            datasets: [{ data: Object.values(dataMap), backgroundColor: ['#6d28d9', '#22c55e', '#3b82f6', '#f59e0b', '#ec4899'], borderWidth: 0 }]
         }
     });
 }
 
-// --- MANTENGO EL RESTO DE FUNCIONES IGUAL ---
+// --- FUNCIONES MOTOR ---
 window.addItemCarrito = () => {
     let p = document.getElementById("pSel").value, s = document.getElementById("sSel").value, t = document.getElementById("tCli").value, c = parseFloat(document.getElementById("cQty").value) || 0;
     if(!p && !s) return;
@@ -238,7 +253,7 @@ window.procesarV = async () => {
         }
     });
     window.state.ventas.push({id:Date.now(), cliente, total: carritoVenta.reduce((a,b)=>a+b.sub, 0), abonado:0, pagado:false, items: [...carritoVenta]});
-    await window.save(); carritoVenta = []; alert("Venta Exitosa"); setView('cobranzas');
+    await window.save(); carritoVenta = []; alert("Venta Registrada"); setView('cobranzas');
 };
 
 window.borrarV = async (id) => {
@@ -274,7 +289,15 @@ window.addC = async (t) => {
 
 window.editStock = async (n) => { let v = parseFloat(prompt(`Ajustar ${n}:`, window.state.inventario[n].stock)); if(!isNaN(v)){ window.state.inventario[n].stock = v; await window.save(); render(); } };
 window.borrarG = async (id) => { if(confirm("¿Borrar?")){ window.state.gastos=window.state.gastos.filter(x=>x.id!==id); await window.save(); render(); } };
-window.initDashChart = (v, g) => { new Chart(document.getElementById('chartDash'), { type: 'bar', data: { labels: ['Ventas', 'Gastos'], datasets: [{ data: [v, g], backgroundColor: ['#22c55e', '#ef4444'], borderRadius: 10 }] } }); };
+window.enviarWS = (id) => {
+    let v = window.state.ventas.find(x => x.id === id);
+    let msg = `GhostPrint: Hola ${v.cliente}, resta *$${(v.total-(v.abonado||0)).toFixed(2)}*.`;
+    window.open(`https://api.whatsapp.com/send?phone=${v.telefono}&text=${encodeURIComponent(msg)}`, '_blank');
+};
+window.abonarV = async (id) => {
+    let v = window.state.ventas.find(x=>x.id===id), m = parseFloat(prompt("¿Monto?"));
+    if(m){ v.abonado += m; if(v.abonado >= v.total) v.pagado = true; await window.save(); render(); }
+};
 
 render();
 </script>
