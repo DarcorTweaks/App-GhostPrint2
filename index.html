@@ -3,38 +3,30 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GhostPrint ERP v3 - Final Fix</title>
+    <title>GhostPrint ERP v3 - Total Fix</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body { background-color: #0d0d1a; color: #e2e8f0; font-family: ui-sans-serif, system-ui; padding-bottom: 96px; min-height: 100vh; }
-        .btn { background: #6d28d9; color: white; padding: 10px 14px; border-radius: 12px; cursor: pointer; font-weight: 700; border: none; transition: 0.2s; text-transform: uppercase; font-size: 10px; }
-        .card { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(5px); padding: 20px; margin: 12px 0; border-radius: 20px; color: #1e293b; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
+        body { background-color: #0d0d1a; color: #e2e8f0; font-family: system-ui; padding-bottom: 96px; }
+        .btn { background: #6d28d9; color: white; padding: 12px; border-radius: 12px; cursor: pointer; font-weight: 700; border: none; text-transform: uppercase; font-size: 10px; }
+        .card { background: white; padding: 20px; margin: 12px 0; border-radius: 20px; color: #1e293b; box-shadow: 0 10px 20px rgba(0,0,0,0.4); }
         input, select { border: 1px solid #e2e8f0; padding: 12px; margin: 8px 0; border-radius: 12px; width: 100%; background: #f8fafc; color: #1e293b; font-weight: 600; }
         label { font-size: 10px; color: #64748b; font-weight: 800; text-transform: uppercase; display: block; margin-top: 8px; }
-        header { background: linear-gradient(to right, #4c1d95, #000); color: white; padding: 16px; display: flex; justify-content: space-between; position: sticky; top: 0; z-index: 50; }
-        nav { padding: 8px; display: flex; gap: 8px; overflow-x: auto; background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px); position: sticky; top: 72px; z-index: 40; }
-        .table-ghost { width: 100%; border-collapse: collapse; font-size: 11px; }
-        .table-ghost th { background: #f1f5f9; padding: 8px; text-align: left; color: #64748b; text-transform: uppercase; }
-        .table-ghost td { padding: 8px; border-bottom: 1px solid #f1f1f1; }
+        header { background: #1e1b4b; color: white; padding: 16px; position: sticky; top: 0; z-index: 50; border-bottom: 2px solid #6d28d9; }
+        nav { padding: 8px; display: flex; gap: 8px; overflow-x: auto; background: rgba(0,0,0,0.5); position: sticky; top: 60px; z-index: 40; }
     </style>
 </head>
 <body>
 
 <header>
-    <div>
-        <h1 class="text-2xl font-black italic uppercase">GhostPrint ERP</h1>
-        <p id="sync-status" class="text-[9px] font-bold text-amber-300 uppercase">Sincronizando...</p>
-    </div>
+    <h1 class="text-xl font-black italic">GHOSTPRINT ERP</h1>
+    <p id="sync-status" class="text-[9px] text-amber-300">CONECTANDO...</p>
 </header>
 
 <nav>
     <button onclick="setView('dashboard')" class="btn">🏠 Inicio</button>
     <button onclick="setView('ventas')" class="btn !bg-green-600">💵 Vender</button>
     <button onclick="setView('cobranzas')" class="btn !bg-amber-500">⏳ Cobros</button>
-    <button onclick="setView('compras')" class="btn !bg-blue-600">📦 Compras</button>
     <button onclick="setView('config')" class="btn !bg-slate-700">⚙️ Catálogo</button>
-    <button onclick="setView('reportes')" class="btn !bg-indigo-600">📊 Reportes</button>
 </nav>
 
 <div id="app" class="p-4 max-w-4xl mx-auto"></div>
@@ -62,8 +54,13 @@ let carritoVenta = [];
 
 onSnapshot(docRef, (snap) => {
     if (snap.exists()) { 
-        window.state = snap.data(); 
-        document.getElementById("sync-status").innerText = "Sincronizado ✓"; 
+        window.state = snap.data();
+        // Proteccion contra datos nulos
+        if (!window.state.inventario) window.state.inventario = {};
+        if (!window.state.serviciosExtra) window.state.serviciosExtra = [];
+        if (!window.state.ventas) window.state.ventas = [];
+        
+        document.getElementById("sync-status").innerText = "CONECTADO ✓"; 
         render(); 
     }
 });
@@ -79,41 +76,63 @@ window.render = function() {
 
     if(window.view === "dashboard"){
         const vM = (window.state.ventas || []).filter(v => new Date(v.id).getMonth() === mesIdx).reduce((a,b)=>a+b.total,0);
-        html = `<div class="card bg-green-50">Ventas del Mes<br><b class="text-3xl text-green-700">$${vM.toFixed(2)}</b></div>`;
+        html = `<div class="card"><h2 class="text-slate-400 font-bold text-xs uppercase">Ventas Abril</h2><b class="text-4xl text-green-600">$${vM.toFixed(2)}</b></div>`;
     }
 
     if(window.view === "ventas"){
         html = `<div class="card">
-            <h2 class="font-black mb-4 uppercase">Facturar</h2>
-            <label>Cliente</label><input id="cliV" placeholder="CLIENTE">
+            <h2 class="font-black mb-4 uppercase text-purple-700">Nueva Venta</h2>
+            <label>Nombre Cliente</label><input id="cliV" placeholder="Ej: Juan Pérez">
+            
             <div class="grid grid-cols-2 gap-2">
-                <div><label>Material</label><select id="pSel"><option value="">-- Ver --</option>${Object.keys(window.state.inventario).map(p=>`<option value="${p}">${p}</option>`).join("")}</select></div>
-                <div><label>Servicio</label><select id="sSel"><option value="">-- Ver --</option>${(window.state.serviciosExtra || []).map(s=>`<option value="${s}">${s}</option>`).join("")}</select></div>
+                <div>
+                    <label>Material</label>
+                    <select id="pSel"><option value="">-- Ninguno --</option>${Object.keys(window.state.inventario).map(p=>`<option value="${p}">${p}</option>`).join("")}</select>
+                </div>
+                <div>
+                    <label>Servicio</label>
+                    <select id="sSel"><option value="">-- Ninguno --</option>${window.state.serviciosExtra.map(s=>`<option value="${s}">${s}</option>`).join("")}</select>
+                </div>
             </div>
-            <label>Tarifa</label>
+
+            <label>Tipo de Tarifa</label>
             <select id="tCli" onchange="document.getElementById('divLibre').style.display = (this.value==='libre'?'block':'none')">
-                <option value="detal">Detal ($9)</option>
-                <option value="mayor">Mayor ($10)</option>
-                <option value="libre">Manual / Libre</option>
+                <option value="detal">Tarifa Detal ($9)</option>
+                <option value="mayor">Tarifa Mayor ($10)</option>
+                <option value="libre">Tarifa Libre (Manual)</option>
             </select>
-            <div id="divLibre" style="display:none"><label>Precio Unitario $</label><input id="pMan" type="number" value="0"></div>
-            <label>Cantidad / Metros</label><input id="cQty" type="number" value="1">
-            <button onclick="addItemCarrito()" class="btn w-full !bg-blue-600 mt-2">+ Añadir Item</button>
-            <div class="mt-4 border-t pt-2">${carritoVenta.map((v,i)=>`<div class="flex justify-between py-1 text-xs border-b"><span>${v.qty}x ${v.nombre}</span><b>$${v.sub.toFixed(2)}</b></div>`).join("")}</div>
-            <div class="p-4 bg-slate-900 text-white text-center font-black mt-3 rounded-2xl text-xl">TOTAL: $${carritoVenta.reduce((a,b)=>a+b.sub,0).toFixed(2)}</div>
-            <button onclick="procesarV()" class="btn w-full bg-green-600 mt-4">GENERAR VENTA</button>
+
+            <div id="divLibre" style="display:none" class="bg-amber-50 p-2 rounded-lg border border-amber-200 mt-2">
+                <label>Precio por Metro/Unidad $</label>
+                <input id="pMan" type="number" step="0.01" value="0">
+            </div>
+
+            <label>Cantidad / Metros</label>
+            <input id="cQty" type="number" step="0.01" value="1">
+
+            <button onclick="addItemCarrito()" class="btn w-full !bg-indigo-600 mt-4 shadow-lg">+ AGREGAR ITEM</button>
+            
+            <div class="mt-4 border-t pt-2">
+                ${carritoVenta.map((v,i)=>`<div class="flex justify-between py-2 border-b text-sm"><span><b>${v.qty}x</b> ${v.nombre}</span><b>$${v.sub.toFixed(2)}</b></div>`).join("")}
+            </div>
+            
+            <div class="p-4 bg-slate-900 text-white text-center font-black mt-4 rounded-2xl text-2xl">TOTAL: $${carritoVenta.reduce((a,b)=>a+b.sub,0).toFixed(2)}</div>
+            <button onclick="procesarV()" class="btn w-full !bg-green-600 mt-4 py-4 text-sm shadow-xl">FINALIZAR VENTA</button>
         </div>`;
     }
 
     if(window.view === "cobranzas"){
-        html = `<h2 class="font-bold text-white mb-4">POR COBRAR</h2>${(window.state.ventas || []).filter(v=>!v.pagado).reverse().map(v=>`<div class="card flex justify-between items-center border-l-4 border-amber-500"><div><b>${v.cliente}</b><br><small class="text-red-600 font-bold">Resta: $${(v.total-(v.abonado||0)).toFixed(2)}</small></div><button onclick="abonarV(${v.id})" class="bg-blue-600 text-white p-2 rounded text-[8px] font-bold">ABONAR</button></div>`).join("")}`;
+        html = `<h2 class="font-bold text-white mb-4">PENDIENTES</h2>${window.state.ventas.filter(v=>!v.pagado).reverse().map(v=>`<div class="card flex justify-between items-center"><div><b>${v.cliente}</b><br><span class="text-red-500 font-bold">$${(v.total-(v.abonado||0)).toFixed(2)}</span></div><button onclick="abonarV(${v.id})" class="btn !bg-blue-600 !p-2 text-[8px]">ABONAR</button></div>`).join("")}`;
     }
 
     if(window.view === "config"){
-        html = `<div class="card"><h2 class="font-black mb-4 uppercase">Configuración</h2>
-        <label>Material</label><input id="nP"><button onclick="addC('p')" class="btn w-full bg-blue-600 mt-2">Guardar Material</button>
-        <hr class="my-6">
-        <label>Servicio</label><input id="nS"><button onclick="addC('s')" class="btn w-full bg-purple-600 mt-2">Guardar Servicio</button></div>`;
+        html = `<div class="card">
+            <label>Registrar Material</label><input id="nP" placeholder="Ej: VINIL">
+            <button onclick="addC('p')" class="btn w-full !bg-blue-600 mt-2">Guardar</button>
+            <hr class="my-6">
+            <label>Registrar Servicio</label><input id="nS" placeholder="Ej: DISEÑO">
+            <button onclick="addC('s')" class="btn w-full !bg-purple-600 mt-2">Guardar</button>
+        </div>`;
     }
 
     app.innerHTML = html;
@@ -125,32 +144,26 @@ window.addItemCarrito = () => {
     const t = document.getElementById("tCli").value;
     const q = parseFloat(document.getElementById("cQty").value) || 0;
     
-    if(q <= 0) return alert("Cantidad inválida");
+    if(q <= 0) return alert("Cantidad no válida");
 
-    let nombre = "";
-    if(p && s) nombre = `${p} + ${s}`;
-    else if(p) nombre = p;
-    else if(s) nombre = s;
-    else if(t === "libre") nombre = "LIBRE";
-    else return alert("Selecciona material o servicio");
-
+    let nombre = (p && s) ? `${p} + ${s}` : (p || s || "Venta");
     let pre = 0;
+
     if(t === "libre") {
         pre = parseFloat(document.getElementById("pMan").value) || 0;
     } else {
-        // CORRECCIÓN: Si hay producto usa tarifa de 9 o 10.
+        // LÓGICA DE PRECIOS: Si hay material seleccionado, aplica 9 o 10.
         pre = (p) ? (t === "mayor" ? 10 : 9) : 12;
     }
 
-    carritoVenta.push({ nombre: nombre, qty: q, sub: q * pre, prod: p });
+    carritoVenta.push({ nombre: nombre.toUpperCase(), qty: q, sub: q * pre });
     render();
 };
 
 window.procesarV = async () => {
     const c = document.getElementById("cliV").value;
-    if(!c || carritoVenta.length === 0) return alert("Faltan datos");
-    const total = carritoVenta.reduce((a,b)=>a+b.sub, 0);
-    window.state.ventas.push({ id: Date.now(), cliente: c.toUpperCase(), total: total, abonado: 0, pagado: false, items: [...carritoVenta] });
+    if(!c || carritoVenta.length === 0) return alert("Falta cliente o productos");
+    window.state.ventas.push({ id: Date.now(), cliente: c.toUpperCase(), total: carritoVenta.reduce((a,b)=>a+b.sub,0), abonado:0, pagado:false, items: [...carritoVenta] });
     carritoVenta = [];
     await window.save();
     setView('dashboard');
@@ -162,7 +175,7 @@ window.addC = async (type) => {
         if(n) window.state.inventario[n] = { stock: 0, costo: 0 };
     } else {
         const n = document.getElementById("nS").value.toUpperCase();
-        if(n) (window.state.serviciosExtra = window.state.serviciosExtra || []).push(n);
+        if(n) window.state.serviciosExtra.push(n);
     }
     await window.save();
     render();
@@ -170,7 +183,7 @@ window.addC = async (type) => {
 
 window.abonarV = async (id) => {
     let v = window.state.ventas.find(x=>x.id===id);
-    let m = parseFloat(prompt("Monto?"));
+    let m = parseFloat(prompt("¿Cuánto abona?"));
     if(m) { 
         v.abonado = (v.abonado || 0) + m; 
         if(v.abonado >= v.total) v.pagado = true; 
