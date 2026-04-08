@@ -53,7 +53,6 @@ const appF = initializeApp(firebaseConfig);
 const db = getFirestore(appF);
 const docRef = doc(db, "sistema", "datos_principales");
 
-// BASE DE DATOS INICIAL ROBUSTA
 const defaultState = {
     ventas: [], gastos: [], 
     inventario: {
@@ -83,7 +82,7 @@ window.calcularVenta = () => {
     if (t === "libre") { document.getElementById("divLibre").classList.remove("hidden"); pre = parseFloat(document.getElementById("pLibre").value) || 0; }
     else {
         document.getElementById("divLibre").classList.add("hidden");
-        pre = (window.state.inventario[p]) ? (t === "mayor" ? 10 : 9) : 12; // Precios por defecto
+        pre = (window.state.inventario[p]) ? (t === "mayor" ? 10 : 9) : 12;
     }
     document.getElementById("totalVenta").innerText = (c * pre).toFixed(2);
 };
@@ -114,9 +113,14 @@ window.render = function() {
         html = `<h2>FACTURAR VENTA</h2><div class="card">
             <label>Cliente</label><input id="cli" placeholder="Nombre">
             <label>WhatsApp</label><input id="tel" type="number" placeholder="58...">
-            <label>Producto o Servicio</label><select id="prod" onchange="calcularVenta()">
-                <optgroup label="Materiales">${Object.keys(window.state.inventario).map(p=>`<option value="${p}">${p}</option>`).join("")}</optgroup>
-                <optgroup label="Servicios">${window.state.serviciosExtra.map(s=>`<option value="${s}">${s}</option>`).join("")}</optgroup>
+            <label>Producto o Servicio</label>
+            <select id="prod" onchange="calcularVenta()">
+                <optgroup label="Materiales">
+                    ${Object.keys(window.state.inventario).map(p=>`<option value="${p}">${p}</option>`).join("")}
+                </optgroup>
+                <optgroup label="Servicios">
+                    ${window.state.serviciosExtra.map(s=>`<option value="${s}">${s}</option>`).join("")}
+                </optgroup>
             </select>
             <label>Tarifa</label><select id="tipoCli" onchange="calcularVenta()"><option value="mayor">Mayorista</option><option value="detal">Detal</option><option value="libre">Precio Manual</option></select>
             <div id="divLibre" class="hidden"><label>Monto Unitario Manual $</label><input id="pLibre" type="number" oninput="calcularVenta()"></div>
@@ -129,7 +133,7 @@ window.render = function() {
         html = `<h2>DEUDAS PENDIENTES</h2>`;
         window.state.ventas.filter(v=>!v.pagado).slice().reverse().forEach(v => {
             html += `<div class="card border-l-8 border-amber-500">
-                <div class="flex justify-between items-center mb-2"><b>${v.cliente}</b><span class="text-red-600 font-black">$${(v.total-v.abonado).toFixed(2)}</span></div>
+                <div class="flex justify-between items-center mb-2"><b>${v.cliente}</b><span class="text-red-600 font-black">$${(v.total-(v.abonado||0)).toFixed(2)}</span></div>
                 <div class="grid grid-cols-4 gap-1">
                     <button onclick="enviarWS(${v.id})" class="bg-green-600 text-white p-2 rounded-lg text-[8px]">WS</button>
                     <button onclick="abonar(${v.id})" class="bg-blue-600 text-white p-2 rounded-lg text-[8px]">ABONAR</button>
@@ -146,7 +150,7 @@ window.render = function() {
             <label>Costo Total de la Compra $</label><input id="monC" type="number" placeholder="0.00">
             <button onclick="regCompra()" class="btn w-full bg-blue-700 mt-2">Registrar Compra y Sumar Stock</button></div>
             <h3 class="mt-4">STOCK ACTUAL</h3><div class="grid grid-cols-2 gap-2">${Object.entries(window.state.inventario).map(([n, i]) => `
-            <div class="card !m-0"><b>${n}</b><br><span class="text-xl">${i.stock.toFixed(2)}</span>m</div>`).join("")}</div>`;
+            <div class="card !m-0"><b>${n}</b><br><span class="text-xl">${(i.stock||0).toFixed(2)}</span>m</div>`).join("")}</div>`;
     }
 
     if(window.view === "gastos"){
@@ -176,7 +180,6 @@ window.render = function() {
     if(window.view === "ventas") calcularVenta();
 };
 
-// LOGICA PROFESIONAL
 window.regVenta = async () => {
     let c = document.getElementById("cli").value, t = parseFloat(document.getElementById("totalVenta").innerText), p = document.getElementById("prod").value, can = parseFloat(document.getElementById("cant").value);
     if(c && t > 0){
@@ -218,12 +221,12 @@ window.deleteItem = async (tipo, item) => {
 
 window.enviarWS = (id) => {
     let v = window.state.ventas.find(x => x.id === id);
-    if(v.telefono) window.open(`https://api.whatsapp.com/send?phone=${v.telefono}&text=Hola *${v.cliente}*, tienes un saldo de *$${(v.total-v.abonado).toFixed(2)}* pendiente en *GhostPrint* 👻.`, '_blank');
+    if(v.telefono) window.open(`https://api.whatsapp.com/send?phone=${v.telefono}&text=Hola *${v.cliente}*, tienes un saldo de *$${(v.total-(v.abonado||0)).toFixed(2)}* pendiente en *GhostPrint* 👻.`, '_blank');
 };
 
 window.abonar = async (id) => {
-    let v = window.state.ventas.find(x => x.id === id), m = parseFloat(prompt(`Debe $${(v.total-v.abonado).toFixed(2)}. ¿Abono?`));
-    if(m){ v.abonado += m; if(v.abonado >= v.total) v.pagado = true; await window.save(); render(); }
+    let v = window.state.ventas.find(x => x.id === id), m = parseFloat(prompt(`Debe $${(v.total-(v.abonado||0)).toFixed(2)}. ¿Abono?`));
+    if(m){ v.abonado = (v.abonado || 0) + m; if(v.abonado >= v.total) v.pagado = true; await window.save(); render(); }
 };
 
 window.liquidar = async (id) => { let v = window.state.ventas.find(x => x.id === id); v.abonado = v.total; v.pagado = true; await window.save(); render(); };
