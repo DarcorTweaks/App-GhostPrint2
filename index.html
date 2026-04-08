@@ -3,35 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>GhostPrint PRO v18.2 - Premium Admin</title>
+    <title>GhostPrint PRO v18.3</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap');
-        body { background-color: #05050a; color: #e2e8f0; font-family: 'Plus Jakarta Sans', sans-serif; padding-bottom: 100px; }
-        .card-pro { background: #0f0f1e; border: 1px solid #1e1e30; border-radius: 20px; padding: 20px; margin-bottom: 12px; }
-        nav { background: rgba(5, 5, 12, 0.9); backdrop-filter: blur(10px); display: flex; gap: 8px; overflow-x: auto; padding: 12px; position: sticky; top: 0; z-index: 100; border-bottom: 1px solid #1e1e30; }
-        .btn-nav { background: #16162a; color: #94a3b8; padding: 10px 16px; border-radius: 12px; font-size: 10px; font-weight: 700; white-space: nowrap; cursor: pointer; text-transform: uppercase; transition: 0.3s; }
-        .active { background: #8b5cf6 !important; color: white !important; }
-        input, select { background: #0a0a16; border: 1px solid #1e1e30; color: white; padding: 12px; border-radius: 12px; width: 100%; margin: 6px 0; font-weight: 600; outline: none; }
-        .btn-main { background: #8b5cf6; color: white; padding: 16px; border-radius: 16px; width: 100%; font-weight: 800; text-transform: uppercase; cursor: pointer; border: none; transition: 0.2s; }
-        .btn-main:active { transform: scale(0.98); opacity: 0.9; }
-        #bill-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.9); z-index:200; padding:20px; }
-        .bill-card { background: white; color: black; border-radius: 24px; padding: 24px; max-width: 340px; margin: 0 auto; }
-        .stock-bar { height: 6px; border-radius: 10px; background: #1e1e30; margin-top: 8px; overflow: hidden; }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap');
+        body { background-color: #030308; color: #f8fafc; font-family: 'Inter', sans-serif; padding-bottom: 100px; }
+        .card-pro { background: #111122; border: 1px solid #2d2d44; border-radius: 24px; padding: 20px; margin-bottom: 12px; }
+        nav { background: rgba(10, 10, 20, 0.95); display: flex; gap: 8px; overflow-x: auto; padding: 14px; position: sticky; top: 0; z-index: 100; border-bottom: 1px solid #334155; }
+        .btn-nav { background: #1e1e30; color: #64748b; padding: 12px 18px; border-radius: 14px; font-size: 10px; font-weight: 800; white-space: nowrap; cursor: pointer; text-transform: uppercase; }
+        .active { background: #7c3aed !important; color: white !important; box-shadow: 0 0 20px rgba(124, 58, 237, 0.4); }
+        input, select { background: #070712; border: 1px solid #334155; color: white; padding: 14px; border-radius: 14px; width: 100%; margin: 6px 0; font-weight: 700; outline: none; }
+        .btn-main { background: linear-gradient(135deg, #7c3aed 0%, #4c1d95 100%); color: white; padding: 18px; border-radius: 18px; width: 100%; font-weight: 900; text-transform: uppercase; cursor: pointer; border: none; }
+        .stock-bar { height: 8px; border-radius: 10px; background: #1e1e30; margin-top: 10px; overflow: hidden; }
         .stock-fill { height: 100%; transition: width 0.5s ease; }
+        #bill-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.95); z-index:200; padding:20px; overflow-y: auto; }
+        .bill-card { background: white; color: black; border-radius: 25px; padding: 25px; max-width: 350px; margin: 0 auto; }
     </style>
 </head>
 <body>
 
-<header class="p-5 flex justify-between items-center bg-[#05050a]">
-    <div class="flex items-center gap-2">
-        <div class="w-8 h-8 bg-purple-600 rounded-lg flex items-center justify-center font-black italic">G</div>
-        <h1 class="text-lg font-extrabold tracking-tighter uppercase italic">GhostPrint <span class="text-purple-500">PRO</span></h1>
+<header class="p-5 bg-[#0a0a1a] border-b border-white/5 flex justify-between items-center">
+    <div class="flex items-center">
+        <span class="text-2xl mr-2">👻</span>
+        <h1 class="text-xl font-black italic text-white uppercase tracking-tighter">GhostPrint <span class="text-purple-500">PRO</span></h1>
     </div>
-    <div class="text-[9px] font-bold bg-white/5 px-3 py-1 rounded-full border border-white/10 uppercase tracking-widest">v18.2</div>
+    <span class="text-[8px] font-black uppercase bg-purple-500/20 text-purple-400 px-3 py-1.5 rounded-full border border-purple-500/30">v18.3</span>
 </header>
 
-<nav>
+<nav id="main-nav">
     <div onclick="setView('inicio')" class="btn-nav active" id="n-inicio">🏠 Inicio</div>
     <div onclick="setView('ventas')" class="btn-nav" id="n-ventas">💵 Ventas</div>
     <div onclick="setView('inventario')" class="btn-nav" id="n-inventario">📦 Stock</div>
@@ -42,22 +41,23 @@
     <div onclick="setView('catalogo')" class="btn-nav" id="n-catalogo">⚙️ Config</div>
 </nav>
 
-<div id="app" class="p-4 max-w-xl mx-auto"></div>
+<div id="app" class="p-4 max-w-2xl mx-auto"></div>
 
 <div id="bill-modal">
-    <div class="bill-card shadow-2xl">
+    <div class="bill-card">
         <div class="text-center">
-            <h2 class="text-xl font-black italic uppercase tracking-tighter">GhostPrint <span class="text-purple-600">PRO</span></h2>
-            <p id="b-fecha" class="text-[9px] font-bold text-gray-400 uppercase mt-1"></p>
+            <span class="text-4xl">👻</span>
+            <h2 class="text-xl font-black italic uppercase tracking-tighter mt-1">GhostPrint <span class="text-purple-600">PRO</span></h2>
+            <p id="b-fecha" class="text-[9px] font-black text-gray-400 uppercase"></p>
         </div>
-        <div class="border-t border-dashed border-gray-300 my-4"></div>
-        <p class="text-[9px] uppercase font-bold text-gray-400">Cliente</p>
-        <p id="b-cli" class="text-lg font-black uppercase text-gray-800"></p>
-        <p class="text-[9px] uppercase font-bold text-gray-400 mt-4">Saldo Pendiente</p>
+        <div class="border-t-2 dashed border-gray-200 my-4"></div>
+        <p class="text-[9px] uppercase font-black text-gray-400">Cliente:</p>
+        <p id="b-cli" class="text-lg font-black uppercase text-gray-800 mb-4"></p>
+        <p class="text-[9px] uppercase font-black text-gray-400">Saldo Pendiente:</p>
         <p id="b-monto" class="text-4xl font-black text-purple-700"></p>
-        <div class="border-t border-dashed border-gray-300 my-4"></div>
-        <button id="btn-wa" class="w-full bg-green-600 text-white font-black py-4 rounded-xl mb-2">ENVIAR POR WHATSAPP</button>
-        <button onclick="closeBill()" class="w-full text-gray-400 font-bold text-xs uppercase py-2">Cerrar</button>
+        <div class="border-t-2 dashed border-gray-200 my-4"></div>
+        <button id="btn-wa" class="btn-main !from-green-600 !to-green-800 flex justify-center items-center gap-2 italic font-black mb-2 text-sm">📱 WHATSAPP</button>
+        <button onclick="closeBill()" class="btn-main !from-gray-800 !to-black text-xs">CERRAR</button>
     </div>
 </div>
 
@@ -65,7 +65,6 @@
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 
 <script>
-    // Configuración Firebase (Misma que usas)
     const firebaseConfig = {
         apiKey: "AIzaSyBCm5JlhTxvvtlwjA1EYEtLvxb1AH5v1WI",
         authDomain: "ghost-print-contabilidad.firebaseapp.com",
@@ -79,12 +78,12 @@
     const db = firebase.firestore();
     const docRef = db.collection("sistema").doc("datos_principales");
 
-    window.state = JSON.parse(localStorage.getItem('gp_v18_2')) || { ventas: [], gastos: [], inventario: {}, serviciosExtra: ["OJALETES", "DISEÑO", "MONTAJE", "CORTE"], comprasInversion: [], mermas: [] };
+    window.state = JSON.parse(localStorage.getItem('gp_v18_3')) || { ventas: [], gastos: [], inventario: {}, serviciosExtra: ["OJALETES", "DISEÑO", "MONTAJE", "CORTE"], comprasInversion: [], mermas: [] };
     window.currentView = "inicio";
     let cart = [];
 
     window.sync = async function() {
-        localStorage.setItem('gp_v18_2', JSON.stringify(window.state));
+        localStorage.setItem('gp_v18_3', JSON.stringify(window.state));
         await docRef.set(window.state).catch(e => console.log("Offline"));
     };
 
@@ -93,8 +92,8 @@
     window.setView = function(v) {
         window.currentView = v;
         document.querySelectorAll('.btn-nav').forEach(b => b.classList.remove('active'));
-        const activeNav = document.getElementById('n-' + v);
-        if(activeNav) activeNav.classList.add('active');
+        const target = document.getElementById('n-' + v);
+        if(target) target.classList.add('active');
         render();
     };
 
@@ -117,39 +116,32 @@
 
         if(window.currentView === "inicio") {
             app.innerHTML = `
-                <div class="card-pro !bg-gradient-to-br !from-purple-600 !to-indigo-800 border-none shadow-2xl relative overflow-hidden">
-                    <div class="relative z-10">
-                        <p class="text-[10px] font-bold text-purple-200 uppercase tracking-widest opacity-80 italic text-center">Efectivo en Caja</p>
-                        <h2 class="text-6xl font-black text-white italic text-center my-2 tracking-tighter">$${utilidadCaja.toFixed(2)}</h2>
-                    </div>
-                    <div class="absolute -right-4 -bottom-4 text-white/10 text-9xl font-black italic">G</div>
+                <div class="card-pro !bg-gradient-to-br !from-purple-600 !to-indigo-900 border-none shadow-xl">
+                    <p class="text-[10px] font-black text-purple-200 uppercase tracking-widest text-center italic">Caja Disponible</p>
+                    <h2 class="text-6xl font-black text-white italic text-center my-2 leading-none">$${utilidadCaja.toFixed(2)}</h2>
                 </div>
-                <div class="grid grid-cols-2 gap-3 mt-4">
-                    <div class="card-pro text-center"><p class="text-[8px] font-bold opacity-40 uppercase">Ventas</p><b class="text-xl">$${totalVendido.toFixed(0)}</b></div>
-                    <div class="card-pro text-center"><p class="text-[8px] font-bold opacity-40 uppercase">Inversión</p><b class="text-xl text-blue-400">$${totalStock.toFixed(0)}</b></div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="card-pro text-center"><p class="text-[8px] font-black opacity-40 uppercase">Ventas Mes</p><b class="text-xl">$${totalVendido.toFixed(0)}</b></div>
+                    <div class="card-pro text-center"><p class="text-[8px] font-black opacity-40 uppercase">Inversión Stock</p><b class="text-xl text-blue-400">$${totalStock.toFixed(0)}</b></div>
                 </div>`;
         }
 
         if(window.currentView === "inventario") {
-            app.innerHTML = `
-                <div class="space-y-3">
-                    ${Object.entries(window.state.inventario || {}).map(([n, i]) => {
-                        const cant = i.stock || 0;
-                        const colorClass = cant <= 0 ? 'bg-red-500' : cant < 5 ? 'bg-orange-500' : 'bg-emerald-500';
-                        const textClass = cant <= 0 ? 'text-red-400' : cant < 5 ? 'text-orange-400' : 'text-emerald-400';
-                        return `
-                        <div class="card-pro">
-                            <div class="flex justify-between items-start">
-                                <div>
-                                    <h4 class="text-sm font-extrabold uppercase tracking-tight">${n}</h4>
-                                    <p class="text-2xl font-black ${textClass} mt-1">${cant.toFixed(2)} <span class="text-[10px] opacity-40">unid/mts</span></p>
-                                </div>
-                                <button onclick="registrarMerma('${n}')" class="bg-red-500/10 text-red-500 text-[10px] font-black px-3 py-2 rounded-lg border border-red-500/20">MERMA</button>
-                            </div>
-                            <div class="stock-bar"><div class="stock-fill ${colorClass}" style="width: ${Math.min(cant*5, 100)}%"></div></div>
-                        </div>`;
-                    }).join("")}
+            app.innerHTML = `<div class="space-y-3">${Object.entries(window.state.inventario || {}).map(([n, i]) => {
+                const cant = i.stock || 0;
+                const color = cant <= 0 ? 'bg-red-500' : cant < 5 ? 'bg-orange-500' : 'bg-green-500';
+                return `
+                <div class="card-pro">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <p class="text-[9px] font-black opacity-50 uppercase">${n}</p>
+                            <h4 class="text-3xl font-black text-white">${cant.toFixed(2)}</h4>
+                        </div>
+                        <button onclick="registrarMerma('${n}')" class="bg-red-600/20 text-red-500 border border-red-500/30 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-tighter">⚠ Merma</button>
+                    </div>
+                    <div class="stock-bar"><div class="stock-fill ${color}" style="width: ${Math.min(cant*10, 100)}%"></div></div>
                 </div>`;
+            }).join("")}</div>`;
         }
 
         if(window.currentView === "reportes") {
@@ -161,304 +153,62 @@
             app.innerHTML = `
                 <div class="space-y-4">
                     <div class="card-pro">
-                        <h3 class="text-[10px] font-black uppercase text-purple-400 mb-4 italic">Salud Financiera</h3>
-                        <div class="space-y-4">
+                        <h3 class="text-[10px] font-black uppercase text-purple-400 mb-4 italic tracking-widest text-center">Resumen Administrativo</h3>
+                        <div class="space-y-5">
                             <div>
-                                <div class="flex justify-between text-[10px] font-bold uppercase mb-1"><span>Cobro de Ventas</span> <span>${((totalCobrado/(totalVendido||1))*100).toFixed(0)}%</span></div>
-                                <div class="w-full bg-white/5 h-2 rounded-full overflow-hidden"><div class="bg-emerald-500 h-full" style="width: ${(totalCobrado/(totalVendido||1))*100}%"></div></div>
+                                <div class="flex justify-between text-[9px] font-black uppercase mb-1"><span>Dinero Cobrado</span> <span>$${totalCobrado.toFixed(0)}</span></div>
+                                <div class="w-full bg-white/5 h-2 rounded-full overflow-hidden"><div class="bg-green-500 h-full" style="width: ${(totalCobrado/(totalVendido||1))*100}%"></div></div>
                             </div>
                             <div>
-                                <div class="flex justify-between text-[10px] font-bold uppercase mb-1"><span>Cobertura de Gastos</span> <span>${percMeta.toFixed(0)}%</span></div>
+                                <div class="flex justify-between text-[9px] font-black uppercase mb-1"><span>Meta de Gastos</span> <span>$${totalGastos.toFixed(0)}</span></div>
                                 <div class="w-full bg-white/5 h-2 rounded-full overflow-hidden"><div class="bg-purple-500 h-full" style="width: ${percMeta}%"></div></div>
                             </div>
                         </div>
                     </div>
-
                     <div class="card-pro">
-                        <h3 class="text-[10px] font-black uppercase opacity-40 mb-3 italic">Mejores Clientes</h3>
-                        <div class="space-y-3">
-                            ${topClientes.map(([name, total], i) => `
-                                <div class="flex justify-between items-center bg-white/5 p-3 rounded-xl">
-                                    <span class="text-xs font-bold uppercase">${i+1}. ${name}</span>
-                                    <span class="text-sm font-black">$${total.toFixed(2)}</span>
-                                </div>
-                            `).join("") || '<p class="text-center opacity-30 text-xs">Sin registros</p>'}
+                        <h3 class="text-[10px] font-black uppercase opacity-40 mb-3 italic">Top 3 Clientes</h3>
+                        <div class="space-y-2">
+                            ${topClientes.map(([name, total], i) => `<div class="flex justify-between text-xs font-bold uppercase"><span>${i+1}. ${name}</span><span>$${total.toFixed(2)}</span></div>`).join("") || '<p class="text-center opacity-30 text-xs">Sin registros</p>'}
                         </div>
                     </div>
-
-                    <div class="card-pro !bg-white/5 border-dashed">
-                        <div class="space-y-2 text-xs font-bold uppercase opacity-80">
-                            <div class="flex justify-between"><span>Vendido este mes:</span><span>$${totalVendido.toFixed(2)}</span></div>
-                            <div class="flex justify-between"><span>Cobrado en mano:</span><span class="text-emerald-400">$${totalCobrado.toFixed(2)}</span></div>
-                            <div class="flex justify-between"><span>Pendiente cobrar:</span><span class="text-orange-400">$${porCobrar.toFixed(2)}</span></div>
+                    <div class="card-pro border-white/5 bg-white/5">
+                        <div class="space-y-2 text-[11px] font-bold uppercase italic opacity-70">
+                            <div class="flex justify-between"><span>Vendido:</span><span>$${totalVendido.toFixed(2)}</span></div>
+                            <div class="flex justify-between"><span>Deuda Clientes:</span><span class="text-orange-400">$${porCobrar.toFixed(2)}</span></div>
                         </div>
                     </div>
                 </div>`;
         }
 
-        // VISTAS DE OPERACIÓN (Simplificadas visualmente)
+        if(window.currentView === "ventas") {
+            app.innerHTML = `<div class="card-pro"><input type="date" id="fV" value="${new Date().toISOString().split('T')[0]}"><input id="cli" placeholder="CLIENTE"><input id="tel" type="number" placeholder="WHATSAPP"><div class="bg-white/5 p-4 rounded-xl mt-3 border border-white/10"><div class="grid grid-cols-2 gap-2"><select id="pS"><option value="">Material...</option>${Object.keys(window.state.inventario || {}).map(m=>`<option value="${m}">${m}</option>`).join("")}</select><select id="sS"><option value="">Servicio...</option>${(window.state.serviciosExtra || []).map(s=>`<option value="${s}">${s}</option>`).join("")}</select></div><input id="qV" type="number" placeholder="Cantidad" value="1"><select id="tC" onchange="document.getElementById('pL').classList.toggle('hidden', this.value !== 'libre')"><option value="detal">DETAL ($9)</option><option value="mayor">MAYOR ($10)</option><option value="libre">PRECIO LIBRE</option></select><input id="pL" class="hidden" type="number" placeholder="Monto $"><button onclick="addCart()" class="btn-main !p-3 mt-3">+ Añadir</button></div><div id="cart-list" class="mt-4 space-y-2 text-[10px]"></div><div id="total-disp" class="text-4xl font-black text-center my-6 italic">Total: $0.00</div><button onclick="finalizarVenta()" class="btn-main">Guardar Venta</button></div>`;
+        }
         if(window.currentView === "cobros") {
             const d = (window.state.ventas || []).filter(v => !v.pagado);
-            app.innerHTML = d.map(v => `<div class="card-pro flex justify-between items-center border-l-4 border-orange-500"><div><b class="text-xs uppercase font-black">${v.cliente}</b><br><span class="text-orange-400 text-xs font-bold">Debe: $${(v.total - (v.abonado || 0)).toFixed(2)}</span></div><div class="flex gap-2"><button onclick="showBill('${v.cliente}', ${(v.total-(v.abonado||0))}, '${v.telefono}')" class="bg-green-600 p-3 rounded-xl">📋</button><button onclick="abono(${v.id})" class="bg-purple-600 px-4 py-2 rounded-xl text-[10px] font-black uppercase">Cobrar</button></div></div>`).join("") || '<p class="text-center py-20 opacity-30 font-bold uppercase">Sin deudas pendientes</p>';
-        }
-        if(window.currentView === "ventas") {
-            app.innerHTML = `<div class="card-pro"><h2 class="text-lg font-black text-white mb-4 uppercase italic">Nueva Venta</h2><input type="date" id="fV" value="${new Date().toISOString().split('T')[0]}"><input id="cli" placeholder="NOMBRE DEL CLIENTE"><input id="tel" type="number" placeholder="TELÉFONO"><div class="bg-white/5 p-4 rounded-2xl mt-4 border border-white/5"><div class="grid grid-cols-2 gap-2"><select id="pS"><option value="">Material...</option>${Object.keys(window.state.inventario || {}).map(m=>`<option value="${m}">${m}</option>`).join("")}</select><select id="sS"><option value="">Servicio...</option>${(window.state.serviciosExtra || []).map(s=>`<option value="${s}">${s}</option>`).join("")}</select></div><input id="qV" type="number" placeholder="Cantidad" value="1"><select id="tC" onchange="document.getElementById('pL').classList.toggle('hidden', this.value !== 'libre')"><option value="detal">DETAL ($9)</option><option value="mayor">MAYOR ($10)</option><option value="libre">PRECIO LIBRE</option></select><input id="pL" class="hidden" type="number" placeholder="Monto Unitario $"><button onclick="addCart()" class="btn-main !p-3 mt-3 !bg-white/10 text-white">+ Añadir al Carrito</button></div><div id="cart-list" class="mt-4 space-y-2 text-[10px] border-y border-white/5 py-3"></div><div id="total-disp" class="text-4xl font-black text-center my-6 italic">$0.00</div><button onclick="finalizarVenta()" class="btn-main shadow-lg">Registrar Venta</button></div>`;
-        }
-        if(window.currentView === "compras") {
-            app.innerHTML = `<div class="card-pro"><h2 class="text-lg font-black uppercase mb-4 italic text-blue-400">Carga de Stock</h2><input type="date" id="fC" value="${new Date().toISOString().split('T')[0]}"><select id="mInv"><option value="">Seleccionar Material...</option>${Object.keys(window.state.inventario || {}).map(m=>`<option value="${m}">${m}</option>`).join("")}</select><div class="grid grid-cols-2 gap-2"><input id="qInv" type="number" placeholder="Cantidad"><input id="pInv" type="number" placeholder="Precio Compra $"></div><button onclick="saveInv()" class="btn-main !bg-blue-600 mt-4">Actualizar Inventario</button></div>`;
+            app.innerHTML = d.map(v => `<div class="card-pro flex justify-between items-center border-l-4 border-orange-500"><div><b class="text-xs uppercase font-black">${v.cliente}</b><br><span class="text-orange-400 text-xs font-black">Debe: $${(v.total - (v.abonado || 0)).toFixed(2)}</span></div><div class="flex gap-2"><button onclick="showBill('${v.cliente}', ${(v.total-(v.abonado||0))}, '${v.telefono}')" class="bg-green-600 p-3 rounded-xl">📋</button><button onclick="abono(${v.id})" class="bg-blue-600 px-4 py-2 rounded-xl text-[10px] font-black uppercase">Abonar</button></div></div>`).join("") || '<p class="text-center py-20 opacity-30 font-black">TODO AL DÍA</p>';
         }
         if(window.currentView === "gastos") {
-            app.innerHTML = `<div class="card-pro"><h2 class="text-lg font-black uppercase mb-4 italic text-red-400">Nuevo Gasto</h2><input type="date" id="fG" value="${new Date().toISOString().split('T')[0]}"><input id="dG" placeholder="Descripción (Alquiler, Luz, etc)"><input id="aG" type="number" placeholder="Monto $"><button onclick="saveGasto()" class="btn-main !bg-red-600 mt-4">Guardar Gasto</button></div>`;
+            app.innerHTML = `<div class="card-pro border-t-4 border-red-500"><h2 class="text-lg font-black uppercase mb-4 italic text-center">Nuevo Gasto</h2><input type="date" id="fG" value="${new Date().toISOString().split('T')[0]}"><input id="dG" placeholder="Descripción"><input id="aG" type="number" placeholder="Monto $"><button onclick="saveGasto()" class="btn-main mt-4 !bg-red-600">Guardar Gasto</button></div>`;
+        }
+        if(window.currentView === "compras") {
+            app.innerHTML = `<div class="card-pro border-t-4 border-blue-500"><h2 class="text-lg font-black uppercase mb-4 italic text-center">Carga de Stock</h2><input type="date" id="fC" value="${new Date().toISOString().split('T')[0]}"><select id="mInv"><option value="">Material...</option>${Object.keys(window.state.inventario || {}).map(m=>`<option value="${m}">${m}</option>`).join("")}</select><div class="grid grid-cols-2 gap-2"><input id="qInv" type="number" placeholder="Cant"><input id="pInv" type="number" placeholder="Precio Un."></div><button onclick="saveInv()" class="btn-main mt-4">Guardar Stock</button></div>`;
         }
         if(window.currentView === "catalogo") {
-            app.innerHTML = `<div class="card-pro"><h2 class="text-sm font-black uppercase mb-4 opacity-50">Gestionar Catálogo</h2><input id="newM" placeholder="Nuevo Material"><button onclick="addMat()" class="bg-white/10 w-full py-3 rounded-xl font-bold mb-4">Añadir Material</button><input id="newS" placeholder="Nuevo Servicio"><button onclick="addServicio()" class="bg-white/10 w-full py-3 rounded-xl font-bold">Añadir Servicio</button></div>`;
+            app.innerHTML = `<div class="card-pro"><input id="newM" placeholder="Nuevo Material"><button onclick="addMat()" class="btn-main !p-3">Añadir Material</button><hr class="my-4 border-white/5"><input id="newS" placeholder="Nuevo Servicio"><button onclick="addServicio()" class="btn-main !p-3">Añadir Servicio</button></div>`;
         }
     };
 
-    // FUNCIONES CORE (Siguen funcionando igual para no dañar datos)
-    window.registrarMerma = async (material) => { let cant = parseFloat(prompt(`Cantidad dañada de ${material}:`)); if(cant && cant > 0) { if(window.state.inventario[material].stock >= cant) { window.state.inventario[material].stock -= cant; if(!window.state.mermas) window.state.mermas = []; window.state.mermas.push({ id: Date.now(), material, cant }); await window.sync(); render(); } else { alert("No hay suficiente stock."); } } };
+    // FUNCIONES CORE (SIN CAMBIOS)
+    window.registrarMerma = async (material) => { let cant = parseFloat(prompt(`Cantidad dañada de ${material}:`)); if(cant && cant > 0) { if(window.state.inventario[material].stock >= cant) { window.state.inventario[material].stock -= cant; if(!window.state.mermas) window.state.mermas = []; window.state.mermas.push({ id: Date.now(), material, cant }); await window.sync(); render(); } else { alert("Stock insuficiente."); } } };
     window.saveInv = async () => { const m = document.getElementById("mInv").value, q = parseFloat(document.getElementById("qInv").value), p = parseFloat(document.getElementById("pInv").value), f = document.getElementById("fC").value; if(m && q && p) { if(!window.state.inventario[m]) window.state.inventario[m] = {stock:0}; window.state.inventario[m].stock += q; if(!window.state.comprasInversion) window.state.comprasInversion = []; window.state.comprasInversion.push({ id: new Date(f+"T12:00:00").getTime(), material: m, amount: (q * p), qty: q }); await window.sync(); setView('inicio'); } };
     window.saveGasto = async () => { const d = document.getElementById("dG").value, a = parseFloat(document.getElementById("aG").value), f = document.getElementById("fG").value; if(d && a) { if(!window.state.gastos) window.state.gastos = []; window.state.gastos.push({ id: new Date(f+"T12:00:00").getTime(), desc: d.toUpperCase(), amount: a }); await window.sync(); setView('inicio'); } };
-    window.showBill = (cliente, monto, telf) => { const fechaStr = new Date().toLocaleDateString(); document.getElementById('b-cli').innerText = cliente; document.getElementById('b-monto').innerText = "$" + monto.toFixed(2); document.getElementById('b-fecha').innerText = fechaStr; document.getElementById('bill-modal').style.display = 'block'; document.getElementById('btn-wa').onclick = () => { const msg = `*GHOSTPRINT PRO*%0A*Fecha:* ${fechaStr}%0A*Cliente:* ${cliente}%0A*Saldo Pendiente:* $${monto.toFixed(2)}%0A_Favor reportar captura del pago._`; window.open(`https://api.whatsapp.com/send?phone=${telf}&text=${msg}`, '_blank'); }; };
+    window.showBill = (cliente, monto, telf) => { const fechaStr = new Date().toLocaleDateString(); document.getElementById('b-cli').innerText = cliente; document.getElementById('b-monto').innerText = "$" + monto.toFixed(2); document.getElementById('b-fecha').innerText = fechaStr; document.getElementById('bill-modal').style.display = 'block'; document.getElementById('btn-wa').onclick = () => { const msg = `*GHOSTPRINT PRO*%0A*Fecha:* ${fechaStr}%0A*Cliente:* ${cliente}%0A*Saldo Pendiente:* $${monto.toFixed(2)}`; window.open(`https://api.whatsapp.com/send?phone=${telf}&text=${msg}`, '_blank'); }; };
     window.closeBill = () => { document.getElementById('bill-modal').style.display = 'none'; };
-    window.abono = async (id) => { let v = window.state.ventas.find(x => x.id === id); let m = parseFloat(prompt(`Saldo: $${(v.total-v.abonado).toFixed(2)}. ¿Abono?`)); if(m) { v.abonado = (Number(v.abonado)||0) + m; if(v.abonado >= v.total) v.pagado = true; await window.sync(); render(); } };
+    window.abono = async (id) => { let v = window.state.ventas.find(x => x.id === id); let m = parseFloat(prompt(`Abono para ${v.cliente}?`)); if(m) { v.abonado = (Number(v.abonado)||0) + m; if(v.abonado >= v.total) v.pagado = true; await window.sync(); render(); } };
     window.addMat = async () => { let n = document.getElementById("newM").value.toUpperCase(); if(n) { if(!window.state.inventario) window.state.inventario = {}; window.state.inventario[n] = {stock: 0}; await window.sync(); render(); } };
     window.addServicio = async () => { let s = document.getElementById("newS").value.toUpperCase(); if(s) { if(!window.state.serviciosExtra) window.state.serviciosExtra = []; window.state.serviciosExtra.push(s); await window.sync(); render(); } };
     window.addCart = () => { let m = document.getElementById("pS").value, s = document.getElementById("sS").value, q = parseFloat(document.getElementById("qV").value) || 1, t = document.getElementById("tC").value; let p = (t === "detal") ? 9 : (t === "mayor") ? 10 : parseFloat(document.getElementById("pL").value) || 0; let d = (m && s) ? m + " + " + s : m || s; if(d) { cart.push({ d, p: (p*q), mat: m, qtyV: q }); renderCart(); } };
-    function renderCart() { document.getElementById("cart-list").innerHTML = cart.map((c, i) => `<div class="flex justify-between py-1 uppercase font-bold text-white/60"><span>${c.d}</span><b>$${c.p}</b></div>`).join(""); document.getElementById("total-disp").innerText = "$" + cart.reduce((a,b)=>a+b.p,0).toFixed(2); }
-    window.finalizarVenta = async () => { let cli = document.getElementById("cli").value, tel = document.getElementById("tel").value, fec = document.getElementById("fV").value; if(!cli || !cart.length) return; cart.forEach(c => { if(c.mat && window.state.inventario[c.mat]) window.state.inventario[c.mat].stock -= c.qtyV; }); window.state.ventas.push({ id: new Date(fec+"T12:00:00").getTime(), cliente: cli.toUpperCase(), telefono: tel, total: cart.reduce((a,b)=>a+b.p,0), abonado: 0, pagado: false }); await window.sync(); cart = []; setView('inicio'); };
-
-    render();
-</script>
-</body>
-</html><!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>GhostPrint PRO v18.2 - Premium Admin</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap');
-        body { background-color: #05050a; color: #e2e8f0; font-family: 'Plus Jakarta Sans', sans-serif; padding-bottom: 100px; }
-        .card-pro { background: #0f0f1e; border: 1px solid #1e1e30; border-radius: 20px; padding: 20px; margin-bottom: 12px; }
-        nav { background: rgba(5, 5, 12, 0.9); backdrop-filter: blur(10px); display: flex; gap: 8px; overflow-x: auto; padding: 12px; position: sticky; top: 0; z-index: 100; border-bottom: 1px solid #1e1e30; }
-        .btn-nav { background: #16162a; color: #94a3b8; padding: 10px 16px; border-radius: 12px; font-size: 10px; font-weight: 700; white-space: nowrap; cursor: pointer; text-transform: uppercase; transition: 0.3s; }
-        .active { background: #8b5cf6 !important; color: white !important; }
-        input, select { background: #0a0a16; border: 1px solid #1e1e30; color: white; padding: 12px; border-radius: 12px; width: 100%; margin: 6px 0; font-weight: 600; outline: none; }
-        .btn-main { background: #8b5cf6; color: white; padding: 16px; border-radius: 16px; width: 100%; font-weight: 800; text-transform: uppercase; cursor: pointer; border: none; transition: 0.2s; }
-        .btn-main:active { transform: scale(0.98); opacity: 0.9; }
-        #bill-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.9); z-index:200; padding:20px; }
-        .bill-card { background: white; color: black; border-radius: 24px; padding: 24px; max-width: 340px; margin: 0 auto; }
-        .stock-bar { height: 6px; border-radius: 10px; background: #1e1e30; margin-top: 8px; overflow: hidden; }
-        .stock-fill { height: 100%; transition: width 0.5s ease; }
-    </style>
-</head>
-<body>
-
-<header class="p-5 flex justify-between items-center bg-[#05050a]">
-    <div class="flex items-center gap-2">
-        <div class="w-8 h-8 bg-purple-600 rounded-lg flex items-center justify-center font-black italic">G</div>
-        <h1 class="text-lg font-extrabold tracking-tighter uppercase italic">GhostPrint <span class="text-purple-500">PRO</span></h1>
-    </div>
-    <div class="text-[9px] font-bold bg-white/5 px-3 py-1 rounded-full border border-white/10 uppercase tracking-widest">v18.2</div>
-</header>
-
-<nav>
-    <div onclick="setView('inicio')" class="btn-nav active" id="n-inicio">🏠 Inicio</div>
-    <div onclick="setView('ventas')" class="btn-nav" id="n-ventas">💵 Ventas</div>
-    <div onclick="setView('inventario')" class="btn-nav" id="n-inventario">📦 Stock</div>
-    <div onclick="setView('reportes')" class="btn-nav" id="n-reportes">📊 Análisis</div>
-    <div onclick="setView('cobros')" class="btn-nav" id="n-cobros">⏳ Cuentas</div>
-    <div onclick="setView('gastos')" class="btn-nav" id="n-gastos">💸 Gastos</div>
-    <div onclick="setView('compras')" class="btn-nav" id="n-compras">🛒 Carga</div>
-    <div onclick="setView('catalogo')" class="btn-nav" id="n-catalogo">⚙️ Config</div>
-</nav>
-
-<div id="app" class="p-4 max-w-xl mx-auto"></div>
-
-<div id="bill-modal">
-    <div class="bill-card shadow-2xl">
-        <div class="text-center">
-            <h2 class="text-xl font-black italic uppercase tracking-tighter">GhostPrint <span class="text-purple-600">PRO</span></h2>
-            <p id="b-fecha" class="text-[9px] font-bold text-gray-400 uppercase mt-1"></p>
-        </div>
-        <div class="border-t border-dashed border-gray-300 my-4"></div>
-        <p class="text-[9px] uppercase font-bold text-gray-400">Cliente</p>
-        <p id="b-cli" class="text-lg font-black uppercase text-gray-800"></p>
-        <p class="text-[9px] uppercase font-bold text-gray-400 mt-4">Saldo Pendiente</p>
-        <p id="b-monto" class="text-4xl font-black text-purple-700"></p>
-        <div class="border-t border-dashed border-gray-300 my-4"></div>
-        <button id="btn-wa" class="w-full bg-green-600 text-white font-black py-4 rounded-xl mb-2">ENVIAR POR WHATSAPP</button>
-        <button onclick="closeBill()" class="w-full text-gray-400 font-bold text-xs uppercase py-2">Cerrar</button>
-    </div>
-</div>
-
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-
-<script>
-    // Configuración Firebase (Misma que usas)
-    const firebaseConfig = {
-        apiKey: "AIzaSyBCm5JlhTxvvtlwjA1EYEtLvxb1AH5v1WI",
-        authDomain: "ghost-print-contabilidad.firebaseapp.com",
-        projectId: "ghost-print-contabilidad",
-        storageBucket: "ghost-print-contabilidad.firebasestorage.app",
-        messagingSenderId: "867057362556",
-        appId: "1:867057362556:web:6bd2a461817219a4000bf9"
-    };
-
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
-    const docRef = db.collection("sistema").doc("datos_principales");
-
-    window.state = JSON.parse(localStorage.getItem('gp_v18_2')) || { ventas: [], gastos: [], inventario: {}, serviciosExtra: ["OJALETES", "DISEÑO", "MONTAJE", "CORTE"], comprasInversion: [], mermas: [] };
-    window.currentView = "inicio";
-    let cart = [];
-
-    window.sync = async function() {
-        localStorage.setItem('gp_v18_2', JSON.stringify(window.state));
-        await docRef.set(window.state).catch(e => console.log("Offline"));
-    };
-
-    docRef.onSnapshot(doc => { if(doc.exists) { window.state = doc.data(); render(); } });
-
-    window.setView = function(v) {
-        window.currentView = v;
-        document.querySelectorAll('.btn-nav').forEach(b => b.classList.remove('active'));
-        const activeNav = document.getElementById('n-' + v);
-        if(activeNav) activeNav.classList.add('active');
-        render();
-    };
-
-    window.render = function() {
-        const app = document.getElementById("app");
-        const mesActual = new Date().getMonth();
-        const anioActual = new Date().getFullYear();
-        
-        const filterDate = (arr) => (arr || []).filter(i => { const d = new Date(i.id); return d.getMonth() === mesActual && d.getFullYear() === anioActual; });
-        const vM = filterDate(window.state.ventas);
-        const gM = filterDate(window.state.gastos);
-        const cM = filterDate(window.state.comprasInversion);
-
-        const totalVendido = vM.reduce((a, b) => a + (Number(b.total) || 0), 0);
-        const totalCobrado = vM.reduce((a, b) => a + (Number(b.abonado) || (b.pagado ? b.total : 0)), 0);
-        const totalGastos = gM.reduce((a, b) => a + (Number(b.amount) || 0), 0);
-        const totalStock = cM.reduce((a, b) => a + (Number(b.amount) || 0), 0);
-        const porCobrar = totalVendido - totalCobrado;
-        const utilidadCaja = totalCobrado - totalGastos - totalStock;
-
-        if(window.currentView === "inicio") {
-            app.innerHTML = `
-                <div class="card-pro !bg-gradient-to-br !from-purple-600 !to-indigo-800 border-none shadow-2xl relative overflow-hidden">
-                    <div class="relative z-10">
-                        <p class="text-[10px] font-bold text-purple-200 uppercase tracking-widest opacity-80 italic text-center">Efectivo en Caja</p>
-                        <h2 class="text-6xl font-black text-white italic text-center my-2 tracking-tighter">$${utilidadCaja.toFixed(2)}</h2>
-                    </div>
-                    <div class="absolute -right-4 -bottom-4 text-white/10 text-9xl font-black italic">G</div>
-                </div>
-                <div class="grid grid-cols-2 gap-3 mt-4">
-                    <div class="card-pro text-center"><p class="text-[8px] font-bold opacity-40 uppercase">Ventas</p><b class="text-xl">$${totalVendido.toFixed(0)}</b></div>
-                    <div class="card-pro text-center"><p class="text-[8px] font-bold opacity-40 uppercase">Inversión</p><b class="text-xl text-blue-400">$${totalStock.toFixed(0)}</b></div>
-                </div>`;
-        }
-
-        if(window.currentView === "inventario") {
-            app.innerHTML = `
-                <div class="space-y-3">
-                    ${Object.entries(window.state.inventario || {}).map(([n, i]) => {
-                        const cant = i.stock || 0;
-                        const colorClass = cant <= 0 ? 'bg-red-500' : cant < 5 ? 'bg-orange-500' : 'bg-emerald-500';
-                        const textClass = cant <= 0 ? 'text-red-400' : cant < 5 ? 'text-orange-400' : 'text-emerald-400';
-                        return `
-                        <div class="card-pro">
-                            <div class="flex justify-between items-start">
-                                <div>
-                                    <h4 class="text-sm font-extrabold uppercase tracking-tight">${n}</h4>
-                                    <p class="text-2xl font-black ${textClass} mt-1">${cant.toFixed(2)} <span class="text-[10px] opacity-40">unid/mts</span></p>
-                                </div>
-                                <button onclick="registrarMerma('${n}')" class="bg-red-500/10 text-red-500 text-[10px] font-black px-3 py-2 rounded-lg border border-red-500/20">MERMA</button>
-                            </div>
-                            <div class="stock-bar"><div class="stock-fill ${colorClass}" style="width: ${Math.min(cant*5, 100)}%"></div></div>
-                        </div>`;
-                    }).join("")}
-                </div>`;
-        }
-
-        if(window.currentView === "reportes") {
-            const percMeta = totalGastos > 0 ? Math.min((totalCobrado / totalGastos) * 100, 100) : 0;
-            const clientMap = {};
-            vM.forEach(v => { clientMap[v.cliente] = (clientMap[v.cliente] || 0) + v.total; });
-            const topClientes = Object.entries(clientMap).sort((a,b) => b[1]-a[1]).slice(0, 3);
-
-            app.innerHTML = `
-                <div class="space-y-4">
-                    <div class="card-pro">
-                        <h3 class="text-[10px] font-black uppercase text-purple-400 mb-4 italic">Salud Financiera</h3>
-                        <div class="space-y-4">
-                            <div>
-                                <div class="flex justify-between text-[10px] font-bold uppercase mb-1"><span>Cobro de Ventas</span> <span>${((totalCobrado/(totalVendido||1))*100).toFixed(0)}%</span></div>
-                                <div class="w-full bg-white/5 h-2 rounded-full overflow-hidden"><div class="bg-emerald-500 h-full" style="width: ${(totalCobrado/(totalVendido||1))*100}%"></div></div>
-                            </div>
-                            <div>
-                                <div class="flex justify-between text-[10px] font-bold uppercase mb-1"><span>Cobertura de Gastos</span> <span>${percMeta.toFixed(0)}%</span></div>
-                                <div class="w-full bg-white/5 h-2 rounded-full overflow-hidden"><div class="bg-purple-500 h-full" style="width: ${percMeta}%"></div></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="card-pro">
-                        <h3 class="text-[10px] font-black uppercase opacity-40 mb-3 italic">Mejores Clientes</h3>
-                        <div class="space-y-3">
-                            ${topClientes.map(([name, total], i) => `
-                                <div class="flex justify-between items-center bg-white/5 p-3 rounded-xl">
-                                    <span class="text-xs font-bold uppercase">${i+1}. ${name}</span>
-                                    <span class="text-sm font-black">$${total.toFixed(2)}</span>
-                                </div>
-                            `).join("") || '<p class="text-center opacity-30 text-xs">Sin registros</p>'}
-                        </div>
-                    </div>
-
-                    <div class="card-pro !bg-white/5 border-dashed">
-                        <div class="space-y-2 text-xs font-bold uppercase opacity-80">
-                            <div class="flex justify-between"><span>Vendido este mes:</span><span>$${totalVendido.toFixed(2)}</span></div>
-                            <div class="flex justify-between"><span>Cobrado en mano:</span><span class="text-emerald-400">$${totalCobrado.toFixed(2)}</span></div>
-                            <div class="flex justify-between"><span>Pendiente cobrar:</span><span class="text-orange-400">$${porCobrar.toFixed(2)}</span></div>
-                        </div>
-                    </div>
-                </div>`;
-        }
-
-        // VISTAS DE OPERACIÓN (Simplificadas visualmente)
-        if(window.currentView === "cobros") {
-            const d = (window.state.ventas || []).filter(v => !v.pagado);
-            app.innerHTML = d.map(v => `<div class="card-pro flex justify-between items-center border-l-4 border-orange-500"><div><b class="text-xs uppercase font-black">${v.cliente}</b><br><span class="text-orange-400 text-xs font-bold">Debe: $${(v.total - (v.abonado || 0)).toFixed(2)}</span></div><div class="flex gap-2"><button onclick="showBill('${v.cliente}', ${(v.total-(v.abonado||0))}, '${v.telefono}')" class="bg-green-600 p-3 rounded-xl">📋</button><button onclick="abono(${v.id})" class="bg-purple-600 px-4 py-2 rounded-xl text-[10px] font-black uppercase">Cobrar</button></div></div>`).join("") || '<p class="text-center py-20 opacity-30 font-bold uppercase">Sin deudas pendientes</p>';
-        }
-        if(window.currentView === "ventas") {
-            app.innerHTML = `<div class="card-pro"><h2 class="text-lg font-black text-white mb-4 uppercase italic">Nueva Venta</h2><input type="date" id="fV" value="${new Date().toISOString().split('T')[0]}"><input id="cli" placeholder="NOMBRE DEL CLIENTE"><input id="tel" type="number" placeholder="TELÉFONO"><div class="bg-white/5 p-4 rounded-2xl mt-4 border border-white/5"><div class="grid grid-cols-2 gap-2"><select id="pS"><option value="">Material...</option>${Object.keys(window.state.inventario || {}).map(m=>`<option value="${m}">${m}</option>`).join("")}</select><select id="sS"><option value="">Servicio...</option>${(window.state.serviciosExtra || []).map(s=>`<option value="${s}">${s}</option>`).join("")}</select></div><input id="qV" type="number" placeholder="Cantidad" value="1"><select id="tC" onchange="document.getElementById('pL').classList.toggle('hidden', this.value !== 'libre')"><option value="detal">DETAL ($9)</option><option value="mayor">MAYOR ($10)</option><option value="libre">PRECIO LIBRE</option></select><input id="pL" class="hidden" type="number" placeholder="Monto Unitario $"><button onclick="addCart()" class="btn-main !p-3 mt-3 !bg-white/10 text-white">+ Añadir al Carrito</button></div><div id="cart-list" class="mt-4 space-y-2 text-[10px] border-y border-white/5 py-3"></div><div id="total-disp" class="text-4xl font-black text-center my-6 italic">$0.00</div><button onclick="finalizarVenta()" class="btn-main shadow-lg">Registrar Venta</button></div>`;
-        }
-        if(window.currentView === "compras") {
-            app.innerHTML = `<div class="card-pro"><h2 class="text-lg font-black uppercase mb-4 italic text-blue-400">Carga de Stock</h2><input type="date" id="fC" value="${new Date().toISOString().split('T')[0]}"><select id="mInv"><option value="">Seleccionar Material...</option>${Object.keys(window.state.inventario || {}).map(m=>`<option value="${m}">${m}</option>`).join("")}</select><div class="grid grid-cols-2 gap-2"><input id="qInv" type="number" placeholder="Cantidad"><input id="pInv" type="number" placeholder="Precio Compra $"></div><button onclick="saveInv()" class="btn-main !bg-blue-600 mt-4">Actualizar Inventario</button></div>`;
-        }
-        if(window.currentView === "gastos") {
-            app.innerHTML = `<div class="card-pro"><h2 class="text-lg font-black uppercase mb-4 italic text-red-400">Nuevo Gasto</h2><input type="date" id="fG" value="${new Date().toISOString().split('T')[0]}"><input id="dG" placeholder="Descripción (Alquiler, Luz, etc)"><input id="aG" type="number" placeholder="Monto $"><button onclick="saveGasto()" class="btn-main !bg-red-600 mt-4">Guardar Gasto</button></div>`;
-        }
-        if(window.currentView === "catalogo") {
-            app.innerHTML = `<div class="card-pro"><h2 class="text-sm font-black uppercase mb-4 opacity-50">Gestionar Catálogo</h2><input id="newM" placeholder="Nuevo Material"><button onclick="addMat()" class="bg-white/10 w-full py-3 rounded-xl font-bold mb-4">Añadir Material</button><input id="newS" placeholder="Nuevo Servicio"><button onclick="addServicio()" class="bg-white/10 w-full py-3 rounded-xl font-bold">Añadir Servicio</button></div>`;
-        }
-    };
-
-    // FUNCIONES CORE (Siguen funcionando igual para no dañar datos)
-    window.registrarMerma = async (material) => { let cant = parseFloat(prompt(`Cantidad dañada de ${material}:`)); if(cant && cant > 0) { if(window.state.inventario[material].stock >= cant) { window.state.inventario[material].stock -= cant; if(!window.state.mermas) window.state.mermas = []; window.state.mermas.push({ id: Date.now(), material, cant }); await window.sync(); render(); } else { alert("No hay suficiente stock."); } } };
-    window.saveInv = async () => { const m = document.getElementById("mInv").value, q = parseFloat(document.getElementById("qInv").value), p = parseFloat(document.getElementById("pInv").value), f = document.getElementById("fC").value; if(m && q && p) { if(!window.state.inventario[m]) window.state.inventario[m] = {stock:0}; window.state.inventario[m].stock += q; if(!window.state.comprasInversion) window.state.comprasInversion = []; window.state.comprasInversion.push({ id: new Date(f+"T12:00:00").getTime(), material: m, amount: (q * p), qty: q }); await window.sync(); setView('inicio'); } };
-    window.saveGasto = async () => { const d = document.getElementById("dG").value, a = parseFloat(document.getElementById("aG").value), f = document.getElementById("fG").value; if(d && a) { if(!window.state.gastos) window.state.gastos = []; window.state.gastos.push({ id: new Date(f+"T12:00:00").getTime(), desc: d.toUpperCase(), amount: a }); await window.sync(); setView('inicio'); } };
-    window.showBill = (cliente, monto, telf) => { const fechaStr = new Date().toLocaleDateString(); document.getElementById('b-cli').innerText = cliente; document.getElementById('b-monto').innerText = "$" + monto.toFixed(2); document.getElementById('b-fecha').innerText = fechaStr; document.getElementById('bill-modal').style.display = 'block'; document.getElementById('btn-wa').onclick = () => { const msg = `*GHOSTPRINT PRO*%0A*Fecha:* ${fechaStr}%0A*Cliente:* ${cliente}%0A*Saldo Pendiente:* $${monto.toFixed(2)}%0A_Favor reportar captura del pago._`; window.open(`https://api.whatsapp.com/send?phone=${telf}&text=${msg}`, '_blank'); }; };
-    window.closeBill = () => { document.getElementById('bill-modal').style.display = 'none'; };
-    window.abono = async (id) => { let v = window.state.ventas.find(x => x.id === id); let m = parseFloat(prompt(`Saldo: $${(v.total-v.abonado).toFixed(2)}. ¿Abono?`)); if(m) { v.abonado = (Number(v.abonado)||0) + m; if(v.abonado >= v.total) v.pagado = true; await window.sync(); render(); } };
-    window.addMat = async () => { let n = document.getElementById("newM").value.toUpperCase(); if(n) { if(!window.state.inventario) window.state.inventario = {}; window.state.inventario[n] = {stock: 0}; await window.sync(); render(); } };
-    window.addServicio = async () => { let s = document.getElementById("newS").value.toUpperCase(); if(s) { if(!window.state.serviciosExtra) window.state.serviciosExtra = []; window.state.serviciosExtra.push(s); await window.sync(); render(); } };
-    window.addCart = () => { let m = document.getElementById("pS").value, s = document.getElementById("sS").value, q = parseFloat(document.getElementById("qV").value) || 1, t = document.getElementById("tC").value; let p = (t === "detal") ? 9 : (t === "mayor") ? 10 : parseFloat(document.getElementById("pL").value) || 0; let d = (m && s) ? m + " + " + s : m || s; if(d) { cart.push({ d, p: (p*q), mat: m, qtyV: q }); renderCart(); } };
-    function renderCart() { document.getElementById("cart-list").innerHTML = cart.map((c, i) => `<div class="flex justify-between py-1 uppercase font-bold text-white/60"><span>${c.d}</span><b>$${c.p}</b></div>`).join(""); document.getElementById("total-disp").innerText = "$" + cart.reduce((a,b)=>a+b.p,0).toFixed(2); }
+    function renderCart() { document.getElementById("cart-list").innerHTML = cart.map((c, i) => `<div class="flex justify-between py-1 uppercase font-bold text-white/50"><span>${c.d}</span><b>$${c.p}</b></div>`).join(""); document.getElementById("total-disp").innerText = "Total: $" + cart.reduce((a,b)=>a+b.p,0).toFixed(2); }
     window.finalizarVenta = async () => { let cli = document.getElementById("cli").value, tel = document.getElementById("tel").value, fec = document.getElementById("fV").value; if(!cli || !cart.length) return; cart.forEach(c => { if(c.mat && window.state.inventario[c.mat]) window.state.inventario[c.mat].stock -= c.qtyV; }); window.state.ventas.push({ id: new Date(fec+"T12:00:00").getTime(), cliente: cli.toUpperCase(), telefono: tel, total: cart.reduce((a,b)=>a+b.p,0), abonado: 0, pagado: false }); await window.sync(); cart = []; setView('inicio'); };
 
     render();
