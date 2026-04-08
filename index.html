@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>GhostPrint PRO v16.4 - Bill Edition</title>
+    <title>GhostPrint PRO v16.5 - FULL RESTORED</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap');
@@ -16,10 +16,14 @@
         .btn-main { background: linear-gradient(135deg, #7c3aed 0%, #4c1d95 100%); color: white; padding: 18px; border-radius: 18px; width: 100%; font-weight: 900; text-transform: uppercase; cursor: pointer; border: none; }
         .ghost-logo { font-size: 28px; filter: drop-shadow(0 0 8px #7c3aed); margin-right: 8px; }
         
-        /* Modal de Factura */
-        #bill-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.9); z-index:200; padding:40px 20px; }
-        .bill-card { background: white; color: black; border-radius: 30px; padding: 30px; position: relative; overflow: hidden; }
+        /* Modal de Factura para Captura */
+        #bill-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.95); z-index:200; padding:40px 20px; overflow-y: auto; }
+        .bill-card { background: white; color: black; border-radius: 30px; padding: 30px; position: relative; }
         .bill-cut { border-top: 2px dashed #ccc; margin: 20px 0; }
+
+        .bar-chart { display: flex; align-items: flex-end; gap: 12px; height: 120px; padding: 10px; background: rgba(255,255,255,0.03); border-radius: 18px; margin: 15px 0; }
+        .bar { flex: 1; border-radius: 6px 6px 2px 2px; transition: height 0.8s ease; position: relative; min-height: 2px; }
+        .bar-label { font-size: 8px; text-align: center; margin-top: 8px; font-weight: 800; text-transform: uppercase; opacity: 0.5; }
     </style>
 </head>
 <body>
@@ -29,6 +33,7 @@
         <span class="ghost-logo">👻</span>
         <h1 class="text-xl font-black italic text-white uppercase tracking-tighter">GhostPrint <span class="text-purple-500">PRO</span></h1>
     </div>
+    <span class="text-[8px] font-black uppercase bg-purple-500/20 text-purple-400 px-3 py-1.5 rounded-full border border-purple-500/30">v16.5</span>
 </header>
 
 <nav id="main-nav">
@@ -48,7 +53,7 @@
         <div class="flex flex-col items-center">
             <span class="text-4xl">👻</span>
             <h2 class="text-xl font-black italic uppercase tracking-tighter mt-2">GhostPrint <span class="text-purple-600">PRO</span></h2>
-            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Orden de Cobro Pendiente</p>
+            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Orden de Cobro</p>
         </div>
         <div class="bill-cut"></div>
         <div class="space-y-4">
@@ -57,21 +62,14 @@
                 <p id="b-cli" class="text-lg font-black uppercase text-gray-800"></p>
             </div>
             <div>
-                <p class="text-[10px] uppercase font-black text-gray-400">Estado de Cuenta:</p>
-                <div class="flex justify-between items-end">
-                    <span class="text-sm font-bold">Saldo Pendiente:</span>
-                    <span id="b-monto" class="text-3xl font-black text-purple-700"></span>
-                </div>
+                <p class="text-[10px] uppercase font-black text-gray-400">Saldo Pendiente:</p>
+                <p id="b-monto" class="text-4xl font-black text-purple-700"></p>
             </div>
         </div>
         <div class="bill-cut"></div>
-        <p class="text-[9px] text-center font-medium text-gray-500 leading-tight">Por favor, realice su pago para continuar procesando sus pedidos. ¡Gracias por preferirnos!</p>
-        <p class="text-[8px] text-center font-black uppercase text-gray-300 mt-4 tracking-widest">Guatire, Venezuela</p>
+        <p class="text-[10px] text-center font-bold text-gray-500">Guatire, Miranda</p>
     </div>
-    <div class="mt-6 space-y-3">
-        <p class="text-center text-white/50 text-[10px] font-bold uppercase">Toma una captura de pantalla y envíala</p>
-        <button onclick="closeBill()" class="btn-main !from-gray-700 !to-gray-900">Regresar</button>
-    </div>
+    <button onclick="closeBill()" class="btn-main mt-6 !from-gray-700 !to-black">Cerrar</button>
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
@@ -91,11 +89,12 @@
     const db = firebase.firestore();
     const docRef = db.collection("sistema").doc("datos_principales");
 
-    window.state = JSON.parse(localStorage.getItem('gp_v16_4')) || { ventas: [], gastos: [], inventario: {}, serviciosExtra: ["OJALETES", "DISEÑO", "MONTAJE", "CORTE"], comprasInversion: [] };
+    window.state = JSON.parse(localStorage.getItem('gp_v16_5')) || { ventas: [], gastos: [], inventario: {}, serviciosExtra: ["OJALETES", "DISEÑO", "MONTAJE", "CORTE"], comprasInversion: [] };
     window.currentView = "inicio";
+    let cart = [];
 
     window.sync = async function() {
-        localStorage.setItem('gp_v16_4', JSON.stringify(window.state));
+        localStorage.setItem('gp_v16_5', JSON.stringify(window.state));
         await docRef.set(window.state).catch(e => console.log("Offline"));
     };
 
@@ -126,21 +125,51 @@
         const utilidadReal = totalCobrado - totalGastos - totalInversion;
 
         if(window.currentView === "inicio") {
-            html = `<div class="card-pro !bg-gradient-to-br !from-purple-600 !to-indigo-900 border-none text-center"><p class="text-[10px] font-black text-purple-200 uppercase mb-1 tracking-widest">Saldo Neto en Mano</p><h2 class="text-5xl font-black text-white italic">$${utilidadReal.toFixed(2)}</h2></div>
-            <div class="grid grid-cols-2 gap-3"><div class="card-pro border-l-4 border-purple-500"><p class="text-[9px] font-bold opacity-50 uppercase">Vendido</p><b class="text-xl font-black">$${totalVendido.toFixed(2)}</b></div><div class="card-pro border-l-4 border-blue-400"><p class="text-[9px] font-bold opacity-50 uppercase">Inversión</p><b class="text-xl font-black">$${totalInversion.toFixed(2)}</b></div></div>`;
+            const max = Math.max(totalCobrado, (totalGastos+totalInversion), 1);
+            html = `
+            <div class="card-pro !bg-gradient-to-br !from-purple-600 !to-indigo-900 border-none text-center">
+                <p class="text-[10px] font-black text-purple-200 uppercase mb-1">Saldo Neto en Caja</p>
+                <h2 class="text-5xl font-black text-white italic">$${utilidadReal.toFixed(2)}</h2>
+            </div>
+            <div class="card-pro">
+                <div class="bar-chart">
+                    <div class="flex-1 flex flex-col items-center"><div class="bar bg-green-500 w-10/12" style="height: ${(totalCobrado/max)*100}%"></div><span class="bar-label">Cobrado</span></div>
+                    <div class="flex-1 flex flex-col items-center"><div class="bar bg-red-500 w-10/12" style="height: ${((totalGastos+totalInversion)/max)*100}%"></div><span class="bar-label">Salidas</span></div>
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div class="card-pro border-l-4 border-purple-500"><p class="text-[9px] font-bold opacity-50 uppercase">Vendido</p><b class="text-xl font-black">$${totalVendido.toFixed(2)}</b></div>
+                <div class="card-pro border-l-4 border-blue-400"><p class="text-[9px] font-bold opacity-50 uppercase">Inversión Stock</p><b class="text-xl font-black">$${totalInversion.toFixed(2)}</b></div>
+            </div>`;
         }
 
         if(window.currentView === "ventas") {
-            html = `<div class="card-pro"><h2 class="text-lg font-black text-white mb-4 uppercase text-center italic">Nueva Venta</h2><input type="date" id="fV" value="${new Date().toISOString().split('T')[0]}"><input id="cli" placeholder="CLIENTE"><input id="tel" type="number" placeholder="WHATSAPP"><button onclick="finalizarSimple()" class="btn-main mt-4">Guardar Venta</button></div>`;
+            html = `<div class="card-pro"><h2 class="text-lg font-black text-white mb-4 uppercase text-center italic">Nueva Venta</h2><input type="date" id="fV" value="${new Date().toISOString().split('T')[0]}"><input id="cli" placeholder="CLIENTE"><input id="tel" type="number" placeholder="WHATSAPP"><div class="bg-white/5 p-4 rounded-xl mt-3 border border-white/10">
+                <div class="grid grid-cols-2 gap-2"><select id="pS"><option value="">Material...</option>${Object.keys(window.state.inventario || {}).filter(k=>!k.includes('TINTA')).map(m=>`<option value="${m}">${m}</option>`).join("")}</select><select id="sS"><option value="">Servicio...</option>${(window.state.serviciosExtra || []).map(s=>`<option value="${s}">${s}</option>`).join("")}</select></div>
+                <input id="qV" type="number" placeholder="Cantidad / Metros" value="1"><select id="tC" onchange="document.getElementById('pL').classList.toggle('hidden', this.value !== 'libre')"><option value="detal">DETAL ($9)</option><option value="mayor">MAYOR ($10)</option><option value="libre">PRECIO LIBRE</option></select><input id="pL" class="hidden" type="number" placeholder="Monto $"><button onclick="addCart()" class="btn-main !p-3 mt-3">+ Añadir</button></div><div id="cart-list" class="mt-4 space-y-2 text-[10px]"></div><div id="total-disp" class="text-4xl font-black text-center my-6 text-white italic underline decoration-purple-600">Total: $0.00</div><button onclick="finalizarVenta()" class="btn-main">Guardar Venta</button></div>`;
+        }
+
+        if(window.currentView === "compras") {
+            html = `<div class="card-pro border-t-4 border-blue-500"><h2 class="text-lg font-black text-white mb-4 uppercase text-center italic">Carga Almacén</h2><input type="date" id="fC" value="${new Date().toISOString().split('T')[0]}"><select id="mInv"><option value="">Seleccione...</option>${Object.keys(window.state.inventario || {}).map(m=>`<option value="${m}">${m}</option>`).join("")}</select><div class="grid grid-cols-2 gap-2"><input id="qInv" type="number" placeholder="Cant"><input id="pInv" type="number" placeholder="Precio"></div><button onclick="saveInv()" class="btn-main mt-4">Guardar Compra</button></div>
+            <p class="text-[10px] font-black opacity-30 uppercase ml-2 mb-2">Historial de Compras</p><div class="space-y-2">${cM.reverse().map(c => `<div class="card-pro !py-3 flex justify-between items-center border-l-2 border-blue-800"><div><p class="text-[8px] opacity-40">${new Date(c.id).toLocaleDateString()}</p><b class="text-xs uppercase">${c.material} (${c.qty})</b></div><b class="text-blue-400">$${c.amount.toFixed(2)}</b></div>`).join("")}</div>`;
+        }
+
+        if(window.currentView === "gastos") {
+            html = `<div class="card-pro border-t-4 border-red-500"><h2 class="text-lg font-black text-white mb-4 uppercase text-center italic">Registrar Gasto</h2><input type="date" id="fG" value="${new Date().toISOString().split('T')[0]}"><input id="dG" placeholder="Descripción"><input id="aG" type="number" placeholder="Monto $"><button onclick="saveGasto()" class="btn-main mt-4 !bg-red-600">Guardar Gasto</button></div>
+            <p class="text-[10px] font-black opacity-30 uppercase ml-2 mb-2">Historial de Gastos</p><div class="space-y-2">${gM.reverse().map(g => `<div class="card-pro !py-3 flex justify-between items-center border-l-2 border-red-900"><div><p class="text-[8px] opacity-40">${new Date(g.id).toLocaleDateString()}</p><b class="text-xs uppercase">${g.desc}</b></div><b class="text-red-400">-$${g.amount.toFixed(2)}</b></div>`).join("")}</div>`;
+        }
+
+        if(window.currentView === "reportes") {
+            html = `<div class="card-pro"><h3 class="text-[10px] font-black text-blue-400 uppercase mb-4 text-center">Balance Mensual Real</h3><div class="flex justify-between text-xs py-2"><span>Efectivo Neto:</span><b class="text-green-500">$${utilidadReal.toFixed(2)}</b></div><div class="flex justify-between text-xs py-2"><span>Total Cobrado:</span><b class="text-white">$${totalCobrado.toFixed(2)}</b></div><div class="flex justify-between text-xs py-2"><span>Total Gastos:</span><b class="text-red-400">-$${totalGastos.toFixed(2)}</b></div><div class="flex justify-between text-xs py-2"><span>Inversión Stock:</span><b class="text-blue-400">-$${totalInversion.toFixed(2)}</b></div></div>`;
+        }
+
+        if(window.currentView === "inventario") {
+            html = `<h2 class="text-2xl font-black italic uppercase mb-4 px-2 tracking-tighter">Stock</h2><div class="grid grid-cols-1 gap-3">${Object.entries(window.state.inventario || {}).map(([n, i])=>`<div class="card-pro flex justify-between items-center border-l-4 border-blue-600"><div><p class="text-[9px] font-black text-blue-400 uppercase">${n}</p><h4 class="text-3xl font-black text-white">${(i.stock || 0).toFixed(2)}</h4></div><div class="flex gap-2"><button onclick="editMatInv('${n}')" class="bg-white/5 p-3 rounded-xl">✏️</button><button onclick="delMatInv('${n}')" class="bg-red-500/10 p-3 rounded-xl text-red-500">🗑️</button></div></div>`).join("")}</div><div class="card-pro mt-4"><input id="newM" placeholder="Nuevo Item..."><button onclick="addMat()" class="btn-main !p-3">Crear Item</button></div>`;
         }
 
         if(window.currentView === "cobros") {
             let d = (window.state.ventas || []).filter(v => !v.pagado);
             html = d.map(v => `<div class="card-pro flex justify-between items-center border-l-4 border-amber-500"><div><b class="text-xs uppercase font-black">${v.cliente}</b><br><span class="text-red-400 text-[10px] font-black">Debe: $${(v.total - (v.abonado || 0)).toFixed(2)}</span></div><div class="flex gap-2"><button onclick="showBill('${v.cliente}', ${(v.total-(v.abonado||0))})" class="bg-green-600 p-3 rounded-2xl">📋</button><button onclick="abono(${v.id})" class="bg-blue-600 px-4 py-2 rounded-2xl text-[10px] font-black">Abonar</button></div></div>`).join("") || '<p class="text-center py-20 opacity-30 font-black uppercase">Sin pendientes</p>';
-        }
-
-        if(window.currentView === "inventario") {
-            html = `<h2 class="text-2xl font-black italic uppercase mb-4 px-2 tracking-tighter">Stock Actual</h2><div class="grid grid-cols-1 gap-3">${Object.entries(window.state.inventario || {}).map(([n, i])=>`<div class="card-pro flex justify-between items-center border-l-4 border-blue-600"><div><p class="text-[9px] font-black text-blue-400 uppercase">${n}</p><h4 class="text-3xl font-black text-white">${(i.stock || 0).toFixed(2)}</h4></div><div class="flex gap-2"><button onclick="editMatInv('${n}')" class="bg-white/5 p-3 rounded-xl">✏️</button></div></div>`).join("")}</div>`;
         }
 
         app.innerHTML = html;
@@ -152,23 +181,35 @@
         document.getElementById('bill-modal').style.display = 'block';
     };
 
-    window.closeBill = () => {
-        document.getElementById('bill-modal').style.display = 'none';
+    window.closeBill = () => { document.getElementById('bill-modal').style.display = 'none'; };
+
+    window.saveInv = async () => {
+        const m = document.getElementById("mInv").value, q = parseFloat(document.getElementById("qInv").value), p = parseFloat(document.getElementById("pInv").value), f = document.getElementById("fC").value;
+        if(m && q && p) { window.state.inventario[m].stock += q; if(!window.state.comprasInversion) window.state.comprasInversion = []; window.state.comprasInversion.push({ id: new Date(f+"T12:00:00").getTime(), material: m, amount: (q * p), qty: q }); await window.sync(); setView('inicio'); }
     };
 
-    window.finalizarSimple = async () => {
+    window.saveGasto = async () => {
+        const d = document.getElementById("dG").value, a = parseFloat(document.getElementById("aG").value), f = document.getElementById("fG").value;
+        if(d && a) { if(!window.state.gastos) window.state.gastos = []; window.state.gastos.push({ id: new Date(f+"T12:00:00").getTime(), desc: d.toUpperCase(), amount: a }); await window.sync(); setView('inicio'); }
+    };
+
+    window.finalizarVenta = async () => {
         let cli = document.getElementById("cli").value, tel = document.getElementById("tel").value, fec = document.getElementById("fV").value;
-        let monto = parseFloat(prompt("Monto total de la venta:"));
-        if(!cli || !monto) return;
-        window.state.ventas.push({ id: new Date(fec+"T12:00:00").getTime(), cliente: cli.toUpperCase(), telefono: tel, total: monto, abonado: 0, pagado: false });
-        await window.sync(); setView('cobros');
+        if(!cli || !cart.length) return;
+        cart.forEach(c => {
+            if(c.mat && window.state.inventario[c.mat]) window.state.inventario[c.mat].stock -= c.qtyV;
+            Object.keys(window.state.inventario).forEach(key => { if(key.includes("TINTA")) window.state.inventario[key].stock -= (c.qtyV / 300); });
+        });
+        window.state.ventas.push({ id: new Date(fec+"T12:00:00").getTime(), cliente: cli.toUpperCase(), telefono: tel, total: cart.reduce((a,b)=>a+b.p,0), abonado: 0, pagado: false });
+        await window.sync(); cart = []; setView('inicio');
     };
 
-    window.abono = async (id) => {
-        let v = window.state.ventas.find(x => x.id === id);
-        let m = parseFloat(prompt(`Saldo: $${(v.total-v.abonado).toFixed(2)}. ¿Cuánto abona?`));
-        if(m) { v.abonado = (v.abonado||0) + m; if(v.abonado >= v.total) v.pagado = true; await window.sync(); render(); }
-    };
+    window.addMat = async () => { let n = document.getElementById("newM").value.toUpperCase(); if(n) { if(!window.state.inventario) window.state.inventario = {}; window.state.inventario[n] = {stock: 0}; await window.sync(); render(); } };
+    window.delMatInv = async (n) => { if(confirm(`Eliminar ${n}?`)){ delete window.state.inventario[n]; await window.sync(); render(); } };
+    window.editMatInv = async (old) => { let n = prompt("Nuevo nombre:", old); if(n) { window.state.inventario[n.toUpperCase()] = window.state.inventario[old]; delete window.state.inventario[old]; await window.sync(); render(); } };
+    window.addCart = () => { let m = document.getElementById("pS").value, s = document.getElementById("sS").value, q = parseFloat(document.getElementById("qV").value) || 1, t = document.getElementById("tC").value; let p = (t === "detal") ? 9 : (t === "mayor") ? 10 : parseFloat(document.getElementById("pL").value) || 0; let d = (m && s) ? m + " + " + s : m || s; if(d) { cart.push({ d, p: (p*q), mat: m, qtyV: q }); renderCart(); } };
+    function renderCart() { document.getElementById("cart-list").innerHTML = cart.map((c, i) => `<div class="flex justify-between py-1"><span>${c.d} (${c.qtyV}m)</span><b>$${c.p} <button onclick="cart.splice(${i},1);renderCart()" class="text-red-500">×</button></b></div>`).join(""); document.getElementById("total-disp").innerText = "Total: $" + cart.reduce((a,b)=>a+b.p,0).toFixed(2); }
+    window.abono = async (id) => { let v = window.state.ventas.find(x => x.id === id); let m = parseFloat(prompt(`Saldo: $${(v.total-v.abonado).toFixed(2)}. Abona?`)); if(m) { v.abonado = (v.abonado||0) + m; if(v.abonado >= v.total) v.pagado = true; await window.sync(); render(); } };
 
     render();
 </script>
