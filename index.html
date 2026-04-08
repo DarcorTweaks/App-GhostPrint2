@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GhostPrint ERP v4 - Full Graphics & Auto Ink</title>
+    <title>GhostPrint ERP v4.1 - Fix Stock Recovery</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -26,7 +26,7 @@
 <header>
     <div>
         <h1 class="text-2xl font-black italic uppercase">GhostPrint ERP</h1>
-        <p id="sync-status" class="text-[9px] font-bold text-amber-300 uppercase italic">Conectando...</p>
+        <p id="sync-status" class="text-[9px] font-bold text-amber-300 uppercase italic">Sincronizando...</p>
     </div>
 </header>
 
@@ -86,9 +86,9 @@ window.render = function() {
 
     if(window.view === "dashboard"){
         html = `<div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
-            <div class="card !m-0 bg-green-50 border-b-4 border-green-500 text-center font-bold">VENTAS: $${vT.toFixed(2)}</div>
-            <div class="card !m-0 bg-red-50 border-b-4 border-red-500 text-center font-bold">GASTOS: $${gT.toFixed(2)}</div>
-            <div class="card !m-0 bg-slate-900 text-white italic text-center text-purple-400 font-bold uppercase">NETO: $${(vT-gT).toFixed(2)}</div>
+            <div class="card !m-0 bg-green-50 border-b-4 border-green-500 text-center font-bold">Ventas: $${vT.toFixed(2)}</div>
+            <div class="card !m-0 bg-red-50 border-b-4 border-red-500 text-center font-bold">Gastos: $${gT.toFixed(2)}</div>
+            <div class="card !m-0 bg-slate-900 text-white italic text-center text-purple-400 font-bold uppercase">Neto: $${(vT-gT).toFixed(2)}</div>
         </div>
         <div class="card"><canvas id="chartDash" height="200"></canvas></div>`;
         setTimeout(() => initDashChart(vT, gT), 100);
@@ -107,7 +107,7 @@ window.render = function() {
             <button onclick="addItemCarrito()" class="btn w-full !bg-blue-600 mt-2">+ AGREGAR</button>
             <div id="listaCarrito" class="mt-4 border-t pt-2"></div>
             <div id="totalVenta" class="p-3 bg-slate-800 text-white text-center font-bold mt-2 rounded-xl text-xl uppercase italic">Total: $0.00</div>
-            <button onclick="procesarV()" class="btn w-full bg-green-600 mt-4 py-4 font-black">FINALIZAR Y DESCONTAR TINTA</button></div>`;
+            <button onclick="procesarV()" class="btn w-full bg-green-600 mt-4 py-4 font-black text-xs">FINALIZAR VENTA</button></div>`;
         setTimeout(() => renderCarritoInner(), 10);
     }
 
@@ -138,15 +138,10 @@ window.render = function() {
         </div>`;
     }
 
-    if(window.view === "gastos"){
-        html = `<div class="card"><label>Gasto</label><input id="gNom"><label>Monto $</label><input id="gMon" type="number"><button onclick="regG()" class="btn w-full bg-red-600 mt-2">Guardar Gasto</button></div>
-        ${window.state.gastos.slice().reverse().map(g=>`<div class="card flex justify-between py-2 border-l-4 border-red-500"><div><small class="uppercase font-bold">${g.name}</small><br><b>$${g.amount.toFixed(2)}</b></div><button onclick="borrarG(${g.id})" class="text-red-500 font-bold text-xs uppercase">X</button></div>`).join("")}`;
-    }
-
     if(window.view === "reportes"){
-        html = `<div class="card bg-indigo-900 text-white italic font-bold text-center uppercase">Reporte General de Ganancia</div>
+        html = `<div class="card bg-indigo-900 text-white italic font-bold text-center uppercase">Reporte de Ventas por Material</div>
                 <div class="card"><canvas id="chartPie" height="250"></canvas></div>
-                <div class="card bg-white"><h3 class="font-bold text-slate-800 uppercase mb-2">Ingresos vs Egresos por Mes</h3><canvas id="chartLines" height="250"></canvas></div>`;
+                <div class="card"><h3 class="font-bold text-slate-800 uppercase mb-2">Ingresos vs Egresos</h3><canvas id="chartLines" height="250"></canvas></div>`;
         setTimeout(() => initReportCharts(), 100);
     }
 
@@ -158,7 +153,6 @@ window.render = function() {
     app.innerHTML = html;
 };
 
-// --- LÓGICA CARRITO ---
 function renderCarritoInner() {
     let div = document.getElementById("listaCarrito"), totalDiv = document.getElementById("totalVenta");
     if(!div) return;
@@ -171,26 +165,23 @@ window.addItemCarrito = () => {
     if(!p && !s) return;
     let nombre = (p && s) ? `${p} + ${s}` : (p || s);
     let pre = p ? (t === "mayor" ? 10 : 9) : 12;
-    carritoVenta.push({ nombre: nombre.toUpperCase(), qty: c, sub: c * pre, esProd: !!p, prodKey: p, fecha: new Date().toISOString() });
+    carritoVenta.push({ nombre: nombre.toUpperCase(), qty: c, sub: c * pre, esProd: !!p, prodKey: p });
     renderCarritoInner();
 };
 
 window.removeItemCarrito = (i) => { carritoVenta.splice(i, 1); renderCarritoInner(); };
 
-// --- LÓGICA DE VENTA CON AUTO-TINTA ---
+// --- LÓGICA DE VENTA ---
 window.procesarV = async () => {
     let cliente = document.getElementById("cliV").value.toUpperCase();
     let tel = document.getElementById("telV").value;
     if(!cliente || carritoVenta.length === 0) return alert("Falta cliente o material");
 
-    // BUSCADOR AUTOMÁTICO DE TINTA (No importa cómo se llame, mientras diga "TINTA")
     let keyTinta = Object.keys(window.state.inventario).find(k => k.toUpperCase().includes("TINTA"));
 
     carritoVenta.forEach(i => {
         if (i.esProd && i.prodKey && window.state.inventario[i.prodKey]) {
-            // Descuenta material
             window.state.inventario[i.prodKey].stock -= i.qty;
-            // Descuenta tinta (Si no es el ítem de tinta mismo)
             if (keyTinta && i.prodKey.toUpperCase() !== keyTinta.toUpperCase()) {
                 window.state.inventario[keyTinta].stock -= i.qty;
             }
@@ -198,24 +189,29 @@ window.procesarV = async () => {
     });
 
     let total = carritoVenta.reduce((a,b)=>a+b.sub, 0);
-    window.state.ventas.push({id:Date.now(), cliente, telefono:tel, total, abonado:0, pagado:false, items: [...carritoVenta], fecha: new Date().toISOString()});
+    window.state.ventas.push({id:Date.now(), cliente, telefono:tel, total, abonado:0, pagado:false, items: [...carritoVenta]});
     
     await window.save(); 
     carritoVenta = [];
-    alert("Venta procesada. Material y Tinta descontados.");
+    alert("Venta finalizada con éxito.");
     setView('cobranzas');
 };
 
-// --- ANULACIÓN CON DEVOLUCIÓN DE TINTA ---
+// --- LÓGICA DE ANULACIÓN (CORREGIDA) ---
 window.borrarV = async (id) => {
-    if(confirm("¿Anular y devolver material/tinta?")){
+    if(confirm("¿Anular venta? El stock se devolverá exactamente.")){
         let vIdx = window.state.ventas.findIndex(x => x.id === id);
         let venta = window.state.ventas[vIdx];
         let keyTinta = Object.keys(window.state.inventario).find(k => k.toUpperCase().includes("TINTA"));
 
+        // DEVOLUCIÓN PRECISA
         venta.items.forEach(i => {
             if (i.esProd && i.prodKey && window.state.inventario[i.prodKey]) {
+                // Devuelve el material base
                 window.state.inventario[i.prodKey].stock += i.qty;
+                
+                // Devuelve la tinta SOLO si no es el ítem tinta mismo 
+                // para evitar sumar de más en materiales de impresión
                 if (keyTinta && i.prodKey.toUpperCase() !== keyTinta.toUpperCase()) {
                     window.state.inventario[keyTinta].stock += i.qty;
                 }
@@ -228,12 +224,11 @@ window.borrarV = async (id) => {
     }
 };
 
-// --- GRÁFICOS ---
+// --- REPORTES ---
 function initDashChart(v, g) {
     new Chart(document.getElementById('chartDash'), {
         type: 'bar',
-        data: { labels: ['Ingresos', 'Egresos'], datasets: [{ label: '$ USD', data: [v, g], backgroundColor: ['#22c55e', '#ef4444'], borderRadius: 10 }] },
-        options: { plugins: { legend: { display: false } } }
+        data: { labels: ['Ventas', 'Gastos'], datasets: [{ label: '$', data: [v, g], backgroundColor: ['#22c55e', '#ef4444'], borderRadius: 10 }] }
     });
 }
 
@@ -243,38 +238,31 @@ function initReportCharts() {
     
     new Chart(document.getElementById('chartPie'), {
         type: 'doughnut',
-        data: { labels: Object.keys(dataPie), datasets: [{ data: Object.values(dataPie), backgroundColor: ['#6d28d9', '#22c55e', '#3b82f6', '#f59e0b', '#ec4899', '#06b6d4'] }] }
+        data: { labels: Object.keys(dataPie), datasets: [{ data: Object.values(dataPie), backgroundColor: ['#6d28d9', '#22c55e', '#3b82f6', '#f59e0b', '#ec4899'] }] }
     });
 
     new Chart(document.getElementById('chartLines'), {
         type: 'line',
         data: { 
             labels: ['Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab', 'Dom'], 
-            datasets: [
-                { label: 'Ventas', data: [0, 0, 0, 0, 0, 0, 10], borderColor: '#22c55e', tension: 0.3 },
-                { label: 'Gastos', data: [0, 0, 0, 0, 0, 0, 5], borderColor: '#ef4444', tension: 0.3 }
-            ] 
+            datasets: [{ label: 'Ingresos', data: [0,0,0,0,0,0,10], borderColor: '#22c55e' }] 
         }
     });
 }
 
-// --- FUNCIONES EXTRA ---
+// --- OTROS ---
 window.enviarWS = (id) => {
     let v = window.state.ventas.find(x => x.id === id);
-    let msg = `GhostPrint: Hola ${v.cliente}, resta *$${(v.total-(v.abonado||0)).toFixed(2)}*.`;
+    let msg = `GhostPrint: Hola ${v.cliente}, deuda: *$${(v.total-(v.abonado||0)).toFixed(2)}*.`;
     window.open(`https://api.whatsapp.com/send?phone=${v.telefono}&text=${encodeURIComponent(msg)}`, '_blank');
 };
 window.abonarV = async (id) => {
-    let v = window.state.ventas.find(x=>x.id===id), m = parseFloat(prompt("¿Abono?"));
+    let v = window.state.ventas.find(x=>x.id===id), m = parseFloat(prompt("¿Monto?"));
     if(m){ v.abonado += m; if(v.abonado >= v.total) v.pagado = true; await window.save(); render(); }
 };
 window.regCom = async () => {
     let m = document.getElementById("mCom").value, q = parseFloat(document.getElementById("qCom").value), v = parseFloat(document.getElementById("vCom").value);
-    if(q > 0) { window.state.inventario[m].stock += q; window.state.gastos.push({id:Date.now(), name:`COMPRA: ${m}`, amount: v, fecha: new Date().toISOString()}); await window.save(); render(); }
-};
-window.regG = async () => {
-    let n = document.getElementById("gNom").value, m = parseFloat(document.getElementById("gMon").value);
-    if(n && m) { window.state.gastos.push({id:Date.now(), name:n.toUpperCase(), amount: m, fecha: new Date().toISOString()}); await window.save(); render(); }
+    if(q > 0) { window.state.inventario[m].stock += q; window.state.gastos.push({id:Date.now(), name:`COMPRA: ${m}`, amount: v}); await window.save(); render(); }
 };
 window.addC = async (t) => {
     if(t==='p'){ let n=document.getElementById("nP").value.toUpperCase(); if(n) window.state.inventario[n]={stock:0}; }
@@ -282,7 +270,6 @@ window.addC = async (t) => {
     await window.save(); render();
 };
 window.editStock = async (n) => { let v = parseFloat(prompt(`Ajustar ${n}:`, window.state.inventario[n].stock)); if(!isNaN(v)){ window.state.inventario[n].stock = v; await window.save(); render(); } };
-window.borrarG = async (id) => { if(confirm("¿Borrar gasto?")){ window.state.gastos=window.state.gastos.filter(x=>x.id!==id); await window.save(); render(); } };
 
 render();
 </script>
