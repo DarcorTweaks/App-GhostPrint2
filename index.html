@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GhostPrint PRO v12.7</title>
+    <title>GhostPrint PRO v12.8</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
@@ -22,11 +22,11 @@
 <header class="flex justify-between items-center">
     <div>
         <h1 class="text-xl font-black italic text-purple-400 uppercase tracking-tighter">GhostPrint PRO</h1>
-        <p class="text-[8px] font-bold opacity-50">SISTEMA DE CONTROL v12.7</p>
+        <p class="text-[8px] font-bold opacity-50">BY DARCOR v12.8</p>
     </div>
     <div id="conn-status" class="flex items-center gap-2 bg-black/40 px-3 py-1 rounded-full border border-white/5">
-        <div id="status-dot" class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>
-        <span id="status-text" class="text-[9px] font-black text-white uppercase">Sin Internet</span>
+        <div id="status-dot" class="w-2 h-2 rounded-full bg-orange-500 animate-pulse"></div>
+        <span id="status-text" class="text-[9px] font-black text-white uppercase">Conectando...</span>
     </div>
 </header>
 
@@ -40,11 +40,15 @@
     <button onclick="setView('config')" class="btn-nav">⚙️ CONFIG</button>
 </nav>
 
-<div id="app" class="p-4 max-w-xl mx-auto"></div>
+<div id="app" class="p-4 max-w-xl mx-auto">
+    <div class="text-center py-20 opacity-50">
+        <p class="text-xs font-black animate-bounce uppercase">Cargando base de datos...</p>
+    </div>
+</div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getFirestore, doc, setDoc, onSnapshot, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyBCm5JlhTxvvtlwjA1EYEtLvxb1AH5v1WI",
@@ -59,23 +63,47 @@ const appF = initializeApp(firebaseConfig);
 const db = getFirestore(appF);
 const docRef = doc(db, "sistema", "datos_principales");
 
+// Persistencia de datos para que funcione incluso sin internet
+try {
+    enableIndexedDbPersistence(db);
+} catch (err) { console.warn("Modo offline no disponible"); }
+
 window.state = { ventas: [], gastos: [], inventario: {}, serviciosExtra: [], comprasInversion: [] };
 window.view = "dashboard";
 let selMes = new Date().getMonth();
 
 const esMes = (id) => new Date(id).getMonth() === selMes;
 
-window.save = async () => { await setDoc(docRef, window.state); };
-window.setView = (v) => { window.view = v; render(); };
+window.save = async () => { 
+    try {
+        await setDoc(docRef, window.state); 
+    } catch(e) { console.error("Guardado localmente, subirá al conectar."); }
+};
 
+window.setView = (v) => { 
+    window.view = v; 
+    document.querySelectorAll('.btn-nav').forEach(b => {
+        b.classList.remove('active');
+        if(b.innerText.toLowerCase().includes(v.toLowerCase())) b.classList.add('active');
+    });
+    render(); 
+};
+
+// Escuchar cambios (Firebase)
 onSnapshot(docRef, (snap) => {
+    const dot = document.getElementById("status-dot");
+    const text = document.getElementById("status-text");
+    
     if (snap.exists()) { 
         window.state = snap.data(); 
-        document.getElementById("status-dot").classList.replace("bg-red-500", "bg-green-500");
-        document.getElementById("status-dot").classList.remove("animate-pulse");
-        document.getElementById("status-text").innerText = "CONECTADO";
+        dot.className = "w-2 h-2 rounded-full bg-green-500";
+        text.innerText = "ONLINE";
         render(); 
     }
+}, (error) => {
+    document.getElementById("status-dot").className = "w-2 h-2 rounded-full bg-red-600";
+    document.getElementById("status-text").innerText = "MODO OFFLINE";
+    render(); // Renderiza igual con lo que haya en cache
 });
 
 window.render = function() {
@@ -94,14 +122,23 @@ window.render = function() {
         let neta = tV - tG - tI;
 
         html = `
-        <div class="card-pro border-l-4 border-purple-500">
-            <p class="text-[9px] font-black text-purple-400 uppercase tracking-widest">Balance Neto del Mes</p>
+        <div class="card-pro border-l-4 border-purple-500 shadow-xl shadow-purple-900/10">
+            <p class="text-[9px] font-black text-purple-400 uppercase tracking-widest">Balance Neto</p>
             <h2 class="text-5xl font-black italic text-white">$${neta.toFixed(2)}</h2>
         </div>
         <div class="grid grid-cols-1 gap-2">
-            <div class="bg-green-600/20 p-4 rounded-2xl flex justify-between"><span>Ventas</span><b class="text-green-400">$${tV.toFixed(2)}</b></div>
-            <div class="bg-red-600/20 p-4 rounded-2xl flex justify-between"><span>Gastos</span><b class="text-red-400">-$${tG.toFixed(2)}</b></div>
-            <div class="bg-blue-600/20 p-4 rounded-2xl flex justify-between"><span>Inversión</span><b class="text-blue-400">-$${tI.toFixed(2)}</b></div>
+            <div class="bg-green-600/10 p-4 rounded-2xl flex justify-between border border-green-500/20">
+                <span class="text-xs font-bold text-green-200">VENTAS TOTALES</span>
+                <b class="text-green-400 font-black">$${tV.toFixed(2)}</b>
+            </div>
+            <div class="bg-red-600/10 p-4 rounded-2xl flex justify-between border border-red-500/20">
+                <span class="text-xs font-bold text-red-200">GASTOS OPERATIVOS</span>
+                <b class="text-red-400 font-black">-$${tG.toFixed(2)}</b>
+            </div>
+            <div class="bg-blue-600/10 p-4 rounded-2xl flex justify-between border border-blue-500/20">
+                <span class="text-xs font-bold text-blue-200">INVERSIÓN EN STOCK</span>
+                <b class="text-blue-400 font-black">-$${tI.toFixed(2)}</b>
+            </div>
         </div>`;
     }
 
@@ -109,59 +146,59 @@ window.render = function() {
         html = `<div class="card-pro">
             <h2 class="text-lg font-black text-purple-400 mb-3 italic">REGISTRAR VENTA</h2>
             <input type="date" id="fV" value="${new Date().toLocaleDateString('en-CA')}">
-            <input id="cli" placeholder="CLIENTE">
-            <input id="tel" type="number" placeholder="WHATSAPP">
-            <div class="bg-white/5 p-3 rounded-xl mt-3 border border-white/10">
-                <div class="grid grid-cols-2 gap-2">
+            <input id="cli" placeholder="NOMBRE DEL CLIENTE">
+            <input id="tel" type="number" placeholder="TELEFONO (WHATSAPP)">
+            <div class="bg-white/5 p-4 rounded-xl mt-3 border border-white/10">
+                <div class="grid grid-cols-2 gap-2 mb-2">
                     <select id="pS"><option value="">Material...</option>${Object.keys(window.state.inventario || {}).map(p=>`<option value="${p}">${p}</option>`).join("")}</select>
                     <select id="sS"><option value="">Servicio...</option>${(window.state.serviciosExtra || []).map(s=>`<option value="${s}">${s}</option>`).join("")}</select>
                 </div>
-                <select id="tC" onchange="document.getElementById('pL').classList.toggle('hidden', this.value!=='libre')">
-                    <option value="detal">DETAL ($9)</option><option value="mayor">MAYOR ($10)</option><option value="libre">LIBRE</option>
+                <select id="tC" onchange="document.getElementById('pL').classList.toggle('hidden', this.value!=='libre')" class="mb-2">
+                    <option value="detal">PRECIO DETAL ($9)</option><option value="mayor">PRECIO MAYOR ($10)</option><option value="libre">PRECIO PERSONALIZADO</option>
                 </select>
-                <input id="pL" class="hidden" type="number" placeholder="Precio $">
-                <div class="flex gap-2"><input id="q" type="number" value="1" step="0.1" class="!w-1/3"><button onclick="addI()" class="btn-main !p-3">+ AÑADIR</button></div>
+                <input id="pL" class="hidden mb-2" type="number" placeholder="Introducir monto $">
+                <div class="flex gap-2"><input id="q" type="number" value="1" step="0.1" class="!w-1/4 text-center"><button onclick="addItem()" class="btn-main !p-3 shadow-lg shadow-purple-600/20">+ AÑADIR AL PEDIDO</button></div>
             </div>
-            <div id="lC" class="mt-4 space-y-1"></div>
-            <div id="tV" class="text-2xl font-black text-center my-4">TOTAL: $0.00</div>
-            <button onclick="saveV()" class="btn-main">GUARDAR VENTA</button>
+            <div id="lC" class="mt-4 space-y-2"></div>
+            <div id="tV" class="text-3xl font-black text-center my-6 italic text-white">TOTAL: $0.00</div>
+            <button onclick="saveV()" class="btn-main !py-5">GUARDAR VENTA</button>
         </div>`;
     }
 
     if(window.view === "reportes"){
         let vM = (window.state.ventas || []).filter(i => esMes(i.id));
         html = `<div class="card-pro text-center">
-            <h2 class="font-black text-white italic">REPORTE DETALLADO</h2>
-            <select onchange="selMes=parseInt(this.value);render();" class="!w-1/2 mx-auto !py-1">
+            <h2 class="font-black text-white italic uppercase text-xs">Selector de Periodo</h2>
+            <select onchange="selMes=parseInt(this.value);render();" class="!w-full mt-2">
                 ${['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Sept','Oct','Nov','Dic'].map((m,i)=>`<option value="${i}" ${selMes==i?'selected':''}>${m}</option>`).join("")}
             </select>
         </div>
         <div class="card-pro">
-            <p class="text-xs font-bold text-slate-400 mb-2 uppercase">Historial de Ventas</p>
-            ${vM.map(v=>`<div class="flex justify-between py-2 border-b border-white/5 text-[10px]">
-                <span>${new Date(v.id).toLocaleDateString()} - ${v.cliente}</span>
-                <b class="text-purple-400">$${v.total.toFixed(2)}</b>
-            </div>`).join("") || '<p class="text-center opacity-30 italic py-4">Sin datos este mes</p>'}
+            <h3 class="text-[10px] font-black text-purple-400 mb-3 tracking-tighter uppercase">Desglose de Facturación</h3>
+            ${vM.map(v=>`<div class="flex justify-between py-3 border-b border-white/5 text-[11px] font-medium">
+                <span class="opacity-70">${v.cliente}</span>
+                <b class="text-purple-400 font-black">$${v.total.toFixed(2)}</b>
+            </div>`).join("") || '<p class="text-center opacity-30 italic py-10">No hay ventas registradas.</p>'}
         </div>`;
     }
 
     if(window.view === "compras"){
         html = `<div class="card-pro">
-            <h2 class="text-lg font-black text-blue-400 italic mb-3 uppercase">Stock e Inversión</h2>
+            <h2 class="text-lg font-black text-blue-400 italic mb-3">INVERSIÓN DE STOCK</h2>
             <input type="date" id="fC" value="${new Date().toLocaleDateString('en-CA')}">
             <select id="mC">${Object.keys(window.state.inventario || {}).map(p=>`<option value="${p}">${p}</option>`).join("")}</select>
             <div class="grid grid-cols-2 gap-2">
-                <input id="qC" type="number" placeholder="Metros" oninput="calcC()">
-                <input id="pM" type="number" placeholder="$/m" oninput="calcC()">
+                <input id="qC" type="number" placeholder="Cantidad/Mts" oninput="calcC()">
+                <input id="pM" type="number" placeholder="Precio Unidad $" oninput="calcC()">
             </div>
-            <div id="resC" class="text-center p-2 text-blue-400 font-black">INVERSIÓN: $0.00</div>
-            <button onclick="saveC()" class="btn-main !from-blue-600 !to-blue-800">CARGAR STOCK</button>
+            <div id="resC" class="text-center p-3 text-blue-300 font-black bg-blue-900/20 rounded-xl my-2">TOTAL INVERSIÓN: $0.00</div>
+            <button onclick="saveC()" class="btn-main !from-blue-600 !to-blue-800 shadow-blue-900/20">CARGAR MATERIAL</button>
         </div>
         <div class="grid grid-cols-2 gap-2">
-            ${Object.entries(window.state.inventario || {}).map(([n, i])=>`<div class="card-pro text-center">
-                <p class="text-[8px] font-black text-slate-400 uppercase">${n}</p>
-                <h4 class="text-xl font-black">${(i.stock || 0).toFixed(2)}m</h4>
-                <button onclick="adjStock('${n}')" class="text-blue-500 text-[9px] font-bold underline">Corregir</button>
+            ${Object.entries(window.state.inventario || {}).map(([n, i])=>`<div class="card-pro text-center !p-4">
+                <p class="text-[8px] font-black text-slate-500 uppercase">${n}</p>
+                <h4 class="text-2xl font-black text-white">${(i.stock || 0).toFixed(2)}</h4>
+                <button onclick="adjStock('${n}')" class="text-blue-500 text-[9px] font-bold underline italic mt-1">AJUSTAR</button>
             </div>`).join("")}
         </div>`;
     }
@@ -169,51 +206,69 @@ window.render = function() {
     if(window.view === "gastos"){
         let gM = (window.state.gastos || []).filter(i => esMes(i.id)).reverse();
         html = `<div class="card-pro">
-            <h2 class="text-lg font-black text-red-500 italic mb-3">GASTOS</h2>
+            <h2 class="text-lg font-black text-red-500 italic mb-3 uppercase">Egresos</h2>
             <input type="date" id="fG" value="${new Date().toLocaleDateString('en-CA')}">
-            <input id="gN" placeholder="Concepto del gasto">
-            <input id="gM" type="number" placeholder="Monto $">
-            <button onclick="saveG()" class="btn-main !from-red-600 !to-red-800 mt-2">REGISTRAR GASTO</button>
+            <input id="gN" placeholder="¿En qué se gastó?">
+            <input id="gM" type="number" placeholder="Monto total $">
+            <button onclick="saveG()" class="btn-main !from-red-600 !to-red-800 mt-2">GUARDAR GASTO</button>
         </div>
         <div class="space-y-2">
-            ${gM.map(g=>`<div class="card-pro !py-3 flex justify-between items-center text-xs">
-                <span>${g.name}</span><b>$${g.amount}</b><button onclick="del('g',${g.id})" class="text-red-500 font-black ml-4">×</button>
+            ${gM.map(g=>`<div class="card-pro !py-3 flex justify-between items-center text-sm border-l-4 border-red-500/50">
+                <span class="font-bold">${g.name}</span>
+                <div class="flex items-center gap-3"><b class="text-white font-black">$${g.amount}</b><button onclick="del('g',${g.id})" class="text-red-500 text-xl font-black ml-2">×</button></div>
             </div>`).join("")}
         </div>`;
     }
 
     if(window.view === "cobranzas"){
         let deudas = (window.state.ventas || []).filter(v=>!v.pagado);
-        html = `<div class="card-pro border-amber-500/50"><h2 class="text-lg font-black text-amber-500 uppercase italic">Pendientes</h2></div>
-        ${deudas.map(v=>`<div class="card-pro flex justify-between items-center border-l-4 border-amber-500">
-            <div><b class="text-sm uppercase">${v.cliente}</b><br><span class="text-red-400 font-bold text-xs">Faltan: $${(v.total-(v.abonado||0)).toFixed(2)}</span></div>
-            <div class="flex gap-2"><button onclick="ws('${v.telefono}',${v.total-(v.abonado||0)})" class="bg-green-600 p-3 rounded-xl">📱</button>
-            <button onclick="abono(${v.id})" class="bg-blue-600 px-4 py-2 rounded-xl text-[10px] font-black">ABONO</button></div>
-        </div>`).join("") || '<p class="text-center py-10 opacity-30 italic">Todo cobrado.</p>';
+        html = `<div class="card-pro border-amber-500/50 text-center"><h2 class="text-lg font-black text-amber-500 uppercase italic">CUENTAS PENDIENTES</h2></div>
+        ${deudas.map(v=>`<div class="card-pro flex justify-between items-center border-l-4 border-amber-600">
+            <div><b class="text-sm uppercase text-white">${v.cliente}</b><br><span class="text-red-500 font-black text-xs">RESTA: $${(v.total-(v.abonado||0)).toFixed(2)}</span></div>
+            <div class="flex gap-2"><button onclick="ws('${v.telefono}',${v.total-(v.abonado||0)})" class="bg-green-600 px-4 py-3 rounded-2xl shadow-lg shadow-green-900/20">📱</button>
+            <button onclick="abono(${v.id})" class="bg-blue-600 px-5 py-3 rounded-2xl text-[10px] font-black uppercase">Abonar</button></div>
+        </div>`).join("") || '<div class="text-center py-20 opacity-30"><p class="text-sm font-black italic">TODAS LAS CUENTAS AL DÍA</p></div>';
     }
 
     if(window.view === "config"){
         html = `<div class="card-pro">
-            <h2 class="text-lg font-black text-slate-400 italic mb-4 uppercase">Configuración</h2>
-            <div class="flex gap-2"><input id="nP" placeholder="Nuevo Material"><button onclick="cat('p')" class="bg-purple-600 px-4 rounded-xl font-black">+</button></div>
-            <div class="flex gap-2 mt-2"><input id="nS" placeholder="Nuevo Servicio"><button onclick="cat('s')" class="bg-indigo-600 px-4 rounded-xl font-black">+</button></div>
+            <h2 class="text-lg font-black text-slate-400 italic mb-4 uppercase text-center">Configuración de Catálogo</h2>
+            <div class="flex gap-2"><input id="nP" placeholder="Añadir Material"><button onclick="cat('p')" class="bg-purple-600 px-5 rounded-xl font-black">+</button></div>
+            <div class="flex gap-2 mt-2"><input id="nS" placeholder="Añadir Servicio"><button onclick="cat('s')" class="bg-indigo-600 px-5 rounded-xl font-black">+</button></div>
         </div>
-        <button onclick="resetGeneral()" class="w-full text-red-700 font-black text-[10px] mt-10 tracking-widest uppercase">⚠️ Resetear Datos</button>`;
+        <div class="grid grid-cols-2 gap-2 mt-2">
+            <div class="card-pro !p-3">
+                <p class="text-[9px] font-black text-purple-500 border-b border-white/5 mb-2">MATERIALES</p>
+                ${Object.keys(window.state.inventario || {}).map(n=>`<div class="flex justify-between py-1 text-[10px] uppercase font-bold text-slate-400"><span>${n}</span><button onclick="delCat('p','${n}')" class="text-red-500">×</button></div>`).join("")}
+            </div>
+            <div class="card-pro !p-3">
+                <p class="text-[9px] font-black text-indigo-500 border-b border-white/5 mb-2">SERVICIOS</p>
+                ${(window.state.serviciosExtra || []).map((s,i)=>`<div class="flex justify-between py-1 text-[10px] uppercase font-bold text-slate-400"><span>${s}</span><button onclick="delCat('s',${i})" class="text-red-500">×</button></div>`).join("")}
+            </div>
+        </div>
+        <button onclick="resetGeneral()" class="w-full text-red-900 font-black text-[9px] mt-10 tracking-widest uppercase opacity-50 hover:opacity-100 transition-all">⚠️ Resetear Datos del Sistema</button>`;
     }
 
     app.innerHTML = html;
 };
 
-// --- LOGICA ---
+// --- LOGICA DE FUNCIONES ---
 let cart = [];
-window.addI = () => {
+window.addItem = () => {
     let p = document.getElementById("pS").value, s = document.getElementById("sS").value, t = document.getElementById("tC").value, q = parseFloat(document.getElementById("q").value) || 0;
     let pre = (t === "detal") ? 9 : (t === "mayor") ? 10 : parseFloat(document.getElementById("pL").value) || 0;
     if(p || s) cart.push({ item: (p && s ? p+" + "+s : p||s).toUpperCase(), qty: q, price: pre, sub: q*pre, material: p });
-    document.getElementById("lC").innerHTML = cart.map((c, i) => `<div class="bg-white/5 p-2 rounded-lg flex justify-between text-[11px]"><span>${c.qty}x ${c.item}</span><b>$${c.sub.toFixed(2)} <button onclick="delI(${i})" class="text-red-500">×</button></b></div>`).join("");
+    
+    document.getElementById("lC").innerHTML = cart.map((c, i) => `
+        <div class="bg-white/5 p-3 rounded-xl flex justify-between items-center text-[10px] border border-white/5">
+            <div><span class="text-purple-400 font-black">${c.qty}x</span> <span class="uppercase">${c.item}</span></div>
+            <div class="flex items-center gap-3"><b>$${c.sub.toFixed(2)}</b><button onclick="delI(${i})" class="text-red-500 text-lg">×</button></div>
+        </div>`).join("");
     document.getElementById("tV").innerText = "TOTAL: $" + cart.reduce((a,b)=>a+b.sub,0).toFixed(2);
 };
-window.delI = (i) => { cart.splice(i, 1); addI(); if(!cart.length) document.getElementById("lC").innerHTML=""; };
+
+window.delI = (i) => { cart.splice(i, 1); addItem(); if(!cart.length) document.getElementById("lC").innerHTML=""; };
+
 window.saveV = async () => {
     let cli = document.getElementById("cli").value, tel = document.getElementById("tel").value, fec = document.getElementById("fV").value;
     if(!cli || !cart.length) return alert("Faltan datos");
@@ -221,7 +276,9 @@ window.saveV = async () => {
     window.state.ventas.push({ id: new Date(fec+"T12:00:00").getTime(), cliente: cli.toUpperCase(), telefono: tel, total: cart.reduce((a,b)=>a+b.sub,0), abonado: 0, pagado: false });
     await window.save(); cart = []; setView('dashboard');
 };
-window.calcC = () => { document.getElementById("resC").innerText = "INVERSIÓN: $" + ((parseFloat(document.getElementById("qC").value)||0)*(parseFloat(document.getElementById("pM").value)||0)).toFixed(2); };
+
+window.calcC = () => { document.getElementById("resC").innerText = "TOTAL INVERSIÓN: $" + ((parseFloat(document.getElementById("qC").value)||0)*(parseFloat(document.getElementById("pM").value)||0)).toFixed(2); };
+
 window.saveC = async () => {
     let q = parseFloat(document.getElementById("qC").value), p = parseFloat(document.getElementById("pM").value), m = document.getElementById("mC").value, f = document.getElementById("fC").value;
     if(q > 0 && p > 0) {
@@ -231,22 +288,36 @@ window.saveC = async () => {
         await window.save(); setView('dashboard');
     }
 };
+
 window.saveG = async () => {
     let f = document.getElementById("fG").value, n = document.getElementById("gN").value, m = parseFloat(document.getElementById("gM").value);
     if(n && m) { window.state.gastos.push({id: new Date(f+"T12:00:00").getTime(), name: n.toUpperCase(), amount: m}); await window.save(); render(); }
 };
-window.del = async (type, id) => { if(confirm("¿Borrar?")){ if(type==='g') window.state.gastos = window.state.gastos.filter(x=>x.id!==id); await window.save(); render(); } };
-window.abono = async (id) => { let v = window.state.ventas.find(x=>x.id===id), m = parseFloat(prompt("Monto abono?")); if(m){ v.abonado = (v.abonado||0) + m; if(v.abonado >= v.total) v.pagado = true; await window.save(); render(); } };
-window.ws = (tel, d) => window.open(`https://api.whatsapp.com/send?phone=${tel}&text=Hola, tienes un pendiente de $${d.toFixed(2)} en GhostPrint.`, '_blank');
-window.adjStock = async (n) => { let a = parseFloat(prompt("Stock real?", window.state.inventario[n].stock)); if(!isNaN(a)){ window.state.inventario[n].stock = a; await window.save(); render(); } };
+
+window.del = async (type, id) => { if(confirm("¿Seguro que quieres borrar este registro?")){ if(type==='g') window.state.gastos = window.state.gastos.filter(x=>x.id!==id); await window.save(); render(); } };
+
+window.abono = async (id) => { 
+    let v = window.state.ventas.find(x=>x.id===id); 
+    let m = parseFloat(prompt(`Deuda actual: $${(v.total-v.abonado).toFixed(2)}. ¿Cuánto abona el cliente?`)); 
+    if(m){ v.abonado = (v.abonado||0) + m; if(v.abonado >= v.total) v.pagado = true; await window.save(); render(); } 
+};
+
+window.ws = (tel, d) => window.open(`https://api.whatsapp.com/send?phone=${tel}&text=Hola, tienes un pendiente de $${d.toFixed(2)} en GhostPrint. ¡Agradecemos tu pago!`, '_blank');
+
+window.adjStock = async (n) => { let a = parseFloat(prompt("Introducir Stock real en metros:", window.state.inventario[n].stock)); if(!isNaN(a)){ window.state.inventario[n].stock = a; await window.save(); render(); } };
+
 window.cat = async (t) => { 
     let n = document.getElementById(t==='p'?'nP':'nS').value.toUpperCase(); if(!n) return;
     if(t==='p') { if(!window.state.inventario) window.state.inventario={}; window.state.inventario[n]={stock:0}; } 
     else { if(!window.state.serviciosExtra) window.state.serviciosExtra=[]; window.state.serviciosExtra.push(n); } 
     await window.save(); render(); 
 };
-window.resetGeneral = async () => { if(confirm("¿BORRAR TODO?")){ window.state.ventas = []; window.state.gastos = []; window.state.comprasInversion = []; await window.save(); setView('dashboard'); } };
 
+window.delCat = async (t, k) => { if(confirm("¿Eliminar del catálogo?")){ if(t==='p') delete window.state.inventario[k]; else window.state.serviciosExtra.splice(k,1); await window.save(); render(); } };
+
+window.resetGeneral = async () => { if(confirm("PELIGRO: Esto borrará todas las ventas, gastos y stock. ¿Deseas resetear el sistema?")){ window.state.ventas = []; window.state.gastos = []; window.state.comprasInversion = []; await window.save(); setView('dashboard'); } };
+
+// Renderizado inicial por si Firebase tarda
 render();
 </script>
 </body>
