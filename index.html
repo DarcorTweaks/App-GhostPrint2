@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>GhostPrint PRO v21.2</title>
+    <title>GhostPrint PRO v21.3</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap');
@@ -15,10 +15,24 @@
         input, select { background: #070712; border: 1px solid #334155; color: white; padding: 14px; border-radius: 14px; width: 100%; margin: 6px 0; font-weight: 700; outline: none; }
         .btn-main { background: linear-gradient(135deg, #7c3aed 0%, #4c1d95 100%); color: white; padding: 16px; border-radius: 16px; width: 100%; font-weight: 900; text-transform: uppercase; cursor: pointer; border: none; }
         #bill-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.95); z-index:200; padding:20px; align-items: center; justify-content: center; }
-        .logo-ghost { font-size: 24px; font-weight: 900; font-style: italic; color: #7c3aed; text-align: center; letter-spacing: -1px; }
+        .ghost-icon { font-size: 40px; filter: drop-shadow(0 0 10px #7c3aed); }
     </style>
 </head>
 <body>
+
+<div class="p-4 flex justify-between items-center bg-[#0a0a14] border-b border-white/5">
+    <div class="flex items-center gap-2">
+        <span class="ghost-icon">👻</span>
+        <div>
+            <h1 class="text-xl font-black italic leading-none tracking-tighter text-purple-500">GHOST PRINT</h1>
+            <p class="text-[8px] font-black opacity-40 uppercase tracking-[2px]">Admin System Online</p>
+        </div>
+    </div>
+    <div class="flex items-center gap-1 bg-green-500/10 px-2 py-1 rounded-full border border-green-500/20">
+        <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+        <span class="text-[8px] font-black text-green-500 uppercase">Sincronizado</span>
+    </div>
+</div>
 
 <nav>
     <div onclick="setView('inicio')" class="btn-nav active" id="n-inicio">📊 ADMIN</div>
@@ -33,22 +47,24 @@
 <div id="app" class="p-4 max-w-2xl mx-auto"></div>
 
 <div id="bill-modal" onclick="closeBill()">
-    <div class="bg-white p-6 rounded-3xl w-full max-w-xs text-black shadow-2xl" onclick="event.stopPropagation()">
-        <div class="logo-ghost">GHOSTPRINT PRO</div>
-        <p class="text-[8px] text-center font-bold opacity-40 uppercase tracking-widest mb-4">Comprobante de Saldo</p>
+    <div class="bg-white p-6 rounded-3xl w-full max-w-xs text-black shadow-2xl relative overflow-hidden" onclick="event.stopPropagation()">
+        <div class="text-center mb-2">
+            <span class="text-4xl">👻</span>
+            <h2 class="text-2xl font-black italic text-purple-600 leading-none">GHOSTPRINT</h2>
+        </div>
         <div class="border-t border-dashed my-4 border-gray-300"></div>
         
         <p class="text-[10px] font-bold opacity-40 uppercase italic">Cliente:</p>
-        <p id="b-cli" class="text-xl font-black uppercase mb-4 text-gray-800"></p>
+        <p id="b-cli" class="text-xl font-black uppercase mb-4 text-gray-800 leading-tight"></p>
         
         <p class="text-[10px] font-bold opacity-40 uppercase italic">Detalle de Trabajo:</p>
-        <p id="b-det" class="text-[11px] font-bold mb-4 text-gray-600 italic"></p>
+        <p id="b-det" class="text-[11px] font-bold mb-4 text-gray-600 italic leading-tight"></p>
 
-        <p class="text-[10px] font-bold opacity-40 uppercase italic">Saldo Pendiente:</p>
-        <p id="b-monto" class="text-4xl font-black text-purple-700"></p>
+        <p class="text-[10px] font-bold opacity-40 uppercase italic text-center">Saldo Pendiente:</p>
+        <p id="b-monto" class="text-5xl font-black text-purple-700 text-center my-2"></p>
         
         <div class="border-t border-dashed my-4 border-gray-300"></div>
-        <button id="btn-wa" class="btn-main !from-green-600 !to-green-800 mt-2 shadow-lg shadow-green-900/20 text-white">ENVIAR WHATSAPP</button>
+        <button id="btn-wa" class="btn-main !from-green-600 !to-green-800 mt-2 shadow-lg text-white">ENVIAR WHATSAPP</button>
         <button onclick="closeBill()" class="w-full text-gray-400 font-bold py-2 mt-2">Cerrar</button>
     </div>
 </div>
@@ -62,7 +78,7 @@
     const db = firebase.firestore();
     const docRef = db.collection("sistema").doc("datos_principales");
 
-    window.state = JSON.parse(localStorage.getItem('gp_v21_2')) || { ventas: [], gastos: [], inventario: {}, serviciosExtra: ["DISEÑO", "MONTAJE"], comprasInversion: [] };
+    window.state = JSON.parse(localStorage.getItem('gp_v21_3')) || { ventas: [], gastos: [], inventario: {}, serviciosExtra: ["DISEÑO", "MONTAJE"], comprasInversion: [] };
     
     const fmtFecha = (f) => {
         if(!f) return "S/F";
@@ -70,7 +86,7 @@
         return `${d}/${m}/${y.slice(-2)}`;
     }
 
-    window.sync = async function() { localStorage.setItem('gp_v21_2', JSON.stringify(window.state)); await docRef.set(window.state); };
+    window.sync = async function() { localStorage.setItem('gp_v21_3', JSON.stringify(window.state)); await docRef.set(window.state); };
     docRef.onSnapshot(doc => { if(doc.exists) { window.state = doc.data(); render(); } });
 
     window.setView = function(v) {
@@ -167,13 +183,16 @@
         
         if(window.currentView === "catalogo") {
             app.innerHTML = `<div class="card-pro">
-                <h2 class="text-[10px] font-black opacity-40 mb-4 uppercase italic">Gestionar Catálogo</h2>
+                <h2 class="text-[10px] font-black opacity-40 mb-4 uppercase italic">Gestionar Materiales</h2>
                 <input id="newM" placeholder="NUEVO MATERIAL"><button onclick="addMat()" class="btn-main !p-3 mb-4">AÑADIR MATERIAL</button>
-                <hr class="border-white/5 my-4">
-                <input id="newS" placeholder="NUEVO SERVICIO"><button onclick="addServicio()" class="btn-main !p-3">AÑADIR SERVICIO</button>
-                <div class="mt-8">
-                    <h3 class="text-[10px] font-black opacity-40 uppercase mb-2 italic">Materiales Existentes</h3>
+                <div class="mt-4 mb-8">
                     <div class="flex flex-wrap gap-2">${Object.keys(window.state.inventario).map(m=>`<span class="bg-white/5 px-3 py-1 rounded-full text-[10px] font-bold uppercase border border-white/10">${m} <button onclick="delMat('${m}')" class="text-red-500 ml-1">×</button></span>`).join("")}</div>
+                </div>
+                <hr class="border-white/5 my-6">
+                <h2 class="text-[10px] font-black opacity-40 mb-4 uppercase italic">Gestionar Servicios</h2>
+                <input id="newS" placeholder="NUEVO SERVICIO"><button onclick="addServicio()" class="btn-main !p-3 mb-4">AÑADIR SERVICIO</button>
+                <div class="mt-4">
+                    <div class="flex flex-wrap gap-2">${(window.state.serviciosExtra || []).map(s=>`<span class="bg-purple-600/10 px-3 py-1 rounded-full text-[10px] font-bold uppercase border border-purple-500/20 text-purple-400">${s} <button onclick="delServ('${s}')" class="text-red-500 ml-1">×</button></span>`).join("")}</div>
                 </div>
             </div>`;
         }
@@ -209,7 +228,7 @@
         document.getElementById('b-monto').innerText = "$" + mon.toFixed(2); 
         document.getElementById('b-det').innerText = det;
         document.getElementById('bill-modal').style.display = 'flex'; 
-        document.getElementById('btn-wa').onclick = () => window.open(`https://api.whatsapp.com/send?phone=${tel}&text=*GHOSTPRINT PRO*%0A------------------%0A*CLIENTE:* ${cli}%0A*DETALLE:* ${det}%0A*SALDO:* $${mon.toFixed(2)}%0A------------------%0A_Gracias por su preferencia!_`, '_blank'); 
+        document.getElementById('btn-wa').onclick = () => window.open(`https://api.whatsapp.com/send?phone=${tel}&text=👻 *GHOSTPRINT PRO*%0A------------------%0A*CLIENTE:* ${cli}%0A*DETALLE:* ${det}%0A*SALDO:* $${mon.toFixed(2)}%0A------------------%0A_Gracias por su preferencia!_`, '_blank'); 
     };
     
     window.closeBill = () => document.getElementById('bill-modal').style.display = 'none';
@@ -217,9 +236,10 @@
     window.registrarMerma = async (mat) => { let q = parseFloat(prompt(`Merma para ${mat}:`)); if(q > 0) { window.state.inventario[mat].stock -= q; await window.sync(); render(); } };
     window.editMatInv = async (old) => { let n = prompt("Nuevo nombre material:", old); if(n) { window.state.inventario[n.toUpperCase()] = window.state.inventario[old]; delete window.state.inventario[old]; await window.sync(); render(); } };
     window.addMat = async () => { let n = document.getElementById("newM").value.toUpperCase(); if(n) { window.state.inventario[n] = {stock: 0}; await window.sync(); render(); } };
-    window.delMat = async (m) => { if(confirm(`¿Eliminar ${m}?`)){ delete window.state.inventario[m]; await window.sync(); render(); } };
+    window.delMat = async (m) => { if(confirm(`¿Eliminar material ${m}?`)){ delete window.state.inventario[m]; await window.sync(); render(); } };
     window.addServicio = async () => { let s = document.getElementById("newS").value.toUpperCase(); if(s) { window.state.serviciosExtra.push(s); await window.sync(); render(); } };
-    
+    window.delServ = async (s) => { if(confirm(`¿Eliminar servicio ${s}?`)){ window.state.serviciosExtra = window.state.serviciosExtra.filter(x => x !== s); await window.sync(); render(); } };
+
     window.editVentaProfunda = async (id) => {
         const v = window.state.ventas.find(x => x.id === id);
         if(!v) return;
