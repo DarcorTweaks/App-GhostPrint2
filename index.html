@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>GhostPrint PRO v18.3</title>
+    <title>GhostPrint PRO v18.4 - Full Control</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap');
@@ -14,10 +14,10 @@
         .active { background: #7c3aed !important; color: white !important; box-shadow: 0 0 20px rgba(124, 58, 237, 0.4); }
         input, select { background: #070712; border: 1px solid #334155; color: white; padding: 14px; border-radius: 14px; width: 100%; margin: 6px 0; font-weight: 700; outline: none; }
         .btn-main { background: linear-gradient(135deg, #7c3aed 0%, #4c1d95 100%); color: white; padding: 18px; border-radius: 18px; width: 100%; font-weight: 900; text-transform: uppercase; cursor: pointer; border: none; }
-        .stock-bar { height: 8px; border-radius: 10px; background: #1e1e30; margin-top: 10px; overflow: hidden; }
-        .stock-fill { height: 100%; transition: width 0.5s ease; }
-        #bill-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.95); z-index:200; padding:20px; overflow-y: auto; }
-        .bill-card { background: white; color: black; border-radius: 25px; padding: 25px; max-width: 350px; margin: 0 auto; }
+        .bar-container { display: flex; align-items: flex-end; gap: 8px; height: 100px; padding: 10px; background: rgba(255,255,255,0.02); border-radius: 20px; }
+        .bar-item { flex: 1; display: flex; flex-direction: column; align-items: center; height: 100%; justify-content: flex-end; }
+        .bar-fill { width: 100%; border-radius: 6px; min-height: 4px; transition: height 1s ease; position: relative; }
+        .bar-fill::after { content: attr(data-val); position: absolute; top: -20px; left: 50%; transform: translateX(-50%); font-size: 10px; font-weight: 900; color: white; white-space: nowrap; }
     </style>
 </head>
 <body>
@@ -27,7 +27,6 @@
         <span class="text-2xl mr-2">👻</span>
         <h1 class="text-xl font-black italic text-white uppercase tracking-tighter">GhostPrint <span class="text-purple-500">PRO</span></h1>
     </div>
-    <span class="text-[8px] font-black uppercase bg-purple-500/20 text-purple-400 px-3 py-1.5 rounded-full border border-purple-500/30">v18.3</span>
 </header>
 
 <nav id="main-nav">
@@ -42,24 +41,6 @@
 </nav>
 
 <div id="app" class="p-4 max-w-2xl mx-auto"></div>
-
-<div id="bill-modal">
-    <div class="bill-card">
-        <div class="text-center">
-            <span class="text-4xl">👻</span>
-            <h2 class="text-xl font-black italic uppercase tracking-tighter mt-1">GhostPrint <span class="text-purple-600">PRO</span></h2>
-            <p id="b-fecha" class="text-[9px] font-black text-gray-400 uppercase"></p>
-        </div>
-        <div class="border-t-2 dashed border-gray-200 my-4"></div>
-        <p class="text-[9px] uppercase font-black text-gray-400">Cliente:</p>
-        <p id="b-cli" class="text-lg font-black uppercase text-gray-800 mb-4"></p>
-        <p class="text-[9px] uppercase font-black text-gray-400">Saldo Pendiente:</p>
-        <p id="b-monto" class="text-4xl font-black text-purple-700"></p>
-        <div class="border-t-2 dashed border-gray-200 my-4"></div>
-        <button id="btn-wa" class="btn-main !from-green-600 !to-green-800 flex justify-center items-center gap-2 italic font-black mb-2 text-sm">📱 WHATSAPP</button>
-        <button onclick="closeBill()" class="btn-main !from-gray-800 !to-black text-xs">CERRAR</button>
-    </div>
-</div>
 
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
@@ -78,12 +59,12 @@
     const db = firebase.firestore();
     const docRef = db.collection("sistema").doc("datos_principales");
 
-    window.state = JSON.parse(localStorage.getItem('gp_v18_3')) || { ventas: [], gastos: [], inventario: {}, serviciosExtra: ["OJALETES", "DISEÑO", "MONTAJE", "CORTE"], comprasInversion: [], mermas: [] };
+    window.state = JSON.parse(localStorage.getItem('gp_v18_4')) || { ventas: [], gastos: [], inventario: {}, serviciosExtra: ["OJALETES", "DISEÑO", "MONTAJE", "CORTE"], comprasInversion: [], mermas: [] };
     window.currentView = "inicio";
     let cart = [];
 
     window.sync = async function() {
-        localStorage.setItem('gp_v18_3', JSON.stringify(window.state));
+        localStorage.setItem('gp_v18_4', JSON.stringify(window.state));
         await docRef.set(window.state).catch(e => console.log("Offline"));
     };
 
@@ -92,8 +73,8 @@
     window.setView = function(v) {
         window.currentView = v;
         document.querySelectorAll('.btn-nav').forEach(b => b.classList.remove('active'));
-        const target = document.getElementById('n-' + v);
-        if(target) target.classList.add('active');
+        const activeNav = document.getElementById('n-' + v);
+        if(activeNav) activeNav.classList.add('active');
         render();
     };
 
@@ -115,101 +96,85 @@
         const utilidadCaja = totalCobrado - totalGastos - totalStock;
 
         if(window.currentView === "inicio") {
+            const maxVal = Math.max(totalVendido, totalCobrado, totalStock, totalGastos, 1);
             app.innerHTML = `
                 <div class="card-pro !bg-gradient-to-br !from-purple-600 !to-indigo-900 border-none shadow-xl">
                     <p class="text-[10px] font-black text-purple-200 uppercase tracking-widest text-center italic">Caja Disponible</p>
                     <h2 class="text-6xl font-black text-white italic text-center my-2 leading-none">$${utilidadCaja.toFixed(2)}</h2>
                 </div>
-                <div class="grid grid-cols-2 gap-3">
-                    <div class="card-pro text-center"><p class="text-[8px] font-black opacity-40 uppercase">Ventas Mes</p><b class="text-xl">$${totalVendido.toFixed(0)}</b></div>
-                    <div class="card-pro text-center"><p class="text-[8px] font-black opacity-40 uppercase">Inversión Stock</p><b class="text-xl text-blue-400">$${totalStock.toFixed(0)}</b></div>
+                <div class="card-pro">
+                    <div class="bar-container">
+                        <div class="bar-item"><div class="bar-fill bg-purple-500" style="height:${(totalVendido/maxVal)*100}%" data-val="$${totalVendido.toFixed(0)}"></div><span class="text-[9px] mt-2 font-black uppercase">Ventas</span></div>
+                        <div class="bar-item"><div class="bar-fill bg-green-500" style="height:${(totalCobrado/maxVal)*100}%" data-val="$${totalCobrado.toFixed(0)}"></div><span class="text-[9px] mt-2 font-black uppercase">Cobros</span></div>
+                        <div class="bar-item"><div class="bar-fill bg-blue-500" style="height:${(totalStock/maxVal)*100}%" data-val="$${totalStock.toFixed(0)}"></div><span class="text-[9px] mt-2 font-black uppercase">Stock</span></div>
+                        <div class="bar-item"><div class="bar-fill bg-red-500" style="height:${(totalGastos/maxVal)*100}%" data-val="$${totalGastos.toFixed(0)}"></div><span class="text-[9px] mt-2 font-black uppercase">Gastos</span></div>
+                    </div>
                 </div>`;
         }
 
         if(window.currentView === "inventario") {
-            app.innerHTML = `<div class="space-y-3">${Object.entries(window.state.inventario || {}).map(([n, i]) => {
-                const cant = i.stock || 0;
-                const color = cant <= 0 ? 'bg-red-500' : cant < 5 ? 'bg-orange-500' : 'bg-green-500';
-                return `
-                <div class="card-pro">
-                    <div class="flex justify-between items-center">
-                        <div>
-                            <p class="text-[9px] font-black opacity-50 uppercase">${n}</p>
-                            <h4 class="text-3xl font-black text-white">${cant.toFixed(2)}</h4>
+            const stockBajo = Object.entries(window.state.inventario).filter(([n, i]) => i.stock < 5);
+            app.innerHTML = `
+                ${stockBajo.length > 0 ? `<div class="bg-red-600/20 border border-red-600 p-3 rounded-2xl mb-4 text-red-500 font-black text-[10px] uppercase text-center italic">🚨 ¡REPONER MATERIAL PRONTO! (${stockBajo.length} ALERTAS)</div>` : ''}
+                <div class="space-y-3">
+                    ${Object.entries(window.state.inventario || {}).map(([n, i]) => `
+                        <div class="card-pro border-l-4 ${i.stock < 5 ? 'border-red-600' : 'border-green-500'}">
+                            <div class="flex justify-between items-center">
+                                <div><p class="text-[9px] font-black uppercase opacity-50">${n}</p><h4 class="text-3xl font-black text-white">${(i.stock || 0).toFixed(2)}</h4></div>
+                                <div class="flex gap-2">
+                                    <button onclick="registrarMerma('${n}')" class="bg-red-600/20 text-red-500 p-2 rounded-xl text-[10px] font-black">⚠ MERMA</button>
+                                    <button onclick="editMatInv('${n}')" class="bg-white/5 p-2 rounded-xl text-[10px] font-black">EDITAR</button>
+                                    <button onclick="delMatInv('${n}')" class="bg-white/5 p-2 rounded-xl text-[10px] font-black text-red-400">X</button>
+                                </div>
+                            </div>
+                            <div class="w-full bg-white/5 h-1.5 mt-3 rounded-full overflow-hidden"><div class="${i.stock < 5 ? 'bg-red-500' : 'bg-green-500'} h-full" style="width: ${Math.min(i.stock*10, 100)}%"></div></div>
                         </div>
-                        <button onclick="registrarMerma('${n}')" class="bg-red-600/20 text-red-500 border border-red-500/30 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-tighter">⚠ Merma</button>
-                    </div>
-                    <div class="stock-bar"><div class="stock-fill ${color}" style="width: ${Math.min(cant*10, 100)}%"></div></div>
+                    `).join("")}
                 </div>`;
-            }).join("")}</div>`;
         }
 
         if(window.currentView === "reportes") {
             const percMeta = totalGastos > 0 ? Math.min((totalCobrado / totalGastos) * 100, 100) : 0;
-            const clientMap = {};
-            vM.forEach(v => { clientMap[v.cliente] = (clientMap[v.cliente] || 0) + v.total; });
-            const topClientes = Object.entries(clientMap).sort((a,b) => b[1]-a[1]).slice(0, 3);
-
             app.innerHTML = `
                 <div class="space-y-4">
                     <div class="card-pro">
-                        <h3 class="text-[10px] font-black uppercase text-purple-400 mb-4 italic tracking-widest text-center">Resumen Administrativo</h3>
-                        <div class="space-y-5">
-                            <div>
-                                <div class="flex justify-between text-[9px] font-black uppercase mb-1"><span>Dinero Cobrado</span> <span>$${totalCobrado.toFixed(0)}</span></div>
-                                <div class="w-full bg-white/5 h-2 rounded-full overflow-hidden"><div class="bg-green-500 h-full" style="width: ${(totalCobrado/(totalVendido||1))*100}%"></div></div>
-                            </div>
-                            <div>
-                                <div class="flex justify-between text-[9px] font-black uppercase mb-1"><span>Meta de Gastos</span> <span>$${totalGastos.toFixed(0)}</span></div>
-                                <div class="w-full bg-white/5 h-2 rounded-full overflow-hidden"><div class="bg-purple-500 h-full" style="width: ${percMeta}%"></div></div>
-                            </div>
-                        </div>
+                        <h3 class="text-[10px] font-black uppercase text-purple-400 mb-4 italic">Meta: Gastos vs Cobros</h3>
+                        <div class="flex justify-between mb-2 font-black text-xl italic"><span>$${totalCobrado.toFixed(0)} / $${totalGastos.toFixed(0)}</span><span>${percMeta.toFixed(0)}%</span></div>
+                        <div class="w-full bg-white/5 h-3 rounded-full overflow-hidden"><div class="bg-purple-600 h-full" style="width: ${percMeta}%"></div></div>
                     </div>
                     <div class="card-pro">
-                        <h3 class="text-[10px] font-black uppercase opacity-40 mb-3 italic">Top 3 Clientes</h3>
-                        <div class="space-y-2">
-                            ${topClientes.map(([name, total], i) => `<div class="flex justify-between text-xs font-bold uppercase"><span>${i+1}. ${name}</span><span>$${total.toFixed(2)}</span></div>`).join("") || '<p class="text-center opacity-30 text-xs">Sin registros</p>'}
-                        </div>
+                        <p class="text-[9px] font-black uppercase opacity-40 mb-2">Últimos Gastos (Mes)</p>
+                        ${gM.slice(-3).reverse().map(g => `<div class="flex justify-between text-xs py-1 border-b border-white/5"><span>${g.desc}</span><b>$${g.amount}</b></div>`).join("")}
                     </div>
-                    <div class="card-pro border-white/5 bg-white/5">
-                        <div class="space-y-2 text-[11px] font-bold uppercase italic opacity-70">
-                            <div class="flex justify-between"><span>Vendido:</span><span>$${totalVendido.toFixed(2)}</span></div>
-                            <div class="flex justify-between"><span>Deuda Clientes:</span><span class="text-orange-400">$${porCobrar.toFixed(2)}</span></div>
-                        </div>
+                    <div class="card-pro">
+                        <p class="text-[9px] font-black uppercase opacity-40 mb-2">Última Inversión Stock (Mes)</p>
+                        ${cM.slice(-3).reverse().map(c => `<div class="flex justify-between text-xs py-1 border-b border-white/5"><span>${c.material}</span><b>$${c.amount}</b></div>`).join("")}
                     </div>
                 </div>`;
         }
 
-        if(window.currentView === "ventas") {
-            app.innerHTML = `<div class="card-pro"><input type="date" id="fV" value="${new Date().toISOString().split('T')[0]}"><input id="cli" placeholder="CLIENTE"><input id="tel" type="number" placeholder="WHATSAPP"><div class="bg-white/5 p-4 rounded-xl mt-3 border border-white/10"><div class="grid grid-cols-2 gap-2"><select id="pS"><option value="">Material...</option>${Object.keys(window.state.inventario || {}).map(m=>`<option value="${m}">${m}</option>`).join("")}</select><select id="sS"><option value="">Servicio...</option>${(window.state.serviciosExtra || []).map(s=>`<option value="${s}">${s}</option>`).join("")}</select></div><input id="qV" type="number" placeholder="Cantidad" value="1"><select id="tC" onchange="document.getElementById('pL').classList.toggle('hidden', this.value !== 'libre')"><option value="detal">DETAL ($9)</option><option value="mayor">MAYOR ($10)</option><option value="libre">PRECIO LIBRE</option></select><input id="pL" class="hidden" type="number" placeholder="Monto $"><button onclick="addCart()" class="btn-main !p-3 mt-3">+ Añadir</button></div><div id="cart-list" class="mt-4 space-y-2 text-[10px]"></div><div id="total-disp" class="text-4xl font-black text-center my-6 italic">Total: $0.00</div><button onclick="finalizarVenta()" class="btn-main">Guardar Venta</button></div>`;
-        }
-        if(window.currentView === "cobros") {
-            const d = (window.state.ventas || []).filter(v => !v.pagado);
-            app.innerHTML = d.map(v => `<div class="card-pro flex justify-between items-center border-l-4 border-orange-500"><div><b class="text-xs uppercase font-black">${v.cliente}</b><br><span class="text-orange-400 text-xs font-black">Debe: $${(v.total - (v.abonado || 0)).toFixed(2)}</span></div><div class="flex gap-2"><button onclick="showBill('${v.cliente}', ${(v.total-(v.abonado||0))}, '${v.telefono}')" class="bg-green-600 p-3 rounded-xl">📋</button><button onclick="abono(${v.id})" class="bg-blue-600 px-4 py-2 rounded-xl text-[10px] font-black uppercase">Abonar</button></div></div>`).join("") || '<p class="text-center py-20 opacity-30 font-black">TODO AL DÍA</p>';
-        }
         if(window.currentView === "gastos") {
-            app.innerHTML = `<div class="card-pro border-t-4 border-red-500"><h2 class="text-lg font-black uppercase mb-4 italic text-center">Nuevo Gasto</h2><input type="date" id="fG" value="${new Date().toISOString().split('T')[0]}"><input id="dG" placeholder="Descripción"><input id="aG" type="number" placeholder="Monto $"><button onclick="saveGasto()" class="btn-main mt-4 !bg-red-600">Guardar Gasto</button></div>`;
+            app.innerHTML = `<div class="card-pro border-t-4 border-red-500"><h2 class="text-lg font-black uppercase mb-4 italic">Nuevo Gasto</h2><input type="date" id="fG" value="${new Date().toISOString().split('T')[0]}"><input id="dG" placeholder="Descripción"><input id="aG" type="number" placeholder="Monto $"><button onclick="saveGasto()" class="btn-main mt-4 !bg-red-600">Guardar Gasto</button></div><p class="text-[10px] font-black opacity-30 uppercase ml-2 mb-2">Historial Completo</p><div class="space-y-2">${(window.state.gastos || []).slice(-10).reverse().map(g => `<div class="card-pro !py-3 flex justify-between items-center border-l-2 border-red-500 text-[11px]"><div><b class="uppercase">${g.desc}</b></div><b>-$${g.amount.toFixed(2)}</b></div>`).join("")}</div>`;
         }
         if(window.currentView === "compras") {
-            app.innerHTML = `<div class="card-pro border-t-4 border-blue-500"><h2 class="text-lg font-black uppercase mb-4 italic text-center">Carga de Stock</h2><input type="date" id="fC" value="${new Date().toISOString().split('T')[0]}"><select id="mInv"><option value="">Material...</option>${Object.keys(window.state.inventario || {}).map(m=>`<option value="${m}">${m}</option>`).join("")}</select><div class="grid grid-cols-2 gap-2"><input id="qInv" type="number" placeholder="Cant"><input id="pInv" type="number" placeholder="Precio Un."></div><button onclick="saveInv()" class="btn-main mt-4">Guardar Stock</button></div>`;
+            app.innerHTML = `<div class="card-pro border-t-4 border-blue-500"><h2 class="text-lg font-black uppercase mb-4 italic">Carga de Stock</h2><input type="date" id="fC" value="${new Date().toISOString().split('T')[0]}"><select id="mInv"><option value="">Material...</option>${Object.keys(window.state.inventario || {}).map(m=>`<option value="${m}">${m}</option>`).join("")}</select><div class="grid grid-cols-2 gap-2"><input id="qInv" type="number" placeholder="Cant"><input id="pInv" type="number" placeholder="Precio Un."></div><button onclick="saveInv()" class="btn-main mt-4">Guardar Stock</button></div><p class="text-[10px] font-black opacity-30 uppercase ml-2 mb-2">Historial Compras</p><div class="space-y-2">${(window.state.comprasInversion || []).slice(-10).reverse().map(c => `<div class="card-pro !py-3 flex justify-between items-center border-l-2 border-blue-500 text-[11px]"><div><b class="uppercase">${c.material} (${c.qty})</b></div><b>$${c.amount.toFixed(2)}</b></div>`).join("")}</div>`;
         }
-        if(window.currentView === "catalogo") {
-            app.innerHTML = `<div class="card-pro"><input id="newM" placeholder="Nuevo Material"><button onclick="addMat()" class="btn-main !p-3">Añadir Material</button><hr class="my-4 border-white/5"><input id="newS" placeholder="Nuevo Servicio"><button onclick="addServicio()" class="btn-main !p-3">Añadir Servicio</button></div>`;
+        if(window.currentView === "ventas") {
+            app.innerHTML = `<div class="card-pro"><h2 class="text-lg font-black uppercase italic mb-4">Venta</h2><input id="cli" placeholder="CLIENTE"><input id="tel" type="number" placeholder="WHATSAPP"><div class="bg-white/5 p-4 rounded-xl mt-3"><div class="grid grid-cols-2 gap-2"><select id="pS"><option value="">Material...</option>${Object.keys(window.state.inventario || {}).map(m=>`<option value="${m}">${m}</option>`).join("")}</select><select id="sS"><option value="">Servicio...</option>${(window.state.serviciosExtra || []).map(s=>`<option value="${s}">${s}</option>`).join("")}</select></div><input id="qV" type="number" placeholder="Cantidad" value="1"><button onclick="addCart()" class="btn-main !p-3 mt-3">+ Añadir</button></div><div id="cart-list" class="mt-4 space-y-1 text-[10px]"></div><div id="total-disp" class="text-4xl font-black text-center my-6 italic">$0.00</div><button onclick="finalizarVenta()" class="btn-main">Guardar</button></div>`;
         }
     };
 
-    // FUNCIONES CORE (SIN CAMBIOS)
-    window.registrarMerma = async (material) => { let cant = parseFloat(prompt(`Cantidad dañada de ${material}:`)); if(cant && cant > 0) { if(window.state.inventario[material].stock >= cant) { window.state.inventario[material].stock -= cant; if(!window.state.mermas) window.state.mermas = []; window.state.mermas.push({ id: Date.now(), material, cant }); await window.sync(); render(); } else { alert("Stock insuficiente."); } } };
+    // FUNCIONES CORE RESTAURADAS
+    window.delMatInv = async (n) => { if(confirm(`Eliminar ${n}?`)){ delete window.state.inventario[n]; await window.sync(); render(); } };
+    window.editMatInv = async (old) => { let n = prompt("Nuevo nombre:", old); if(n) { window.state.inventario[n.toUpperCase()] = window.state.inventario[old]; delete window.state.inventario[old]; await window.sync(); render(); } };
     window.saveInv = async () => { const m = document.getElementById("mInv").value, q = parseFloat(document.getElementById("qInv").value), p = parseFloat(document.getElementById("pInv").value), f = document.getElementById("fC").value; if(m && q && p) { if(!window.state.inventario[m]) window.state.inventario[m] = {stock:0}; window.state.inventario[m].stock += q; if(!window.state.comprasInversion) window.state.comprasInversion = []; window.state.comprasInversion.push({ id: new Date(f+"T12:00:00").getTime(), material: m, amount: (q * p), qty: q }); await window.sync(); setView('inicio'); } };
     window.saveGasto = async () => { const d = document.getElementById("dG").value, a = parseFloat(document.getElementById("aG").value), f = document.getElementById("fG").value; if(d && a) { if(!window.state.gastos) window.state.gastos = []; window.state.gastos.push({ id: new Date(f+"T12:00:00").getTime(), desc: d.toUpperCase(), amount: a }); await window.sync(); setView('inicio'); } };
-    window.showBill = (cliente, monto, telf) => { const fechaStr = new Date().toLocaleDateString(); document.getElementById('b-cli').innerText = cliente; document.getElementById('b-monto').innerText = "$" + monto.toFixed(2); document.getElementById('b-fecha').innerText = fechaStr; document.getElementById('bill-modal').style.display = 'block'; document.getElementById('btn-wa').onclick = () => { const msg = `*GHOSTPRINT PRO*%0A*Fecha:* ${fechaStr}%0A*Cliente:* ${cliente}%0A*Saldo Pendiente:* $${monto.toFixed(2)}`; window.open(`https://api.whatsapp.com/send?phone=${telf}&text=${msg}`, '_blank'); }; };
-    window.closeBill = () => { document.getElementById('bill-modal').style.display = 'none'; };
-    window.abono = async (id) => { let v = window.state.ventas.find(x => x.id === id); let m = parseFloat(prompt(`Abono para ${v.cliente}?`)); if(m) { v.abonado = (Number(v.abonado)||0) + m; if(v.abonado >= v.total) v.pagado = true; await window.sync(); render(); } };
+    window.registrarMerma = async (material) => { let cant = parseFloat(prompt(`Merma de ${material}:`)); if(cant > 0) { window.state.inventario[material].stock -= cant; await window.sync(); render(); } };
     window.addMat = async () => { let n = document.getElementById("newM").value.toUpperCase(); if(n) { if(!window.state.inventario) window.state.inventario = {}; window.state.inventario[n] = {stock: 0}; await window.sync(); render(); } };
     window.addServicio = async () => { let s = document.getElementById("newS").value.toUpperCase(); if(s) { if(!window.state.serviciosExtra) window.state.serviciosExtra = []; window.state.serviciosExtra.push(s); await window.sync(); render(); } };
-    window.addCart = () => { let m = document.getElementById("pS").value, s = document.getElementById("sS").value, q = parseFloat(document.getElementById("qV").value) || 1, t = document.getElementById("tC").value; let p = (t === "detal") ? 9 : (t === "mayor") ? 10 : parseFloat(document.getElementById("pL").value) || 0; let d = (m && s) ? m + " + " + s : m || s; if(d) { cart.push({ d, p: (p*q), mat: m, qtyV: q }); renderCart(); } };
-    function renderCart() { document.getElementById("cart-list").innerHTML = cart.map((c, i) => `<div class="flex justify-between py-1 uppercase font-bold text-white/50"><span>${c.d}</span><b>$${c.p}</b></div>`).join(""); document.getElementById("total-disp").innerText = "Total: $" + cart.reduce((a,b)=>a+b.p,0).toFixed(2); }
-    window.finalizarVenta = async () => { let cli = document.getElementById("cli").value, tel = document.getElementById("tel").value, fec = document.getElementById("fV").value; if(!cli || !cart.length) return; cart.forEach(c => { if(c.mat && window.state.inventario[c.mat]) window.state.inventario[c.mat].stock -= c.qtyV; }); window.state.ventas.push({ id: new Date(fec+"T12:00:00").getTime(), cliente: cli.toUpperCase(), telefono: tel, total: cart.reduce((a,b)=>a+b.p,0), abonado: 0, pagado: false }); await window.sync(); cart = []; setView('inicio'); };
+    window.addCart = () => { let m = document.getElementById("pS").value, s = document.getElementById("sS").value, q = parseFloat(document.getElementById("qV").value) || 1; let d = (m && s) ? m + " + " + s : m || s; if(d) { cart.push({ d, p: (9*q), mat: m, qtyV: q }); renderCart(); } };
+    function renderCart() { document.getElementById("cart-list").innerHTML = cart.map((c, i) => `<div class="flex justify-between"><span>${c.d}</span><b>$${c.p}</b></div>`).join(""); document.getElementById("total-disp").innerText = "$" + cart.reduce((a,b)=>a+b.p,0).toFixed(2); }
+    window.finalizarVenta = async () => { let cli = document.getElementById("cli").value; if(!cli || !cart.length) return; cart.forEach(c => { if(c.mat) window.state.inventario[c.mat].stock -= c.qtyV; }); window.state.ventas.push({ id: Date.now(), cliente: cli.toUpperCase(), total: cart.reduce((a,b)=>a+b.p,0), abonado: 0, pagado: false }); await window.sync(); cart = []; setView('inicio'); };
 
     render();
 </script>
