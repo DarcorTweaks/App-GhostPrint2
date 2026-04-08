@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>GhostPrint PRO v20.7</title>
+    <title>GhostPrint PRO v20.8</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap');
@@ -53,10 +53,10 @@
     const db = firebase.firestore();
     const docRef = db.collection("sistema").doc("datos_principales");
 
-    window.state = JSON.parse(localStorage.getItem('gp_v20_7')) || { ventas: [], gastos: [], inventario: {}, serviciosExtra: ["DISEÑO", "MONTAJE"], comprasInversion: [] };
+    window.state = JSON.parse(localStorage.getItem('gp_v20_8')) || { ventas: [], gastos: [], inventario: {}, serviciosExtra: ["DISEÑO", "MONTAJE"], comprasInversion: [] };
     window.currentView = "inicio";
 
-    window.sync = async function() { localStorage.setItem('gp_v20_7', JSON.stringify(window.state)); await docRef.set(window.state); };
+    window.sync = async function() { localStorage.setItem('gp_v20_8', JSON.stringify(window.state)); await docRef.set(window.state); };
     docRef.onSnapshot(doc => { if(doc.exists) { window.state = doc.data(); render(); } });
 
     window.setView = function(v) {
@@ -66,9 +66,9 @@
         render();
     };
 
-    const getF = () => {
+    const getNow = () => {
         const d = new Date();
-        return `${d.getDate()}/${d.getMonth()+1} ${d.getHours()}:${d.getMinutes()}`;
+        return `${d.getDate()}/${d.getMonth()+1}/${d.getFullYear().toString().slice(-2)} - ${d.getHours()}:${d.getMinutes().toString().padStart(2, '0')}`;
     };
 
     let cart = [];
@@ -84,37 +84,42 @@
         const tGastos = gM.reduce((a, b) => a + Number(b.amount), 0);
         const tInversionTotal = cM.reduce((a, b) => a + Number(b.amount), 0);
         const tDeuda = vM.filter(v => !v.pagado).reduce((a, b) => a + (b.total - (b.abonado || 0)), 0);
-        
         const cajaEfectivo = tCobrado - tGastos - tInversionTotal;
 
         if(window.currentView === "inicio") {
             app.innerHTML = `
                 <div class="card-pro !bg-gradient-to-br !from-purple-600 !to-indigo-900 border-none shadow-xl text-center">
-                    <p class="text-[10px] font-black uppercase opacity-70 italic tracking-widest">Efectivo Real en Caja</p>
-                    <h2 class="text-6xl font-black italic mt-2">$${cajaEfectivo.toFixed(2)}</h2>
+                    <p class="text-[10px] font-black uppercase opacity-70 italic">Efectivo Real</p>
+                    <h2 class="text-6xl font-black italic mt-2 leading-none font-sans">$${cajaEfectivo.toFixed(2)}</h2>
                 </div>
-                <div class="grid grid-cols-2 gap-3">
-                    <div class="card-pro"><p class="text-[8px] opacity-40 uppercase">Total Ventas</p><b class="text-lg text-green-400">$${tVendido.toFixed(2)}</b></div>
-                    <div class="card-pro"><p class="text-[8px] opacity-40 uppercase">Inversión Stock</p><b class="text-lg text-blue-400">$${tInversionTotal.toFixed(2)}</b></div>
+                <div class="grid grid-cols-2 gap-3 mb-2">
+                    <div class="card-pro border-l-4 border-green-500"><p class="text-[8px] opacity-40 uppercase">Ventas Brutas</p><b class="text-lg">$${tVendido.toFixed(2)}</b></div>
+                    <div class="card-pro border-l-4 border-blue-500"><p class="text-[8px] opacity-40 uppercase">Invertido Stock</p><b class="text-lg">$${tInversionTotal.toFixed(2)}</b></div>
                 </div>
                 <h3 class="text-[10px] font-black uppercase opacity-40 ml-2 mb-2 italic">Historial de Ventas</h3>
-                <div class="space-y-1">${vM.slice(-5).reverse().map(v => `<div class="card-pro !py-3 flex justify-between text-[10px] border-l-2 border-green-500"><div><b>${v.cliente}</b><br><span class="opacity-50">${v.fecha || ''}</span></div><b class="${v.pagado ? 'text-green-400':'text-orange-400'}">$${v.total}</b></div>`).join("")}</div>`;
+                <div class="space-y-1">${vM.slice(-5).reverse().map(v => `<div class="card-pro !py-3 flex justify-between text-[10px] border-white/5"><div><b>${v.cliente}</b><br><span class="opacity-40 font-bold">${v.fecha || 'N/A'}</span></div><b class="${v.pagado ? 'text-green-400':'text-orange-400'}">$${v.total}</b></div>`).join("")}</div>`;
         }
 
         if(window.currentView === "ventas") {
-            app.innerHTML = `<div class="card-pro"><h2 class="text-lg font-black uppercase italic mb-4">Registro de Trabajo</h2><input id="cli" placeholder="CLIENTE"><input id="tel" type="number" placeholder="WHATSAPP"><div class="bg-white/5 p-4 rounded-xl mt-3"><div class="grid grid-cols-2 gap-2"><select id="pS"><option value="">Ninguno (Servicio)...</option>${Object.keys(window.state.inventario || {}).map(m=>`<option value="${m}">${m}</option>`).join("")}</select><select id="sS"><option value="">Servicio...</option>${(window.state.serviciosExtra || []).map(s=>`<option value="${s}">${s}</option>`).join("")}</select></div><input id="qV" type="number" placeholder="Cantidad" value="1"><select id="tC" onchange="document.getElementById('pL').classList.toggle('hidden', this.value !== 'libre')"><option value="detal">DETAL ($9)</option><option value="mayor">MAYOR ($10)</option><option value="libre">PRECIO LIBRE</option></select><input id="pL" class="hidden" type="number" placeholder="Precio $"><button onclick="addCart()" class="btn-main !p-3 mt-3">+ AÑADIR ITEM</button></div><div id="cart-list" class="mt-4 space-y-1 text-xs italic"></div><div id="total-disp" class="text-4xl font-black text-center my-6 italic leading-none">$0.00</div><button onclick="finalizarVenta()" class="btn-main shadow-lg">FINALIZAR TRABAJO</button></div>`;
+            app.innerHTML = `<div class="card-pro"><h2 class="text-lg font-black uppercase italic mb-4">Nueva Venta</h2><input id="cli" placeholder="CLIENTE"><input id="tel" type="number" placeholder="WHATSAPP"><div class="bg-white/5 p-4 rounded-xl mt-3"><div class="grid grid-cols-2 gap-2"><select id="pS"><option value="">Ninguno (Servicio)...</option>${Object.keys(window.state.inventario || {}).map(m=>`<option value="${m}">${m}</option>`).join("")}</select><select id="sS"><option value="">Servicio...</option>${(window.state.serviciosExtra || []).map(s=>`<option value="${s}">${s}</option>`).join("")}</select></div><input id="qV" type="number" placeholder="Cantidad" value="1"><select id="tC" onchange="document.getElementById('pL').classList.toggle('hidden', this.value !== 'libre')"><option value="detal">DETAL ($9)</option><option value="mayor">MAYOR ($10)</option><option value="libre">PRECIO LIBRE</option></select><input id="pL" class="hidden" type="number" placeholder="Precio $"><button onclick="addCart()" class="btn-main !p-3 mt-3 shadow-lg">+ AÑADIR AL TRABAJO</button></div><div id="cart-list" class="mt-4 space-y-1 text-xs italic font-bold"></div><div id="total-disp" class="text-5xl font-black text-center my-6 italic text-purple-400 leading-none">$0.00</div><button onclick="finalizarVenta()" class="btn-main">GUARDAR TRABAJO</button></div>`;
             updateCartUI();
         }
 
         if(window.currentView === "cobros") {
             const deudas = vM.filter(v => !v.pagado);
-            app.innerHTML = `<div class="card-pro !bg-orange-600/10 text-center mb-6"><p class="text-[10px] font-black uppercase text-orange-500">Total por Cobrar</p><h3 class="text-4xl font-black italic">$${tDeuda.toFixed(2)}</h3></div>
-            <div class="space-y-2">${deudas.reverse().map(v => `<div class="card-pro border-l-4 border-purple-500 flex justify-between items-center"><div><b class="text-xs uppercase">${v.cliente}</b><br><span class="text-orange-400 text-[10px] font-black italic">Saldo: $${(v.total - (v.abonado||0)).toFixed(2)}</span><br><span class="text-[8px] opacity-30 italic">${v.fecha || ''}</span></div>
+            app.innerHTML = `<div class="card-pro !bg-orange-600/10 text-center mb-4"><p class="text-[10px] font-black uppercase text-orange-500">Pendiente por Cobrar</p><h3 class="text-4xl font-black italic">$${tDeuda.toFixed(2)}</h3></div>
+            <div class="space-y-2">${deudas.reverse().map(v => `<div class="card-pro border-l-4 border-purple-500 flex justify-between items-center"><div><b class="text-xs uppercase">${v.cliente}</b><br><span class="text-purple-400 text-[9px] font-black uppercase">${v.items ? v.items.map(i=>i.d).join(' / ') : 'TRABAJO'}</span><br><span class="text-orange-400 text-[10px] font-black italic">DEBE: $${(v.total - (v.abonado||0)).toFixed(2)}</span><br><span class="text-[8px] opacity-40 font-bold uppercase">${v.fecha || ''}</span></div>
             <div class="flex gap-1">
                 <button onclick="editVentaProfunda(${v.id})" class="bg-white/5 p-2 rounded-lg text-xs">✏️</button>
                 <button onclick="showBill('${v.cliente}', ${(v.total-(v.abonado||0))}, '${v.telefono}')" class="bg-green-600 p-2 rounded-lg text-xs">📋</button>
-                <button onclick="abonoM('${v.cliente}')" class="bg-purple-600 px-2 py-1 rounded-lg text-[9px] font-black uppercase">Cobrar</button>
+                <button onclick="abonoM('${v.cliente}')" class="bg-purple-600 px-3 py-1 rounded-lg text-[9px] font-black">COBRAR</button>
             </div></div>`).join("")}</div>`;
+        }
+
+        if(window.currentView === "compras") {
+            app.innerHTML = `<div class="card-pro border-t-4 border-blue-600"><h2 class="text-lg font-black uppercase italic mb-4">Cargar Material</h2><select id="mInv"><option value="">Seleccionar Material...</option>${Object.keys(window.state.inventario || {}).map(m=>`<option value="${m}">${m}</option>`).join("")}</select><input id="qInv" type="number" placeholder="Cantidad"><input id="pInv" type="number" placeholder="Costo Total de Compra $"><button onclick="saveInv()" class="btn-main !bg-blue-600 mt-4">CARGAR AL STOCK</button></div>
+            <h3 class="text-[10px] font-black uppercase opacity-40 ml-2 mb-2 italic">Historial de Compras</h3>
+            <div class="space-y-1">${cM.slice(-10).reverse().map(c=>`<div class="card-pro !py-2 flex justify-between text-[10px] border-l-2 border-blue-500"><div><b>${c.material} (Cant: ${c.qty})</b><br><span class="opacity-40 font-bold uppercase">${c.fecha || ''}</span></div><div class="flex items-center gap-3"><b class="text-blue-400">$${c.amount}</b><button onclick="delCompra(${c.id})" class="opacity-30">✕</button></div></div>`).join("")}</div>`;
         }
 
         if(window.currentView === "inventario") {
@@ -130,40 +135,13 @@
         }
 
         if(window.currentView === "gastos") {
-            app.innerHTML = `<div class="card-pro border-t-4 border-red-600"><h2 class="text-lg font-black uppercase italic mb-4">Gasto Nuevo</h2><input id="dG" placeholder="Descripción"><input id="aG" type="number" placeholder="Monto $"><button onclick="saveGasto()" class="btn-main !bg-red-600 mt-4">GUARDAR</button></div>
+            app.innerHTML = `<div class="card-pro border-t-4 border-red-600"><h2 class="text-lg font-black uppercase italic mb-4">Nuevo Gasto</h2><input id="dG" placeholder="Descripción"><input id="aG" type="number" placeholder="Monto $"><button onclick="saveGasto()" class="btn-main !bg-red-600 mt-4">GUARDAR</button></div>
             <h3 class="text-[10px] font-black uppercase opacity-40 ml-2 mb-2 italic">Historial de Gastos</h3>
-            <div class="space-y-1">${gM.slice(-10).reverse().map(g=>`<div class="card-pro !py-2 flex justify-between text-xs border-l-2 border-red-500"><div><span>${g.desc}</span><br><span class="text-[8px] opacity-30">${g.fecha || ''}</span></div><b class="text-red-400">-$${g.amount}</b></div>`).join("")}</div>`;
-        }
-
-        if(window.currentView === "compras") {
-            app.innerHTML = `<div class="card-pro border-t-4 border-blue-600"><h2 class="text-lg font-black uppercase italic mb-4">Entrada Stock</h2><select id="mInv"><option value="">Material...</option>${Object.keys(window.state.inventario || {}).map(m=>`<option value="${m}">${m}</option>`).join("")}</select><input id="qInv" type="number" placeholder="Cantidad"><input id="pInv" type="number" placeholder="Costo Total $"><button onclick="saveInv()" class="btn-main !bg-blue-600 mt-4">CARGAR</button></div>
-            <h3 class="text-[10px] font-black uppercase opacity-40 ml-2 mb-2 italic">Historial de Compras</h3>
-            <div class="space-y-1">${cM.slice(-10).reverse().map(c=>`<div class="card-pro !py-2 flex justify-between text-xs border-l-2 border-blue-500"><div><span>${c.material} (${c.qty})</span><br><span class="text-[8px] opacity-30">${c.fecha || ''}</span></div><b class="text-blue-400">$${c.amount}</b></div>`).join("")}</div>`;
+            <div class="space-y-1">${gM.slice(-10).reverse().map(g=>`<div class="card-pro !py-2 flex justify-between text-[10px] border-l-2 border-red-500"><div><b>${g.desc}</b><br><span class="opacity-40 font-bold uppercase">${g.fecha || ''}</span></div><b class="text-red-400">-$${g.amount}</b></div>`).join("")}</div>`;
         }
 
         if(window.currentView === "catalogo") {
             app.innerHTML = `<div class="card-pro"><h2 class="text-xs font-black opacity-40 mb-4 uppercase italic">Configuración</h2><input id="newM" placeholder="Material"><button onclick="addMat()" class="btn-main !p-3 mb-4">Añadir</button><hr class="border-white/5 my-4"><input id="newS" placeholder="Servicio"><button onclick="addServicio()" class="btn-main !p-3">Añadir</button></div>`;
-        }
-    };
-
-    // LOGICA DE EDICION PROFUNDA
-    window.editVentaProfunda = async (id) => {
-        const v = window.state.ventas.find(x => x.id === id);
-        if(!v) return;
-        if(confirm(`Se devolverá el material al stock para editar. ¿Continuar?`)) {
-            if(v.items) {
-                v.items.forEach(item => { if(item.mat && window.state.inventario[item.mat]) window.state.inventario[item.mat].stock += item.qtyV; });
-                cart = [...v.items];
-            }
-            window.currentEditCli = { nombre: v.cliente, tel: v.telefono };
-            window.state.ventas = window.state.ventas.filter(x => x.id !== id);
-            await window.sync();
-            setView('ventas');
-            setTimeout(() => {
-                document.getElementById('cli').value = window.currentEditCli.nombre;
-                document.getElementById('tel').value = window.currentEditCli.tel;
-                updateCartUI();
-            }, 100);
         }
     };
 
@@ -176,24 +154,41 @@
         }
     };
 
-    window.removeCart = (index) => { cart.splice(index, 1); updateCartUI(); };
     window.addCart = () => { 
         let m = document.getElementById("pS").value, s = document.getElementById("sS").value, q = parseFloat(document.getElementById("qV").value) || 1, t = document.getElementById("tC").value, p = (t === "detal") ? 9 : (t === "mayor") ? 10 : parseFloat(document.getElementById("pL").value) || 0, d = (m && s) ? m + " + " + s : m || s; 
         if(d) { cart.push({ d, p: (p*q), mat: m, qtyV: q }); updateCartUI(); } 
     };
 
+    window.removeCart = (index) => { cart.splice(index, 1); updateCartUI(); };
+
     window.finalizarVenta = async () => { 
         let cli = document.getElementById("cli").value; if(!cli || !cart.length) return; 
         cart.forEach(c => { if(c.mat && window.state.inventario[c.mat]) window.state.inventario[c.mat].stock -= c.qtyV; }); 
-        window.state.ventas.push({ id: Date.now(), fecha: getF(), cliente: cli.toUpperCase(), telefono: document.getElementById("tel").value, total: cart.reduce((a,b)=>a+b.p,0), abonado: 0, pagado: false, items: [...cart] }); 
+        window.state.ventas.push({ id: Date.now(), fecha: getNow(), cliente: cli.toUpperCase(), telefono: document.getElementById("tel").value, total: cart.reduce((a,b)=>a+b.p,0), abonado: 0, pagado: false, items: [...cart] }); 
         await window.sync(); cart = []; setView('inicio'); 
     };
 
-    // FUNCIONES RESTAURADAS
-    window.saveGasto = async () => { const d = document.getElementById("dG").value, a = parseFloat(document.getElementById("aG").value); if(d && a) { window.state.gastos.push({ id: Date.now(), fecha: getF(), desc: d.toUpperCase(), amount: a }); await window.sync(); setView('inicio'); } };
-    window.saveInv = async () => { const m = document.getElementById("mInv").value, q = parseFloat(document.getElementById("qInv").value), p = parseFloat(document.getElementById("pInv").value); if(m && q) { window.state.inventario[m].stock += q; window.state.comprasInversion.push({ id: Date.now(), fecha: getF(), material: m, amount: p, qty: q }); await window.sync(); setView('inicio'); } };
-    window.registrarMerma = async (mat) => { let q = parseFloat(prompt(`Cantidad de merma para ${mat}:`)); if(q > 0) { window.state.inventario[mat].stock -= q; await window.sync(); render(); } };
+    window.editVentaProfunda = async (id) => {
+        const v = window.state.ventas.find(x => x.id === id);
+        if(!v) return;
+        if(confirm(`Devolviendo material al stock para editar...`)) {
+            if(v.items) {
+                v.items.forEach(item => { if(item.mat && window.state.inventario[item.mat]) window.state.inventario[item.mat].stock += item.qtyV; });
+                cart = [...v.items];
+            }
+            const cliN = v.cliente; const telN = v.telefono;
+            window.state.ventas = window.state.ventas.filter(x => x.id !== id);
+            await window.sync();
+            setView('ventas');
+            setTimeout(() => { document.getElementById('cli').value = cliN; document.getElementById('tel').value = telN; updateCartUI(); }, 100);
+        }
+    };
+
+    window.saveGasto = async () => { const d = document.getElementById("dG").value, a = parseFloat(document.getElementById("aG").value); if(d && a) { window.state.gastos.push({ id: Date.now(), fecha: getNow(), desc: d.toUpperCase(), amount: a }); await window.sync(); setView('inicio'); } };
+    window.saveInv = async () => { const m = document.getElementById("mInv").value, q = parseFloat(document.getElementById("qInv").value), p = parseFloat(document.getElementById("pInv").value); if(m && q) { window.state.inventario[m].stock += q; window.state.comprasInversion.push({ id: Date.now(), fecha: getNow(), material: m, amount: p, qty: q }); await window.sync(); setView('inicio'); } };
+    window.delCompra = async (id) => { if(confirm("¿Eliminar esta compra del historial? (No afecta el stock actual)")){ window.state.comprasInversion = window.state.comprasInversion.filter(c => c.id !== id); await window.sync(); render(); } };
     
+    window.registrarMerma = async (mat) => { let q = parseFloat(prompt(`Merma para ${mat}:`)); if(q > 0) { window.state.inventario[mat].stock -= q; await window.sync(); render(); } };
     window.addMat = async () => { let n = document.getElementById("newM").value.toUpperCase(); if(n) { window.state.inventario[n] = {stock: 0}; await window.sync(); render(); } };
     window.addServicio = async () => { let s = document.getElementById("newS").value.toUpperCase(); if(s) { window.state.serviciosExtra.push(s); await window.sync(); render(); } };
     window.abonoM = async (name) => { let m = parseFloat(prompt(`Pago de ${name}:`)); if(!m) return; let vCli = window.state.ventas.filter(v => v.cliente === name && !v.pagado); vCli.forEach(v => { if(m <= 0) return; let p = v.total - (v.abonado||0); if(m >= p) { v.abonado = v.total; v.pagado = true; m -= p; } else { v.abonado = (v.abonado||0) + m; m = 0; } }); await window.sync(); render(); };
