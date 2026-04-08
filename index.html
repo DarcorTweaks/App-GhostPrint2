@@ -7,123 +7,25 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        /* FONDO GHOST NEBULA: Oscuro con destellos suaves */
         body {
-            background-color: #0d0d1a; /* Negro azulado base */
+            background-color: #0d0d1a;
             background-image: 
-                radial-gradient(at 10% 10%, rgba(109, 40, 217, 0.2) 0px, transparent 50%), /* Destello Púrpura */
-                radial-gradient(at 90% 90%, rgba(79, 70, 229, 0.15) 0px, transparent 50%); /* Destello Índigo */
+                radial-gradient(at 10% 10%, rgba(109, 40, 217, 0.2) 0px, transparent 50%),
+                radial-gradient(at 90% 90%, rgba(79, 70, 229, 0.15) 0px, transparent 50%);
             background-attachment: fixed;
             background-size: cover;
             font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            color: #e2e8f0; /* Texto claro para contraste */
+            color: #e2e8f0;
             padding-bottom: 96px;
         }
-
-        /* BOTONES PRINCIPALES */
-        .btn { 
-            background: #6d28d9; /* Morado GhostPrint */
-            color: white; 
-            padding: 10px 14px; 
-            border-radius: 12px; 
-            cursor: pointer; 
-            font-weight: 700; 
-            border: none; 
-            transition: all 0.2s ease-in-out; 
-            text-transform: uppercase; 
-            font-size: 10px; 
-            box-shadow: 0 4px 6px -1px rgba(109, 40, 217, 0.3);
-        }
-        .btn:hover { 
-            background: #5b21b6; 
-            transform: translateY(-1px); 
-            box-shadow: 0 6px 8px -1px rgba(109, 40, 217, 0.4);
-        }
-        .btn:active {
-            transform: translateY(1px);
-        }
-
-        /* CARDS DE DATOS: Blancas y limpias, contrastan con el fondo oscuro */
-        .card { 
-            background: rgba(255, 255, 255, 0.95); /* Blanco casi puro para legibilidad */
-            backdrop-filter: blur(5px); /* Toque sutil de transparencia */
-            padding: 20px; 
-            margin: 12px 0; 
-            border-radius: 20px; 
-            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.3); 
-            border: 1px solid rgba(255,255,255,0.1);
-            color: #1e293b; /* Texto oscuro dentro de las cards */
-        }
-
-        /* INPUTS Y SELECTS */
-        input, select { 
-            border: 1px solid #e2e8f0; 
-            padding: 12px; 
-            margin: 8px 0; 
-            border-radius: 12px; 
-            width: 100%; 
-            font-size: 14px; 
-            background: #f8fafc; 
-            color: #1e293b;
-            transition: border-color 0.2s;
-        }
-        input:focus, select:focus {
-            outline: none;
-            border-color: #6d28d9;
-            box-shadow: 0 0 0 3px rgba(109, 40, 217, 0.1);
-        }
-
-        /* ETIQUETAS */
-        label { 
-            font-size: 10px; 
-            color: #64748b; 
-            font-weight: 800; 
-            text-transform: uppercase; 
-            display: block; 
-            margin-top: 8px; 
-            margin-left: 4px;
-        }
-
-        /* HEADER */
-        header {
-            background: linear-gradient(to right, #4c1d95, #3730a3, #000000); /* Degradado oscuro */
-            color: white; 
-            padding: 16px; 
-            shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5); 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center; 
-            position: sticky; 
-            top: 0; 
-            z-index: 50;
-            border-bottom: 1px solid rgba(255,255,255,0.05);
-        }
-
-        /* BARRA DE NAVEGACIÓN */
-        nav {
-            padding: 8px; 
-            display: flex; 
-            gap: 8px; 
-            overflow-x: auto; 
-            background: rgba(255, 255, 255, 0.1); /* Fondo translúcido */
-            backdrop-filter: blur(10px); 
-            shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2); 
-            position: sticky; 
-            top: 72px; /* Ajustar según altura del header */
-            z-index: 40; 
-            border-bottom: 1px solid rgba(255,255,255,0.05);
-        }
-
-        /* TÍTULOS SECCIÓN */
-        h2 {
-            font-size: 1.5rem;
-            font-weight: 800;
-            color: #f1f5f9;
-            margin-top: 1rem;
-            margin-bottom: 0.5rem;
-            text-transform: uppercase;
-            letter-spacing: -0.025em;
-        }
+        .btn { background: #6d28d9; color: white; padding: 10px 14px; border-radius: 12px; cursor: pointer; font-weight: 700; border: none; transition: all 0.2s ease-in-out; text-transform: uppercase; font-size: 10px; box-shadow: 0 4px 6px -1px rgba(109, 40, 217, 0.3); }
+        .btn:hover { background: #5b21b6; transform: translateY(-1px); }
+        .card { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(5px); padding: 20px; margin: 12px 0; border-radius: 20px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: #1e293b; }
+        input, select { border: 1px solid #e2e8f0; padding: 12px; margin: 8px 0; border-radius: 12px; width: 100%; font-size: 14px; background: #f8fafc; color: #1e293b; }
+        label { font-size: 10px; color: #64748b; font-weight: 800; text-transform: uppercase; display: block; margin-top: 8px; }
+        header { background: linear-gradient(to right, #4c1d95, #3730a3, #000000); color: white; padding: 16px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 50; }
+        nav { padding: 8px; display: flex; gap: 8px; overflow-x: auto; background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px); position: sticky; top: 72px; z-index: 40; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        h2 { font-size: 1.5rem; font-weight: 800; color: #f1f5f9; margin-top: 1rem; text-transform: uppercase; }
     </style>
 </head>
 <body>
@@ -164,35 +66,14 @@ const appF = initializeApp(firebaseConfig);
 const db = getFirestore(appF);
 const docRef = doc(db, "sistema", "datos_principales");
 
-// Datos base cargados de tus listas
-const defaultState = {
-    ventas: [], gastos: [], 
-    inventario: {
-        "VINIL GLOSSY": {stock: 68, costo: 3.00}, "BANNER": {stock: 175, costo: 3.60},
-        "KIT DE TINTA": {stock: 400, costo: 0.45}, "VINIL CLEAR GLOSSY BRILLANTE": {stock: 50, costo: 3.00},
-        "VINIL CLEAR GLOSSY MATE": {stock: 50, costo: 3.00}, "VINIL BLACKOUT": {stock: 0, costo: 3.50},
-        "VINIL BLANCO": {stock: 0, costo: 3.00}, "BANNER 137": {stock: 0, costo: 3.60},
-        "BANNER 180": {stock: 0, costo: 4.00}, "CLEAR BRILLANTE": {stock: 0, costo: 3.00},
-        "CLEAR MATE": {stock: 0, costo: 3.00}, "HOJA BLANCA": {stock: 0, costo: 0.05},
-        "PAPEL FOTOGRAFICO": {stock: 0, costo: 0.50}, "PAPEL GLASSE": {stock: 0, costo: 0.30},
-        "RETAZOS": {stock: 0, costo: 0.00}, "OTROS": {stock: 0, costo: 0.00}
-    },
-    serviciosExtra: [
-        "DISEÑO, IMPRECION, INSTALACION", "DISEÑO", "IMPRESIÓN", "DISEÑO, IMPRESIÓN", 
-        "INSTALACION", "POP", "DESINTALACION", "ROTULACION", "LAMINADO", 
-        "LAMINADO. IMPRESIOM", "IMPRESIÓN Y CORTE", "VINIL DE ROTULACION"
-    ]
-};
-
-window.state = JSON.parse(JSON.stringify(defaultState));
+window.state = { ventas: [], gastos: [], inventario: {}, serviciosExtra: [] };
 window.view = "dashboard";
 let carritoVenta = [];
 
 onSnapshot(docRef, (snap) => {
     if (snap.exists()) {
-        window.state = { ...window.state, ...snap.data() };
+        window.state = snap.data();
         document.getElementById("sync-status").innerText = "Sincronizado ✓";
-        document.getElementById("sync-status").classList.replace("text-amber-300", "text-green-400");
     } else { window.save(); }
     render();
 });
@@ -201,11 +82,8 @@ window.save = async () => { await setDoc(docRef, window.state); };
 window.setView = (v) => { window.view = v; render(); };
 
 window.addItemCarrito = () => {
-    let p = document.getElementById("pSel").value;
-    let s = document.getElementById("sSel").value;
-    let t = document.getElementById("tCli").value;
-    let c = parseFloat(document.getElementById("cQty").value) || 0;
-    let item = p || s;
+    let p = document.getElementById("pSel").value, s = document.getElementById("sSel").value, t = document.getElementById("tCli").value;
+    let c = parseFloat(document.getElementById("cQty").value) || 0, item = p || s;
     if(!item || c <= 0) return alert("Selecciona ítem y cantidad");
     let pre = (window.state.inventario[item]) ? (t === "mayor" ? 10 : 9) : 12;
     if(t === "libre") pre = parseFloat(document.getElementById("pMan").value) || 0;
@@ -217,12 +95,11 @@ window.render = function() {
     let app = document.getElementById("app"), html = "";
 
     if(window.view === "dashboard"){
-        let vT = window.state.ventas.reduce((a,b)=>a+b.total,0);
-        let gT = window.state.gastos.reduce((a,b)=>a+b.amount,0);
+        let vT = window.state.ventas.reduce((a,b)=>a+b.total,0), gT = window.state.gastos.reduce((a,b)=>a+b.amount,0);
         html = `<div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div class="card bg-green-50 border border-green-200">Ingresos<br><b class="text-3xl text-green-700">$${vT.toFixed(2)}</b></div>
-            <div class="card bg-red-50 border border-red-200">Egresos<br><b class="text-3xl text-red-600">$${gT.toFixed(2)}</b></div>
-            <div class="card bg-slate-900 border border-slate-700 text-white italic">Utilidad Neta<br><b class="text-3xl text-purple-400 font-black">$${(vT-gT).toFixed(2)}</b></div>
+            <div class="card bg-green-50 border border-green-200">Ventas<br><b class="text-2xl text-green-700">$${vT.toFixed(2)}</b></div>
+            <div class="card bg-red-50 border border-red-200">Egresos<br><b class="text-2xl text-red-600">$${gT.toFixed(2)}</b></div>
+            <div class="card bg-slate-900 border border-slate-700 text-white italic">Utilidad<br><b class="text-2xl text-purple-400 font-black">$${(vT-gT).toFixed(2)}</b></div>
         </div>`;
     }
 
@@ -231,51 +108,55 @@ window.render = function() {
             <label>Cliente</label><input id="cliV" placeholder="Nombre">
             <label>WhatsApp</label><input id="telV" type="number" placeholder="58...">
             <div class="grid grid-cols-2 gap-2">
-                <div><label>Productos</label><select id="pSel" onchange="document.getElementById('sSel').value=''"><option value="">-- Productos --</option>${Object.keys(window.state.inventario).map(p=>`<option value="${p}">${p}</option>`).join("")}</select></div>
-                <div><label>Servicios</label><select id="sSel" onchange="document.getElementById('pSel').value=''"><option value="">-- Servicios --</option>${window.state.serviciosExtra.map(s=>`<option value="${s}">${s}</option>`).join("")}</select></div>
+                <div><label>Productos</label><select id="pSel" onchange="document.getElementById('sSel').value=''"><option value="">-- Ver --</option>${Object.keys(window.state.inventario).map(p=>`<option value="${p}">${p}</option>`).join("")}</select></div>
+                <div><label>Servicios</label><select id="sSel" onchange="document.getElementById('pSel').value=''"><option value="">-- Ver --</option>${window.state.serviciosExtra.map(s=>`<option value="${s}">${s}</option>`).join("")}</select></div>
             </div>
-            <label>Tarifa</label><select id="tCli" onchange="render()"><option value="detal">Detal</option><option value="mayor">Mayor</option><option value="libre">Manual</option></select>
-            <div id="dLib" class="${document.getElementById('tCli')?.value==='libre'?'':'hidden'}"><input id="pMan" type="number" placeholder="Precio $"></div>
+            <label>Tarifa</label><select id="tCli" onchange="render()"><option value="detal">Detal ($9)</option><option value="mayor">Mayor ($10)</option><option value="libre">Manual</option></select>
+            <div id="dLib" class="${document.getElementById('tCli')?.value==='libre'?'':'hidden'}"><input id="pMan" type="number" placeholder="Monto $"></div>
             <label>Cantidad</label><input id="cQty" type="number" value="1">
-            <button onclick="addItemCarrito()" class="btn w-full !bg-blue-600 mt-2 shadow-md">+ Agregar</button>
-            <div class="mt-4 border-t pt-2">${carritoVenta.map((v,i)=>`<div class="flex justify-between text-xs py-1 border-b border-slate-100"><span>${v.qty}x ${v.nombre}</span><b>$${v.sub.toFixed(2)}</b><button onclick="carritoVenta.splice(${i},1);render()" class="text-red-500 font-bold ml-2">X</button></div>`).join("")}</div>
-            <div class="p-4 bg-slate-800 text-white rounded-xl text-center font-bold mt-2 uppercase text-lg">TOTAL: $${carritoVenta.reduce((a,b)=>a+b.sub,0).toFixed(2)}</div>
-            <button onclick="procesarV()" class="btn w-full bg-green-600 mt-4 py-4 text-sm shadow-lg">Vender</button></div>`;
+            <button onclick="addItemCarrito()" class="btn w-full !bg-blue-600 mt-2">+ Agregar</button>
+            <div class="mt-4 border-t pt-2">${carritoVenta.map((v,i)=>`<div class="flex justify-between text-xs py-1"><span>${v.qty}x ${v.nombre}</span><b>$${v.sub.toFixed(2)}</b><button onclick="carritoVenta.splice(${i},1);render()" class="text-red-500 font-bold ml-2">X</button></div>`).join("")}</div>
+            <div class="p-3 bg-slate-800 text-white rounded-xl text-center font-bold mt-2 uppercase">Total: $${carritoVenta.reduce((a,b)=>a+b.sub,0).toFixed(2)}</div>
+            <button onclick="procesarV()" class="btn w-full bg-green-600 mt-4 py-4 shadow-lg">Vender</button></div>`;
     }
 
     if(window.view === "cobranzas"){
-        html = `<h2>COBROS</h2>${window.state.ventas.filter(v=>!v.pagado).slice().reverse().map(v=>`<div class="card border-l-4 border-amber-500 flex justify-between items-center p-4"><div><b class="text-slate-900">${v.cliente}</b><br><small class="text-red-600 font-bold">Debe: $${(v.total-(v.abonado||0)).toFixed(2)}</small></div><div class="flex gap-1"><button onclick="enviarWS(${v.id})" class="bg-green-600 text-white p-2 rounded-lg text-[8px] font-bold">WS</button><button onclick="abonarV(${v.id})" class="bg-blue-600 text-white p-2 rounded-lg text-[8px] font-bold">ABONAR</button><button onclick="borrarV(${v.id})" class="bg-red-500 text-white p-2 rounded-lg text-[8px] font-bold">BORRAR</button></div></div>`).join("")}`;
+        html = `<h2>COBROS</h2>${window.state.ventas.filter(v=>!v.pagado).slice().reverse().map(v=>`<div class="card border-l-4 border-amber-500 flex justify-between items-center"><div><b>${v.cliente}</b><br><small class="text-red-600 font-bold">Saldo: $${(v.total-(v.abonado||0)).toFixed(2)}</small></div><div class="flex gap-1"><button onclick="enviarWS(${v.id})" class="bg-green-600 text-white p-2 rounded text-[8px] font-bold">WS</button><button onclick="abonarV(${v.id})" class="bg-blue-600 text-white p-2 rounded text-[8px] font-bold">ABONAR</button><button onclick="borrarV(${v.id})" class="bg-red-500 text-white p-2 rounded text-[8px] font-bold text-center">X</button></div></div>`).join("")}`;
     }
 
     if(window.view === "compras"){
         html = `<h2>COMPRAS Y STOCK</h2><div class="card bg-blue-50 border border-blue-200">
             <label>Material</label><select id="mCom">${Object.keys(window.state.inventario).map(p=>`<option value="${p}">${p}</option>`).join("")}</select>
-            <label>Metros/Cant</label><input id="qCom" type="number">
+            <label>Cargar Metros</label><input id="qCom" type="number">
             <label>Inversión $</label><input id="vCom" type="number">
-            <button onclick="regCom()" class="btn w-full bg-blue-700 mt-2 shadow-md">Cargar Compra</button></div>
-            <div class="grid grid-cols-2 gap-2 mt-4">${Object.entries(window.state.inventario).map(([n,i])=>`<div class="card !m-0 p-3 flex justify-between items-center"><b class="text-slate-800 text-xs uppercase">${n}</b><span class="text-blue-700 font-bold text-lg">${i.stock.toFixed(2)}</span></div>`).join("")}</div>`;
+            <button onclick="regCom()" class="btn w-full bg-blue-700 mt-2">Sumar Stock</button></div>
+            <div class="grid grid-cols-2 gap-2 mt-4">
+            ${Object.entries(window.state.inventario).map(([n,i])=>`<div class="card !m-0 p-3 flex justify-between items-center"><div><b class="text-slate-800 text-[10px] uppercase">${n}</b><br><span class="text-blue-700 font-bold text-lg">${i.stock.toFixed(2)}m</span></div><button onclick="editStock('${n}')" class="text-blue-500 font-bold text-xs p-2">EDITAR</button></div>`).join("")}
+            </div>`;
     }
 
     if(window.view === "gastos"){
-        html = `<h2>GASTOS</h2><div class="card"><label>Motivo</label><input id="gNom"><label>Monto $</label><input id="gMon" type="number"><button onclick="regG()" class="btn w-full bg-red-600 mt-2 shadow-md">Guardar Gasto</button></div>
-        ${window.state.gastos.slice().reverse().map(g=>`<div class="card flex justify-between py-3 border-l-4 border-red-300"><div><small class="text-slate-600 font-bold uppercase text-[9px]">${g.name}</small><br><b class="text-lg text-slate-900">$${g.amount}</b></div><button onclick="borrarG(${g.id})" class="text-red-500 font-black text-xs hover:text-red-700 transition">BORRAR</button></div>`).join("")}`;
+        html = `<h2>GASTOS</h2><div class="card"><label>Motivo</label><input id="gNom"><label>Monto $</label><input id="gMon" type="number"><button onclick="regG()" class="btn w-full bg-red-600 mt-2">Guardar Gasto</button></div>
+        ${window.state.gastos.slice().reverse().map(g=>`<div class="card flex justify-between py-2 border-l-4 border-red-300"><div><small class="uppercase text-[9px] font-bold">${g.name}</small><br><b>$${g.amount}</b></div><button onclick="borrarG(${g.id})" class="text-red-500 font-bold text-xs">BORRAR</button></div>`).join("")}`;
     }
 
     if(window.view === "config"){
-        html = `<h2>CATÁLOGO</h2><div class="card"><label>Nuevo Producto</label><input id="nP"><label>Costo $</label><input id="cP" type="number"><button onclick="addC('p')" class="btn bg-blue-600 mt-2 w-full shadow-md">Añadir Material</button></div>
-        <div class="card"><label>Nuevo Servicio</label><input id="nS"><button onclick="addC('s')" class="btn bg-purple-600 mt-2 w-full shadow-md">Añadir Servicio</button></div>`;
+        html = `<h2>CATÁLOGO</h2><div class="card"><label>Material Nuevo</label><input id="nP"><label>Costo $</label><input id="cP" type="number"><button onclick="addC('p')" class="btn bg-blue-600 mt-2 w-full">Añadir</button></div>
+        <div class="card"><label>Servicio Nuevo</label><input id="nS"><button onclick="addC('s')" class="btn bg-purple-600 mt-2 w-full">Añadir</button></div>`;
     }
 
     if(window.view === "reportes"){
         let vT = window.state.ventas.reduce((a,b)=>a+b.total,0), gT = window.state.gastos.reduce((a,b)=>a+b.amount,0);
-        html = `<h2>REPORTE</h2><div class="card bg-indigo-950 border border-indigo-700 text-white p-6 rounded-2xl">Ventas: $${vT.toFixed(2)}<br>Gastos: $${gT.toFixed(2)}<hr class="my-3 border-indigo-800"><b class="text-2xl text-purple-300 italic">Utilidad Neta: $${(vT-gT).toFixed(2)}</b></div>
+        html = `<h2>REPORTE</h2><div class="card bg-indigo-950 border border-indigo-700 text-white p-5">Ingresos: $${vT.toFixed(2)}<br>Egresos: $${gT.toFixed(2)}<hr class="my-2 border-indigo-800"><b class="text-xl text-purple-300">Utilidad: $${(vT-gT).toFixed(2)}</b></div>
         <div class="card mt-4"><h3>TOP CLIENTES</h3>${Object.entries(window.state.ventas.reduce((a,b)=>{a[b.cliente]=(a[b.cliente]||0)+b.total;return a;},{})).sort((a,b)=>b[1]-a[1]).map(([n,t])=>`<div class="flex justify-between border-b border-slate-100 py-2"><span>${n}</span><b>$${t.toFixed(2)}</b></div>`).join("")}</div>`;
     }
 
     app.innerHTML = html;
-    if(window.view === "ventas") {
-        if(document.getElementById('tCli')) document.getElementById('tCli').value = 'detal'; // Reset por defecto
-    }
+};
+
+window.editStock = async (nombre) => {
+    let nuevo = parseFloat(prompt(`Editar stock para ${nombre}:`, window.state.inventario[nombre].stock));
+    if(!isNaN(nuevo)) { window.state.inventario[nombre].stock = nuevo; await window.save(); render(); }
 };
 
 window.procesarV = async () => {
@@ -285,7 +166,7 @@ window.procesarV = async () => {
     carritoVenta.forEach(i => {
         if(i.esProd) {
             window.state.inventario[i.nombre].stock -= i.qty;
-            window.state.gastos.push({id:Date.now()+Math.random(), name:`COSTO: ${i.nombre}`, amount: window.state.inventario[i.nombre].costo * i.qty});
+            window.state.gastos.push({id:Date.now()+Math.random(), name:`COSTO: ${i.nombre}`, amount: (window.state.inventario[i.nombre].costo || 0) * i.qty});
         }
     });
     window.state.ventas.push({id:Date.now(), cliente:c.toUpperCase(), telefono:tel, total:total, abonado:0, pagado:false});
@@ -295,7 +176,7 @@ window.procesarV = async () => {
 window.enviarWS = (id) => {
     let v = window.state.ventas.find(x => x.id === id);
     if(v.telefono) window.open(`https://api.whatsapp.com/send?phone=${v.telefono}&text=Hola *${v.cliente}*, tienes un saldo de *$${(v.total-(v.abonado||0)).toFixed(2)}* en *GhostPrint* 👻.`, '_blank');
-    else alert("No hay teléfono registrado");
+    else alert("Sin teléfono");
 };
 
 window.regCom = async () => {
