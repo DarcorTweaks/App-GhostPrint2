@@ -69,10 +69,10 @@ let carritoVenta = [];
 onSnapshot(docRef, (snap) => {
     if (snap.exists()) { 
         window.state = snap.data();
-        if(!window.state.inventario) window.state.inventario = {};
-        if(!window.state.serviciosExtra) window.state.serviciosExtra = [];
-        if(!window.state.ventas) window.state.ventas = [];
-        if(!window.state.gastos) window.state.gastos = [];
+        window.state.inventario = window.state.inventario || {};
+        window.state.serviciosExtra = window.state.serviciosExtra || [];
+        window.state.ventas = window.state.ventas || [];
+        window.state.gastos = window.state.gastos || [];
         document.getElementById("sync-status").innerText = "Sincronizado ✓"; 
     }
     render();
@@ -104,8 +104,8 @@ window.render = function() {
             <label>Cliente</label><input id="cliV" placeholder="Nombre">
             <label>WhatsApp</label><input id="telV" type="number" placeholder="58...">
             <div class="grid grid-cols-2 gap-2">
-                <div><label>Productos</label><select id="pSel" onchange="document.getElementById('sSel').value=''"><option value="">-- Ver --</option>${Object.keys(window.state.inventario).map(p=>`<option value="${p}">${p}</option>`).join("")}</select></div>
-                <div><label>Servicios</label><select id="sSel" onchange="document.getElementById('pSel').value=''"><option value="">-- Ver --</option>${window.state.serviciosExtra.map(s=>`<option value="${s}">${s}</option>`).join("")}</select></div>
+                <div><label>Material</label><select id="pSel"><option value="">-- Ver --</option>${Object.keys(window.state.inventario).map(p=>`<option value="${p}">${p}</option>`).join("")}</select></div>
+                <div><label>Servicio</label><select id="sSel"><option value="">-- Ver --</option>${window.state.serviciosExtra.map(s=>`<option value="${s}">${s}</option>`).join("")}</select></div>
             </div>
             <label>Tarifa</label>
             <select id="tCli" onchange="document.getElementById('divLibre').style.display = (this.value==='libre'?'block':'none')">
@@ -177,7 +177,6 @@ window.render = function() {
     app.innerHTML = html;
 };
 
-// --- GRÁFICOS ---
 function initDashChart(v, g) {
     new Chart(document.getElementById('chartDash'), {
         type: 'bar',
@@ -196,22 +195,31 @@ function initPieChart() {
     });
 }
 
-// --- ACCIONES ---
 window.addItemCarrito = () => {
-    let p = document.getElementById("pSel").value, s = document.getElementById("sSel").value, t = document.getElementById("tCli").value;
-    let c = parseFloat(document.getElementById("cQty").value) || 0, item = p || s;
-    if(!item && t !== "libre") return alert("Selecciona item");
+    let p = document.getElementById("pSel").value;
+    let s = document.getElementById("sSel").value;
+    let t = document.getElementById("tCli").value;
+    let c = parseFloat(document.getElementById("cQty").value) || 0;
     
+    if(!p && !s && t !== "libre") return alert("Selecciona material o servicio");
+
+    let nombre = "";
+    if(p && s) nombre = `${p} + ${s}`;
+    else nombre = p || s || "VENTA MANUAL";
+
     let pre = 0;
     if(t === "libre"){
         pre = parseFloat(document.getElementById("pMan").value) || 0;
-        if(!item) item = "VENTA MANUAL";
     } else {
-        // CORRECCIÓN PRECIO: Si es material 9 o 10. Si es servicio 12.
-        pre = (p) ? (t === "mayor" ? 10 : 9) : 12;
+        // LÓGICA DE PRECIO: Si hay material manda el 9 o 10. Si solo es servicio manda 12.
+        if (p) {
+            pre = (t === "mayor") ? 10 : 9;
+        } else {
+            pre = 12; // Solo servicio
+        }
     }
 
-    carritoVenta.push({ nombre: item, qty: c, sub: c * pre, esProd: !!window.state.inventario[item] });
+    carritoVenta.push({ nombre: nombre.toUpperCase(), qty: c, sub: c * pre, esProd: !!p, prodKey: p });
     render();
 };
 
@@ -219,8 +227,8 @@ window.procesarV = async () => {
     let c = document.getElementById("cliV").value, tel = document.getElementById("telV").value;
     if(!c || carritoVenta.length === 0) return alert("Error en datos");
     let total = carritoVenta.reduce((a,b)=>a+b.sub, 0);
-    // Descontar Stock
-    carritoVenta.forEach(i => { if(i.esProd) window.state.inventario[i.nombre].stock -= i.qty; });
+    // Descontar Stock solo si es producto
+    carritoVenta.forEach(i => { if(i.esProd && i.prodKey) window.state.inventario[i.prodKey].stock -= i.qty; });
     window.state.ventas.push({id:Date.now(), cliente:c.toUpperCase(), telefono:tel, total:total, abonado:0, pagado:false, items: [...carritoVenta]});
     carritoVenta = []; await window.save(); setView('cobranzas');
 };
