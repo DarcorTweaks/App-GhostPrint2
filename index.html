@@ -365,16 +365,24 @@
         const nCant = parseFloat(prompt(`EDITAR COMPRA DE ${c.m}\nNueva Cantidad (ML):`, c.c));
         if(isNaN(nCant)) return;
         
-        const nCosto = parseFloat(prompt(`Nuevo Costo por ML ($):`, c.co));
+        const nCosto = parseFloat(prompt(`Nuevo Costo de COMPRA por ML ($):`, c.co));
         if(isNaN(nCosto)) return;
+
+        // NUEVO: Editar precios de venta también en la compra por si hubo error
+        const nVentaM2 = parseFloat(prompt(`Nuevo Precio VENTA M2 ($) para ${c.m}:`, window.state.inventario[c.m].precioM2));
+        const nVentaML = parseFloat(prompt(`Nuevo Precio VENTA ML ($) para ${c.m}:`, window.state.inventario[c.m].precioML));
 
         // Actualizar stock basándonos en la diferencia
         if (window.state.inventario[c.m]) {
             const diferencia = nCant - c.c;
             window.state.inventario[c.m].stock += diferencia;
+            
+            // Actualizar precios de venta en el inventario global
+            if(!isNaN(nVentaM2)) window.state.inventario[c.m].precioM2 = nVentaM2;
+            if(!isNaN(nVentaML)) window.state.inventario[c.m].precioML = nVentaML;
         }
         
-        // Actualizar registro
+        // Actualizar registro de la compra
         window.state.compras[idx].c = nCant;
         window.state.compras[idx].co = nCosto;
         
