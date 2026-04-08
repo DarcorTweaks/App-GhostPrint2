@@ -3,43 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GhostPrint ERP v3 - Ink Final Solution</title>
+    <title>GhostPrint ERP v3 - Auto Ink Connector</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body {
-            background-color: #0d0d1a;
-            background-image: radial-gradient(at 10% 10%, rgba(109, 40, 217, 0.2) 0px, transparent 50%), radial-gradient(at 90% 90%, rgba(79, 70, 229, 0.15) 0px, transparent 50%);
-            background-attachment: fixed; background-size: cover;
-            font-family: ui-sans-serif, system-ui; color: #e2e8f0; padding-bottom: 96px;
-        }
-        .btn { background: #6d28d9; color: white; padding: 10px 14px; border-radius: 12px; cursor: pointer; font-weight: 700; border: none; transition: 0.2s; text-transform: uppercase; font-size: 10px; }
-        .card { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(5px); padding: 20px; margin: 12px 0; border-radius: 20px; color: #1e293b; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
-        input, select { border: 1px solid #e2e8f0; padding: 12px; margin: 8px 0; border-radius: 12px; width: 100%; background: #f8fafc; color: #1e293b; font-weight: 600; }
-        label { font-size: 10px; color: #64748b; font-weight: 800; text-transform: uppercase; display: block; margin-top: 8px; }
-        header { background: linear-gradient(to right, #4c1d95, #000); color: white; padding: 16px; display: flex; justify-content: space-between; position: sticky; top: 0; z-index: 50; }
-        nav { padding: 8px; display: flex; gap: 8px; overflow-x: auto; background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px); position: sticky; top: 72px; z-index: 40; }
+        body { background-color: #0d0d1a; color: #e2e8f0; font-family: sans-serif; padding-bottom: 100px; }
+        .btn { background: #6d28d9; color: white; padding: 12px; border-radius: 12px; font-weight: bold; cursor: pointer; text-transform: uppercase; font-size: 11px; border: none; }
+        .card { background: white; padding: 20px; margin: 15px 0; border-radius: 20px; color: #1e293b; box-shadow: 0 10px 20px rgba(0,0,0,0.2); }
+        input, select { border: 1px solid #cbd5e1; padding: 12px; margin: 8px 0; border-radius: 10px; width: 100%; background: #f1f5f9; color: #1e293b; font-weight: bold; }
+        label { font-size: 10px; color: #64748b; font-weight: 800; text-transform: uppercase; }
+        header { background: #4c1d95; color: white; padding: 20px; text-align: center; }
+        nav { display: flex; gap: 10px; padding: 10px; overflow-x: auto; background: #1e1e38; position: sticky; top: 0; z-index: 100; }
     </style>
 </head>
 <body>
 
 <header>
-    <div>
-        <h1 class="text-2xl font-black italic uppercase">GhostPrint ERP</h1>
-        <p id="sync-status" class="text-[9px] font-bold text-amber-300 uppercase">Sincronizando...</p>
-    </div>
+    <h1 class="text-xl font-black italic">GHOSTPRINT ERP</h1>
+    <p id="sync-status" class="text-[10px] text-amber-400">CARGANDO SISTEMA...</p>
 </header>
 
 <nav>
-    <button onclick="setView('dashboard')" class="btn">🏠 Inicio</button>
     <button onclick="setView('ventas')" class="btn !bg-green-600">💵 Vender</button>
+    <button onclick="setView('compras')" class="btn !bg-blue-600">📦 Stock</button>
     <button onclick="setView('cobranzas')" class="btn !bg-amber-500">⏳ Cobros</button>
-    <button onclick="setView('compras')" class="btn !bg-blue-600">📦 Almacén</button>
-    <button onclick="setView('gastos')" class="btn !bg-red-600">📉 Gastos</button>
-    <button onclick="setView('config')" class="btn !bg-slate-700">⚙️ Catálogo</button>
+    <button onclick="setView('config')" class="btn !bg-slate-700">⚙️ Config</button>
 </nav>
 
-<div id="app" class="p-4 max-w-4xl mx-auto"></div>
+<div id="app" class="p-4 max-w-lg mx-auto"></div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
@@ -58,19 +48,16 @@ const appF = initializeApp(firebaseConfig);
 const db = getFirestore(appF);
 const docRef = doc(db, "sistema", "datos_principales");
 
-window.state = { ventas: [], gastos: [], inventario: {}, serviciosExtra: [] };
-window.view = "dashboard";
-let carritoVenta = [];
+window.state = { ventas: [], inventario: {}, serviciosExtra: [] };
+window.view = "ventas";
+let carrito = [];
 
 onSnapshot(docRef, (snap) => {
     if (snap.exists()) { 
         window.state = snap.data();
-        window.state.inventario = window.state.inventario || {};
-        window.state.ventas = window.state.ventas || [];
-        window.state.gastos = window.state.gastos || [];
-        document.getElementById("sync-status").innerText = "Sincronizado ✓"; 
+        document.getElementById("sync-status").innerText = "SINCRO OK ✓"; 
+        render();
     }
-    render();
 });
 
 window.save = async () => { await setDoc(docRef, window.state); };
@@ -78,168 +65,125 @@ window.setView = (v) => { window.view = v; render(); };
 
 window.render = function() {
     let app = document.getElementById("app"), html = "";
-    if(!app) return;
-
-    if(window.view === "dashboard"){
-        let vT = window.state.ventas.reduce((a,b)=>a+b.total,0);
-        let gT = window.state.gastos.reduce((a,b)=>a+b.amount,0);
-        html = `<div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
-            <div class="card !m-0 bg-green-50 border-b-4 border-green-500 text-center font-bold">VENTAS: $${vT.toFixed(2)}</div>
-            <div class="card !m-0 bg-red-50 border-b-4 border-red-500 text-center font-bold">GASTOS: $${gT.toFixed(2)}</div>
-            <div class="card !m-0 bg-slate-900 text-white italic text-center text-purple-400">NETO: $${(vT-gT).toFixed(2)}</div>
-        </div>`;
-    }
-
+    
     if(window.view === "ventas"){
-        html = `<div class="card"><h2 class="font-black mb-4 uppercase text-purple-700">Punto de Venta</h2>
+        html = `<div class="card">
+            <h2 class="font-bold uppercase text-purple-800">Nueva Impresión</h2>
             <label>Cliente</label><input id="cliV" placeholder="NOMBRE">
-            <label>WhatsApp</label><input id="telV" type="number" placeholder="58...">
-            <div class="grid grid-cols-2 gap-2">
-                <div><label>Material</label><select id="pSel"><option value="">-- Ver --</option>${Object.keys(window.state.inventario).map(p=>`<option value="${p}">${p}</option>`).join("")}</select></div>
-                <div><label>Servicio</label><select id="sSel"><option value="">-- Ver --</option>${(window.state.serviciosExtra || []).map(s=>`<option value="${s}">${s}</option>`).join("")}</select></div>
-            </div>
-            <label>Tarifa</label>
-            <select id="tCli"><option value="detal">Detal ($9)</option><option value="mayor">Mayor ($10)</option></select>
+            <label>Material</label>
+            <select id="pSel">
+                <option value="">-- SELECCIONA MATERIAL --</option>
+                ${Object.keys(window.state.inventario).map(p=>`<option value="${p}">${p}</option>`).join("")}
+            </select>
             <label>Cantidad (Metros)</label><input id="cQty" type="number" value="1">
-            <button onclick="addItemCarrito()" class="btn w-full !bg-blue-600 mt-2">+ AGREGAR</button>
-            <div id="listaCarrito" class="mt-4 border-t pt-2"></div>
-            <div id="totalVenta" class="p-3 bg-slate-800 text-white text-center font-bold mt-2 rounded-xl text-xl uppercase italic">Total: $0.00</div>
-            <button onclick="procesarV()" class="btn w-full bg-green-600 mt-4 py-4 font-black">FINALIZAR VENTA</button></div>`;
-        setTimeout(() => renderCarritoInner(), 10);
-    }
-
-    if(window.view === "cobranzas"){
-        html = `${window.state.ventas.filter(v=>!v.pagado).reverse().map(v=>`
-            <div class="card flex justify-between items-center border-l-4 border-amber-500">
-                <div><b class="uppercase">${v.cliente}</b><br><small class="text-red-600 font-bold italic">Debe: $${(v.total-(v.abonado||0)).toFixed(2)}</small></div>
-                <div class="flex gap-1">
-                    <button onclick="enviarWS(${v.id})" class="bg-green-600 text-white p-2 rounded text-[8px] font-bold">WS</button>
-                    <button onclick="abonarV(${v.id})" class="bg-blue-600 text-white p-2 rounded text-[8px] font-bold uppercase">Abono</button>
-                    <button onclick="borrarV(${v.id})" class="bg-red-500 text-white p-2 rounded text-[8px] font-bold uppercase">Anular</button>
-                </div>
-            </div>`).join("")}`;
+            <button onclick="addCart()" class="btn w-full mt-2">+ AÑADIR</button>
+            <div id="lista" class="mt-4 border-t pt-2 text-sm"></div>
+            <div id="total" class="font-bold text-xl mt-2 text-center text-slate-800">TOTAL: $0.00</div>
+            <button onclick="finalizarVenta()" class="btn w-full !bg-green-600 mt-4 py-4">FINALIZAR Y DESCONTAR TINTA</button>
+        </div>`;
+        setTimeout(() => updateCartUI(), 10);
     }
 
     if(window.view === "compras"){
-        html = `<div class="card bg-blue-50">
-            <label>Material / Tinta</label><select id="mCom">${Object.keys(window.state.inventario).map(p=>`<option value="${p}">${p}</option>`).join("")}</select>
-            <label>Cantidad</label><input id="qCom" type="number"><label>Costo $</label><input id="vCom" type="number">
-            <button onclick="regCom()" class="btn w-full bg-blue-700 mt-2">Cargar Inventario</button>
-        </div>
-        <div class="grid grid-cols-2 gap-2 mt-4">
+        html = `<div class="card">
+            <h2 class="font-bold uppercase text-blue-800">Almacén Actual</h2>
             ${Object.entries(window.state.inventario).map(([n,i])=>`
-            <div class="card !m-0 p-3 flex justify-between items-center border-b-2 border-blue-200">
-                <div><b class="text-[9px] uppercase">${n}</b><br><span class="text-blue-700 font-bold text-lg">${(i.stock || 0).toFixed(2)}</span></div>
-                <button onclick="editStock('${n}')" class="text-blue-500 font-bold text-[9px]">EDIT</button>
+            <div class="flex justify-between items-center py-2 border-b">
+                <span class="font-bold uppercase">${n}</span>
+                <span class="text-blue-600 font-black">${(i.stock || 0).toFixed(2)}</span>
             </div>`).join("")}
+            <hr class="my-4">
+            <label>Añadir Stock a:</label>
+            <select id="mCom">${Object.keys(window.state.inventario).map(p=>`<option value="${p}">${p}</option>`).join("")}</select>
+            <input id="qCom" type="number" placeholder="Cantidad">
+            <button onclick="cargarStock()" class="btn w-full !bg-blue-800">Cargar</button>
         </div>`;
     }
 
     if(window.view === "config"){
         html = `<div class="card">
-            <label>Nombre Material (Ej: VINIL)</label><input id="nP">
-            <button onclick="addC('p')" class="btn bg-blue-600 mt-2 w-full uppercase">Crear</button>
-            <p class="text-[10px] mt-2 text-gray-500">* Crea un ítem llamado "TINTA" para que se descuente solo.</p>
+            <label>Nombre Nuevo Material</label><input id="nP">
+            <button onclick="crearProd()" class="btn w-full">Crear Material</button>
+            <p class="text-[10px] mt-4 text-gray-500">Nota: Crea uno llamado "TINTA" para control automático.</p>
         </div>`;
+    }
+
+    if(window.view === "cobranzas"){
+        html = window.state.ventas.slice(-10).reverse().map(v=>`
+        <div class="card !py-2 flex justify-between items-center">
+            <span class="font-bold">${v.cliente}</span>
+            <span class="font-bold text-green-600">$${v.total.toFixed(2)}</span>
+            <button onclick="borrarV(${v.id})" class="text-red-500 font-bold">X</button>
+        </div>`).join("");
     }
 
     app.innerHTML = html;
 };
 
-function renderCarritoInner() {
-    let div = document.getElementById("listaCarrito"), totalDiv = document.getElementById("totalVenta");
-    if(!div) return;
-    div.innerHTML = carritoVenta.map((v,i)=>`<div class="flex justify-between py-1 text-xs border-b"><span><b>${v.qty}x</b> ${v.nombre}</span><button onclick="removeItemCarrito(${i})" class="text-red-500 font-bold px-2">X</button></div>`).join("");
-    totalDiv.innerText = `TOTAL: $${carritoVenta.reduce((a,b)=>a+b.sub,0).toFixed(2)}`;
-}
-
-window.addItemCarrito = () => {
-    let p = document.getElementById("pSel").value, s = document.getElementById("sSel").value, t = document.getElementById("tCli").value, c = parseFloat(document.getElementById("cQty").value) || 0;
-    if(!p && !s) return;
-    let nombre = (p && s) ? `${p} + ${s}` : (p || s);
-    let pre = p ? (t === "mayor" ? 10 : 9) : 12;
-    carritoVenta.push({ nombre: nombre.toUpperCase(), qty: c, sub: c * pre, esProd: !!p, prodKey: p });
-    renderCarritoInner();
+window.addCart = () => {
+    let p = document.getElementById("pSel").value, q = parseFloat(document.getElementById("cQty").value);
+    if(!p || q <= 0) return;
+    carrito.push({ nombre: p, qty: q, precio: 10, sub: q * 10 });
+    updateCartUI();
 };
 
-window.removeItemCarrito = (i) => { carritoVenta.splice(i, 1); renderCarritoInner(); };
+function updateCartUI() {
+    let l = document.getElementById("lista");
+    if(!l) return;
+    l.innerHTML = carrito.map((i, idx)=>`<div>${i.qty}m - ${i.nombre} <button onclick="carrito.splice(${idx},1);updateCartUI();" class="text-red-500 font-bold">X</button></div>`).join("");
+    document.getElementById("total").innerText = "TOTAL: $" + carrito.reduce((a,b)=>a+b.sub,0).toFixed(2);
+}
 
-// --- LÓGICA DE VENTA CORREGIDA ---
-window.procesarV = async () => {
-    let cliente = document.getElementById("cliV").value.toUpperCase();
-    let tel = document.getElementById("telV").value;
-    if(!cliente || carritoVenta.length === 0) return alert("Falta Datos");
+window.finalizarVenta = async () => {
+    let cli = document.getElementById("cliV").value.toUpperCase();
+    if(!cli || carrito.length === 0) return alert("Falta cliente o material");
 
-    // BUSCADOR DE TINTA MEJORADO
-    let inventarioKeys = Object.keys(window.state.inventario);
-    let keyTinta = inventarioKeys.find(k => k.toUpperCase().trim() === "TINTA");
-
-    if(!keyTinta) {
-        alert("⚠️ ATENCIÓN: No existe el producto 'TINTA' en tu almacén. El material se descontará, pero la tinta no.");
+    // 1. Asegurar que existe el ítem TINTA en el inventario
+    if(!window.state.inventario["TINTA"]) {
+        window.state.inventario["TINTA"] = { stock: 0 };
     }
 
-    carritoVenta.forEach(i => {
-        if (i.esProd && i.prodKey && window.state.inventario[i.prodKey]) {
-            // 1. Resta el material seleccionado
-            window.state.inventario[i.prodKey].stock -= i.qty;
-
-            // 2. Resta la tinta AUTOMÁTICAMENTE (Si el material no es tinta)
-            if (keyTinta && i.prodKey.toUpperCase().trim() !== "TINTA") {
-                window.state.inventario[keyTinta].stock -= i.qty;
-                console.log(`Descontando ${i.qty} de tinta por venta de ${i.prodKey}`);
-            }
+    // 2. Procesar descuento de material Y tinta
+    carrito.forEach(item => {
+        // Restar material
+        if(window.state.inventario[item.nombre]) {
+            window.state.inventario[item.nombre].stock -= item.qty;
+        }
+        
+        // REGLA DE ORO: Si el material no es tinta, descontar de TINTA automáticamente
+        if(item.nombre !== "TINTA") {
+            window.state.inventario["TINTA"].stock -= item.qty; 
         }
     });
 
-    let total = carritoVenta.reduce((a,b)=>a+b.sub, 0);
-    window.state.ventas.push({id:Date.now(), cliente, telefono:tel, total, abonado:0, pagado:false, items: [...carritoVenta]});
-    
-    await window.save(); 
-    carritoVenta = [];
-    alert("Venta procesada con éxito.");
-    setView('cobranzas');
+    window.state.ventas.push({ id: Date.now(), cliente: cli, total: carrito.reduce((a,b)=>a+b.sub,0), items: [...carrito] });
+    await window.save();
+    carrito = [];
+    alert("Venta procesada. ¡Tinta descontada automáticamente!");
+    setView('compras');
 };
 
-// --- LÓGICA DE RECUPERACIÓN ---
 window.borrarV = async (id) => {
-    if(confirm("¿Anular venta y devolver stock?")){
-        let vIndex = window.state.ventas.findIndex(x => x.id === id);
-        let venta = window.state.ventas[vIndex];
-        let keyTinta = Object.keys(window.state.inventario).find(k => k.toUpperCase().trim() === "TINTA");
-
-        venta.items.forEach(i => {
-            if (i.esProd && i.prodKey && window.state.inventario[i.prodKey]) {
-                window.state.inventario[i.prodKey].stock += i.qty;
-                if (keyTinta && i.prodKey.toUpperCase().trim() !== "TINTA") {
-                    window.state.inventario[keyTinta].stock += i.qty;
-                }
-            }
-        });
-
-        window.state.ventas.splice(vIndex, 1);
-        await window.save();
-        render();
-    }
+    let idx = window.state.ventas.findIndex(v => v.id === id);
+    let v = window.state.ventas[idx];
+    v.items.forEach(i => {
+        if(window.state.inventario[i.nombre]) window.state.inventario[i.nombre].stock += i.qty;
+        if(i.nombre !== "TINTA") window.state.inventario["TINTA"].stock += i.qty;
+    });
+    window.state.ventas.splice(idx,1);
+    await window.save();
+    render();
 };
 
-window.enviarWS = (id) => {
-    let v = window.state.ventas.find(x => x.id === id);
-    let msg = `Hola ${v.cliente}, tu resta es: *$${(v.total-(v.abonado||0)).toFixed(2)}*.`;
-    window.open(`https://api.whatsapp.com/send?phone=${v.telefono}&text=${encodeURIComponent(msg)}`, '_blank');
+window.cargarStock = async () => {
+    let m = document.getElementById("mCom").value, q = parseFloat(document.getElementById("qCom").value);
+    if(m && q) { window.state.inventario[m].stock += q; await window.save(); render(); }
 };
-window.abonarV = async (id) => {
-    let v = window.state.ventas.find(x=>x.id===id), m = parseFloat(prompt("¿Monto?"));
-    if(m){ v.abonado += m; if(v.abonado >= v.total) v.pagado = true; await window.save(); render(); }
+
+window.crearProd = async () => {
+    let n = document.getElementById("nP").value.toUpperCase();
+    if(n) { window.state.inventario[n] = { stock: 0 }; await window.save(); render(); }
 };
-window.regCom = async () => {
-    let m = document.getElementById("mCom").value, q = parseFloat(document.getElementById("qCom").value), v = parseFloat(document.getElementById("vCom").value);
-    if(q > 0) { window.state.inventario[m].stock += q; window.state.gastos.push({id:Date.now(), name:`COMPRA: ${m}`, amount: v}); await window.save(); render(); }
-};
-window.addC = async (t) => {
-    let n = document.getElementById("nP").value.toUpperCase().trim();
-    if(n) { window.state.inventario[n] = {stock: 0, costo: 0}; await window.save(); render(); }
-};
-window.editStock = async (n) => { let v = parseFloat(prompt(`Ajustar ${n}:`, window.state.inventario[n].stock)); if(!isNaN(v)){ window.state.inventario[n].stock = v; await window.save(); render(); } };
 
 render();
 </script>
