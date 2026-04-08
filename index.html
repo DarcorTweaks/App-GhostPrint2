@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GhostPrint ERP v11.3 - REPARACIÓN TOTAL</title>
+    <title>GhostPrint ERP v11.4 - CONTROL TOTAL</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -14,11 +14,12 @@
         .card { background: white; padding: 18px; margin: 12px 0; border-radius: 20px; color: #1e293b; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
         input, select { border: 2px solid #e2e8f0; padding: 10px; margin: 5px 0; border-radius: 10px; width: 100%; font-weight: 700; color: #0f172a; background: #f8fafc; }
         label { font-size: 9px; font-weight: 900; color: #64748b; text-transform: uppercase; margin-left: 4px; display: block; }
+        .del-btn { color: #ef4444; font-weight: 900; padding: 0 8px; cursor: pointer; }
     </style>
 </head>
 <body>
 
-<header><h1 class="text-xl font-black italic text-purple-400">GHOSTPRINT v11.3</h1></header>
+<header><h1 class="text-xl font-black italic text-purple-400">GHOSTPRINT v11.4</h1></header>
 
 <nav>
     <button onclick="setView('dashboard')" class="btn">🏠 Inicio</button>
@@ -51,14 +52,11 @@ const docRef = doc(db, "sistema", "datos_principales");
 
 window.state = { ventas: [], gastos: [], inventario: {}, serviciosExtra: [], comprasInversion: [] };
 window.view = "dashboard";
-let carritoVenta = [];
 let fHoy = new Date().toLocaleDateString('en-CA');
 
-// FUNCIÓN DE FILTRO ULTRA-REPARADA (No falla con horas ni formatos)
 const esMismoDia = (id, target) => {
     if(!id) return false;
-    let fecha = new Date(id).toLocaleDateString('en-CA');
-    return fecha === target;
+    return new Date(id).toLocaleDateString('en-CA') === target;
 };
 
 window.save = async () => { await setDoc(docRef, window.state); };
@@ -92,16 +90,15 @@ window.render = function() {
         let tG = gH.reduce((a,b)=>a+(b.amount||0),0);
         let tI = iH.reduce((a,b)=>a+(b.amount||0),0);
 
-        html = `<div class="card !bg-slate-900 text-white text-center border-l-8 border-purple-500 shadow-2xl">
-            <p class="text-[10px] uppercase text-purple-400 font-bold">BALANCE DISPONIBLE HOY</p>
+        html = `<div class="card !bg-slate-900 text-white text-center border-l-8 border-purple-500">
+            <p class="text-[10px] uppercase text-purple-400 font-bold">CAJA DEL DÍA</p>
             <h2 class="text-4xl font-black italic">$${(tV - tG - tI).toFixed(2)}</h2>
-            <div class="grid grid-cols-3 gap-1 mt-3 text-[8px] font-black uppercase italic">
-                <div class="bg-green-900/30 p-1 rounded text-green-400">Ventas<br>$${tV.toFixed(2)}</div>
-                <div class="bg-red-900/30 p-1 rounded text-red-400">Gastos<br>$${tG.toFixed(2)}</div>
-                <div class="bg-blue-900/30 p-1 rounded text-blue-400">Compras<br>$${tI.toFixed(2)}</div>
+            <div class="grid grid-cols-3 gap-1 mt-3 text-[8px] font-black uppercase">
+                <div class="text-green-400">Ventas: $${tV.toFixed(2)}</div>
+                <div class="text-red-400">Gastos: $${tG.toFixed(2)}</div>
+                <div class="text-blue-400">Compras: $${tI.toFixed(2)}</div>
             </div>
-        </div><div class="card"><canvas id="gD" height="160"></canvas></div>`;
-        
+        </div><div class="card"><canvas id="gD" height="150"></canvas></div>`;
         setTimeout(() => {
             const ctx = document.getElementById('gD');
             if(ctx) new Chart(ctx, {
@@ -112,75 +109,77 @@ window.render = function() {
         }, 50);
     }
 
+    if(window.view === "gastos"){
+        html = `<div class="card"><h2 class="font-black text-red-600 border-b mb-2 uppercase">Registrar Gasto</h2>
+            <input type="date" id="fG" value="${fHoy}">
+            <input id="gN" placeholder="Concepto del gasto">
+            <input id="gM" type="number" placeholder="Monto $">
+            <button onclick="saveG()" class="btn w-full !bg-red-600 mt-2 font-black py-3">GUARDAR GASTO</button></div>`;
+    }
+
+    if(window.view === "reportes"){
+        html = `<div class="card bg-slate-900"><input type="date" id="fR" value="${fHoy}" onchange="detRep(this.value)"></div><div id="aR"></div>`;
+        setTimeout(() => detRep(fHoy), 10);
+    }
+
+    // El resto de vistas se mantienen igual (Ventas, Compras, etc) pero con la lógica de guardado de fHoy
     if(window.view === "ventas"){
-        html = `<div class="card"><h2 class="font-black uppercase text-purple-600 border-b mb-2">Nueva Venta</h2>
+        html = `<div class="card"><h2 class="font-black uppercase text-purple-600 border-b mb-2 italic">Nueva Venta</h2>
             <input type="date" id="fV" value="${fHoy}">
-            <div class="grid grid-cols-2 gap-2"><input id="cli" placeholder="CLIENTE"><input id="tel" type="number" placeholder="WHATSAPP"></div>
+            <input id="cli" placeholder="CLIENTE">
             <div class="grid grid-cols-2 gap-2 mt-2">
                 <select id="pS"><option value="">- Material -</option>${Object.keys(window.state.inventario).map(p=>`<option value="${p}">${p}</option>`).join("")}</select>
                 <select id="sS"><option value="">- Servicio -</option>${window.state.serviciosExtra.map(s=>`<option value="${s}">${s}</option>`).join("")}</select>
             </div>
             <select id="tC" onchange="document.getElementById('pL').classList.toggle('hidden', this.value!=='libre')"><option value="detal">DETAL ($9)</option><option value="mayor">MAYOR ($10)</option><option value="libre">PRECIO LIBRE</option></select>
-            <input id="pL" class="hidden" type="number" placeholder="Indique Precio $">
-            <div class="flex gap-2"><input id="q" type="number" value="1" step="0.01"><button onclick="addI()" class="btn !bg-blue-600 w-full">+ AGREGAR</button></div>
-            <div id="lC" class="mt-4 border-t pt-2"></div><div id="tV" class="bg-slate-800 text-white p-4 text-center text-3xl font-black rounded-xl mt-3 italic">TOTAL: $0.00</div>
-            <button onclick="saveV()" class="btn w-full !bg-green-600 py-4 mt-3 font-black">REGISTRAR VENTA</button></div>`;
-    }
-
-    if(window.view === "reportes"){
-        html = `<div class="card bg-slate-900 border-b-4 border-indigo-500"><label class="text-white">FECHA DE REPORTE:</label><input type="date" id="fR" value="${fHoy}" onchange="detRep(this.value)"></div><div id="aR"></div>`;
-        setTimeout(() => detRep(fHoy), 10);
+            <input id="pL" class="hidden" type="number" placeholder="Precio $">
+            <div class="flex gap-2"><input id="q" type="number" value="1" step="0.1"><button onclick="addI()" class="btn !bg-blue-600 w-full">+ ADD</button></div>
+            <div id="lC" class="mt-4 border-t pt-2 text-[10px]"></div><div id="tV" class="bg-slate-800 text-white p-3 text-center text-2xl font-black rounded-xl mt-2 italic">TOTAL: $0.00</div>
+            <button onclick="saveV()" class="btn w-full !bg-green-600 py-4 mt-2 font-black">GUARDAR VENTA</button></div>`;
     }
 
     if(window.view === "compras"){
-        html = `<div class="card"><h2 class="font-black text-blue-600 uppercase border-b mb-2">Inversión / Compras</h2>
+        html = `<div class="card"><h2 class="font-black text-blue-600 uppercase border-b mb-2">Inversión</h2>
             <input type="date" id="fC" value="${fHoy}">
             <select id="mC">${Object.keys(window.state.inventario).map(p=>`<option value="${p}">${p}</option>`).join("")}</select>
-            <div class="grid grid-cols-2 gap-2"><input id="qC" type="number" placeholder="Cant. Metros" oninput="upC()"><input id="pM" type="number" placeholder="$/Metro" oninput="upC()"></div>
-            <div class="bg-blue-50 p-3 rounded text-center my-2 font-black text-blue-800" id="resC">Total Compra: $0.00</div>
-            <button onclick="saveC()" class="btn w-full !bg-blue-700 py-3 font-black">GUARDAR COMPRA</button></div>
-            <div class="grid grid-cols-2 gap-2">${Object.entries(window.state.inventario).map(([n, i])=>`<div class="bg-white p-3 rounded-xl border-b-4 border-blue-500 text-center"><b class="text-[9px] uppercase">${n}</b><br><span class="text-xl font-black text-blue-700">${(i.stock || 0).toFixed(2)}m</span><br><button onclick="adjStock('${n}')" class="text-blue-500 text-[10px] font-bold underline">AJUSTAR</button></div>`).join("")}</div>`;
-    }
-
-    if(window.view === "gastos"){
-        html = `<div class="card"><h2 class="font-black text-red-600 border-b mb-2">Registrar Gasto</h2><input type="date" id="fG" value="${fHoy}"><input id="gN" placeholder="¿En qué se gastó?"><input id="gM" type="number" placeholder="Monto $"><button onclick="saveG()" class="btn w-full !bg-red-600 mt-2 font-black py-3">GUARDAR GASTO</button></div>`;
+            <div class="grid grid-cols-2 gap-2"><input id="qC" type="number" placeholder="Metros" oninput="upC()"><input id="pM" type="number" placeholder="$/m" oninput="upC()"></div>
+            <div class="bg-blue-50 p-2 text-center my-2 font-black text-blue-800" id="resC">$0.00</div>
+            <button onclick="saveC()" class="btn w-full !bg-blue-700 font-bold">REGISTRAR COMPRA</button></div>
+            <div class="grid grid-cols-2 gap-2">${Object.entries(window.state.inventario).map(([n, i])=>`<div class="bg-white p-3 rounded-xl border text-center"><b class="text-[9px] uppercase">${n}</b><br><span class="text-xl font-black text-blue-700">${(i.stock || 0).toFixed(2)}</span><br><button onclick="adjStock('${n}')" class="text-blue-500 text-[9px] font-bold underline">AJUSTAR</button></div>`).join("")}</div>`;
     }
 
     if(window.view === "config"){
-        html = `<div class="card"><h2 class="font-black border-b mb-4 uppercase">Gestión de Catálogo</h2>
-            <label>Nuevo Material</label><div class="flex gap-2"><input id="nP" placeholder="EJ: LONA"><button onclick="cat('p')" class="btn">AÑADIR</button></div>
-            <label class="mt-4">Nuevo Servicio</label><div class="flex gap-2"><input id="nS" placeholder="EJ: DISEÑO"><button onclick="cat('s')" class="btn !bg-purple-600">AÑADIR</button></div></div>
+        html = `<div class="card"><h2 class="font-black border-b mb-4 uppercase">Catálogo</h2>
+            <div class="flex gap-2"><input id="nP" placeholder="MATERIAL"><button onclick="cat('p')" class="btn">ADD</button></div>
+            <div class="flex gap-2 mt-2"><input id="nS" placeholder="SERVICIO"><button onclick="cat('s')" class="btn !bg-purple-600">ADD</button></div></div>
             <div class="grid grid-cols-2 gap-2">
-                <div class="card"><b>MATERIALES</b>${Object.keys(window.state.inventario).map(n=>`<div class="flex justify-between py-1 border-b text-[10px]"><span>${n}</span><button onclick="delCat('p','${n}')" class="text-red-500 font-bold px-2">X</button></div>`).join("")}</div>
-                <div class="card"><b>SERVICIOS</b>${window.state.serviciosExtra.map((s,i)=>`<div class="flex justify-between py-1 border-b text-[10px]"><span>${s}</span><button onclick="delCat('s',${i})" class="text-red-500 font-bold px-2">X</button></div>`).join("")}</div>
+                <div class="card"><b>MATERIALES</b>${Object.keys(window.state.inventario).map(n=>`<div class="flex justify-between py-1 border-b text-xs"><span>${n}</span><button onclick="delCat('p','${n}')" class="text-red-500 font-bold px-2">X</button></div>`).join("")}</div>
+                <div class="card"><b>SERVICIOS</b>${window.state.serviciosExtra.map((s,i)=>`<div class="flex justify-between py-1 border-b text-xs"><span>${s}</span><button onclick="delCat('s',${i})" class="text-red-500 font-bold px-2">X</button></div>`).join("")}</div>
             </div>`;
     }
 
     if(window.view === "cobranzas"){
-        html = window.state.ventas.filter(v=>!v.pagado).map(v=>`<div class="card flex justify-between items-center border-l-8 border-amber-500 shadow-md"><div><b class="text-xs">${v.cliente}</b><br><small class="text-red-600 font-black">DEUDA: $${((v.total||0)-(v.abonado||0)).toFixed(2)}</small></div><div class="flex gap-1"><button onclick="ws(${v.id})" class="btn !bg-green-600">WS</button><button onclick="abono(${v.id})" class="btn !bg-blue-600">ABONAR</button></div></div>`).join("") || '<p class="text-center py-10 opacity-50 font-bold">No hay cuentas pendientes.</p>';
+        html = window.state.ventas.filter(v=>!v.pagado).map(v=>`<div class="card flex justify-between items-center border-l-4 border-amber-500"><div><b class="text-xs">${v.cliente}</b><br><small class="text-red-600 font-bold">Debe: $${((v.total||0)-(v.abonado||0)).toFixed(2)}</small></div><div class="flex gap-1"><button onclick="ws(${v.id})" class="btn !bg-green-600">WS</button><button onclick="abono(${v.id})" class="btn !bg-blue-600">ABONAR</button></div></div>`).join("") || '<p class="text-center py-10 opacity-50 font-bold">Sin deudas.</p>';
     }
 
     app.innerHTML = html;
 };
 
-// --- LOGICA REPARADA ---
-window.upC = () => { document.getElementById("resC").innerText = "Total Compra: $" + ((parseFloat(document.getElementById("qC").value)||0) * (parseFloat(document.getElementById("pM").value)||0)).toFixed(2); };
-
-window.saveV = async () => {
-    let f = document.getElementById("fV").value, c = document.getElementById("cli").value;
-    if(!c || !carritoVenta.length) return alert("Faltan datos");
-    let ts = new Date(f + "T12:00:00").getTime();
-    carritoVenta.forEach(i => { if(i.pk && window.state.inventario[i.pk]) window.state.inventario[i.pk].stock -= i.qty; });
-    window.state.ventas.push({id: ts, cliente: c.toUpperCase(), total: carritoVenta.reduce((a,b)=>a+b.sub,0), abonado: 0, pagado: false, telefono: document.getElementById("tel").value});
-    await window.save(); carritoVenta = []; setView('dashboard');
-};
-
+// --- LOGICA REPARADA Y MEJORADA ---
 window.saveG = async () => {
     let f = document.getElementById("fG").value, n = document.getElementById("gN").value, m = parseFloat(document.getElementById("gM").value);
     if(n && m) { 
-        let ts = new Date(f + "T12:00:00").getTime();
-        window.state.gastos.push({id: ts, name: n.toUpperCase(), amount: m}); 
-        await window.save(); setView('dashboard'); 
+        window.state.gastos.push({id: new Date(f + "T12:00:00").getTime(), name: n.toUpperCase(), amount: m}); 
+        await window.save(); alert("Gasto Guardado"); render(); 
+    }
+};
+
+window.delItem = async (type, id) => {
+    if(confirm("¿Eliminar este registro definitivamente?")){
+        if(type === 'v') window.state.ventas = window.state.ventas.filter(x => x.id !== id);
+        if(type === 'g') window.state.gastos = window.state.gastos.filter(x => x.id !== id);
+        if(type === 'i') window.state.comprasInversion = window.state.comprasInversion.filter(x => x.id !== id);
+        await window.save(); render();
     }
 };
 
@@ -190,44 +189,50 @@ window.detRep = (f) => {
     let i = (window.state.comprasInversion||[]).filter(x => esMismoDia(x.id, f));
     let tV = v.reduce((a,b)=>a+(b.total||0),0), tG = g.reduce((a,b)=>a+(b.amount||0),0), tI = i.reduce((a,b)=>a+(b.amount||0),0);
     
-    document.getElementById("aR").innerHTML = `
-    <div class="card !bg-slate-900 text-white text-center"><b>Balance Neto: $${(tV-tG-tI).toFixed(2)}</b></div>
+    document.getElementById("aR").innerHTML = `<div class="card !bg-slate-900 text-white text-center"><b>Balance: $${(tV-tG-tI).toFixed(2)}</b></div>
     <div class="card">
-        <h3 class="text-green-600 font-black text-xs uppercase border-b mb-2">Ventas ($${tV.toFixed(2)})</h3>
-        ${v.map(x=>`<div class="flex justify-between text-[10px] py-1"><span>${x.cliente}</span><b>$${x.total.toFixed(2)}</b></div>`).join("") || '<p class="text-[9px] opacity-50 italic">Cero ventas este día</p>'}
-        <h3 class="text-red-500 font-black text-xs mt-4 uppercase border-b mb-2">Gastos ($${tG.toFixed(2)})</h3>
-        ${g.map(x=>`<div class="flex justify-between text-[10px] py-1 text-red-700 font-bold"><span>${x.name}</span><b>-$${x.amount.toFixed(2)}</b></div>`).join("") || '<p class="text-[9px] opacity-50 italic">Cero gastos este día</p>'}
-        <h3 class="text-blue-500 font-black text-xs mt-4 uppercase border-b mb-2">Compras / Inversión ($${tI.toFixed(2)})</h3>
-        ${i.map(x=>`<div class="flex justify-between text-[10px] py-1 text-blue-700 font-bold"><span>${x.name}</span><b>-$${x.amount.toFixed(2)}</b></div>`).join("") || '<p class="text-[9px] opacity-50 italic">Cero compras este día</p>'}
+        <h3 class="text-green-600 font-black text-xs border-b">VENTAS ($${tV.toFixed(2)})</h3>
+        ${v.map(x=>`<div class="flex justify-between text-[10px] py-1"><span>${x.cliente}</span><span>$${x.total.toFixed(2)} <b class="del-btn" onclick="delItem('v',${x.id})">×</b></span></div>`).join("") || "Sin ventas"}
+        <h3 class="text-red-500 font-black text-xs mt-4 border-b">GASTOS ($${tG.toFixed(2)})</h3>
+        ${g.map(x=>`<div class="flex justify-between text-[10px] py-1"><span>${x.name}</span><span>$${x.amount.toFixed(2)} <b class="del-btn" onclick="delItem('g',${x.id})">×</b></span></div>`).join("") || "Sin gastos"}
+        <h3 class="text-blue-500 font-black text-xs mt-4 border-b">COMPRAS ($${tI.toFixed(2)})</h3>
+        ${i.map(x=>`<div class="flex justify-between text-[10px] py-1"><span>${x.name}</span><span>$${x.amount.toFixed(2)} <b class="del-btn" onclick="delItem('i',${x.id})">×</b></span></div>`).join("") || "Sin compras"}
     </div>`;
 };
 
-// ... (El resto de funciones se mantienen estables)
-window.saveC = async () => {
-    let q = parseFloat(document.getElementById("qC").value), p = parseFloat(document.getElementById("pM").value), m = document.getElementById("mC").value, f = document.getElementById("fC").value;
-    if(q > 0) {
-        let ts = new Date(f + "T12:00:00").getTime();
-        if(!window.state.comprasInversion) window.state.comprasInversion = [];
-        window.state.inventario[m].stock += q;
-        window.state.comprasInversion.push({id: ts, name: m, amount: q*p});
-        await window.save(); setView('dashboard');
-    }
-};
+// --- RESTO DE FUNCIONES ---
 window.addI = () => {
     let p = document.getElementById("pS").value, s = document.getElementById("sS").value, t = document.getElementById("tC").value, q = parseFloat(document.getElementById("q").value) || 0;
     let pre = (t === "detal") ? 9 : (t === "mayor") ? 10 : parseFloat(document.getElementById("pL").value) || 0;
     if(p || s) carritoVenta.push({ nombre: (p && s ? p+" + "+s : p||s).toUpperCase(), qty: q, sub: q*pre, pk: p });
-    document.getElementById("lC").innerHTML = carritoVenta.map(v=>`<div class="flex justify-between text-[10px] uppercase font-bold py-1 border-b"><span>${v.qty} ${v.nombre}</span><b>$${v.sub.toFixed(2)}</b></div>`).join("");
+    document.getElementById("lC").innerHTML = carritoVenta.map(v=>`<div class="flex justify-between py-1 border-b"><span>${v.qty} ${v.nombre}</span><b>$${v.sub.toFixed(2)}</b></div>`).join("");
     document.getElementById("tV").innerText = "TOTAL: $" + carritoVenta.reduce((a,b)=>a+b.sub,0).toFixed(2);
 };
+window.saveV = async () => {
+    let f = document.getElementById("fV").value, c = document.getElementById("cli").value;
+    if(!c || !carritoVenta.length) return alert("Faltan datos");
+    let ts = new Date(f + "T12:00:00").getTime();
+    carritoVenta.forEach(i => { if(i.pk && window.state.inventario[i.pk]) window.state.inventario[i.pk].stock -= i.qty; });
+    window.state.ventas.push({id: ts, cliente: c.toUpperCase(), total: carritoVenta.reduce((a,b)=>a+b.sub,0), abonado: 0, pagado: false });
+    await window.save(); carritoVenta = []; setView('dashboard');
+};
+window.saveC = async () => {
+    let q = parseFloat(document.getElementById("qC").value), p = parseFloat(document.getElementById("pM").value), m = document.getElementById("mC").value, f = document.getElementById("fC").value;
+    if(q > 0) {
+        window.state.inventario[m].stock += q;
+        if(!window.state.comprasInversion) window.state.comprasInversion = [];
+        window.state.comprasInversion.push({id: new Date(f + "T12:00:00").getTime(), name: m, amount: q*p});
+        await window.save(); setView('dashboard');
+    }
+};
+window.upC = () => { document.getElementById("resC").innerText = "$" + ((parseFloat(document.getElementById("qC").value)||0) * (parseFloat(document.getElementById("pM").value)||0)).toFixed(2); };
 window.abono = async (id) => { 
-    let v = window.state.ventas.find(x=>x.id===id), m = parseFloat(prompt("¿Monto del abono para "+v.cliente+"?"));
+    let v = window.state.ventas.find(x=>x.id===id), m = parseFloat(prompt("Monto abono?"));
     if(m){ v.abonado = (v.abonado||0) + m; if(v.abonado >= v.total) v.pagado = true; await window.save(); render(); }
 };
 window.cat = async (t) => { let n = document.getElementById(t==='p'?'nP':'nS').value.toUpperCase(); if(!n) return; if(t==='p') window.state.inventario[n]={stock:0}; else window.state.serviciosExtra.push(n); await window.save(); render(); };
 window.delCat = async (t, k) => { if(confirm("¿Eliminar?")){ if(t==='p') delete window.state.inventario[k]; else window.state.serviciosExtra.splice(k,1); await window.save(); render(); } };
 window.adjStock = async (n) => { let a = parseFloat(prompt("Stock de "+n, window.state.inventario[n].stock)); if(!isNaN(a)){ window.state.inventario[n].stock = a; await window.save(); render(); } };
-window.ws = (id) => { let v = window.state.ventas.find(x=>x.id===id); window.open(`https://api.whatsapp.com/send?phone=${v.telefono}&text=GhostPrint: Deuda $${(v.total-v.abonado).toFixed(2)}`, '_blank'); };
 
 render();
 </script>
