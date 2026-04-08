@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>GhostPrint PRO v22.5</title>
+    <title>GhostPrint PRO v22.7</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -16,19 +16,15 @@
         input, select { background: #070712; border: 1px solid #334155; color: white; padding: 14px; border-radius: 14px; width: 100%; margin: 6px 0; font-weight: 700; outline: none; }
         .btn-main { background: linear-gradient(135deg, #7c3aed 0%, #4c1d95 100%); color: white; padding: 16px; border-radius: 16px; width: 100%; font-weight: 900; text-transform: uppercase; cursor: pointer; border: none; }
         #bill-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.95); z-index:200; padding:20px; align-items: center; justify-content: center; }
-        .ghost-glow { filter: drop-shadow(0 0 12px #7c3aed); font-size: 44px; }
-        .text-shadow { text-shadow: 0 0 15px rgba(124, 58, 237, 0.5); }
+        .ghost-glow { filter: drop-shadow(0 0 12px #7c3aed); }
     </style>
 </head>
 <body>
 
 <div class="p-4 flex justify-between items-center bg-[#0a0a14] border-b border-white/5">
     <div class="flex items-center gap-3">
-        <span class="ghost-glow">👻</span>
-        <div>
-            <h1 class="text-xl font-black italic text-purple-500 leading-none text-shadow">GHOST PRINT</h1>
-            <p class="text-[8px] font-black opacity-40 uppercase tracking-[2px]">Projection Engine v22.5</p>
-        </div>
+        <span class="text-4xl ghost-glow">👻</span>
+        <div><h1 class="text-xl font-black italic text-purple-500 leading-none">GHOST PRINT</h1><p class="text-[8px] font-black opacity-40 uppercase tracking-[2px]">FULL PRECISION v22.7</p></div>
     </div>
 </div>
 
@@ -66,10 +62,10 @@
     const db = firebase.firestore();
     const docRef = db.collection("sistema").doc("datos_principales");
 
-    window.state = JSON.parse(localStorage.getItem('gp_v22_5')) || { ventas: [], gastos: [], inventario: {}, serviciosExtra: ["DISEÑO", "MONTAJE"], comprasInversion: [] };
+    window.state = JSON.parse(localStorage.getItem('gp_v22_7')) || { ventas: [], gastos: [], inventario: {}, serviciosExtra: [], comprasInversion: [] };
     const fmtFecha = (f) => { if(!f) return "S/F"; const [y, m, d] = f.split("-"); return `${d}/${m}`; }
 
-    window.sync = async function() { localStorage.setItem('gp_v22_5', JSON.stringify(window.state)); await docRef.set(window.state); };
+    window.sync = async function() { localStorage.setItem('gp_v22_7', JSON.stringify(window.state)); await docRef.set(window.state); };
     docRef.onSnapshot(doc => { if(doc.exists) { window.state = doc.data(); render(); } });
 
     window.setView = function(v) {
@@ -81,106 +77,141 @@
 
     window.render = function() {
         const app = document.getElementById("app");
+        const inv = window.state.inventario || {};
         const vM = window.state.ventas || [];
         const gM = window.state.gastos || [];
         const cM = window.state.comprasInversion || [];
-        const inv = window.state.inventario || {};
 
         if(window.currentView === "inicio") {
             const totalCobrado = vM.reduce((a, b) => a + (Number(b.abonado) || (b.pagado ? b.total : 0)), 0);
-            const totalBruto = vM.reduce((a, b) => a + Number(b.total), 0);
+            const totalCostoReal = cM.reduce((a, b) => a + Number(b.amount), 0);
             const totalGastosFijos = gM.reduce((a, b) => a + Number(b.amount), 0);
-            const totalActivoInventario = cM.reduce((a, b) => a + Number(b.amount), 0);
             
-            // Proyección de Venta de lo que hay en estante (Asumiendo $9 promedio de venta por unidad)
-            let valorVentaStock = Object.values(inv).reduce((a, b) => a + (b.stock * 9), 0);
-
-            let cajaReal = totalCobrado - totalGastosFijos;
+            let valorVentaTotalStock = 0;
+            Object.values(inv).forEach(data => {
+                valorVentaTotalStock += (data.stock * (data.ancho || 1) * (data.precio || 0));
+            });
 
             app.innerHTML = `
-                <div class="card-pro !bg-gradient-to-br ${cajaReal < 0 ? '!from-red-600 !to-red-900' : '!from-purple-600 !to-indigo-900'} border-none text-center shadow-2xl relative overflow-hidden">
-                    <p class="text-[10px] font-black uppercase opacity-60 tracking-widest">Saldo Líquido en Caja</p>
-                    <h2 class="text-6xl font-black italic">$${(cajaReal < 0 ? 0 : cajaReal).toFixed(2)}</h2>
+                <div class="card-pro bg-gradient-to-br from-purple-900 to-black border-none text-center shadow-2xl relative overflow-hidden">
+                    <p class="text-[10px] font-black uppercase opacity-60 tracking-widest">Valor de Venta en Estante</p>
+                    <h2 class="text-6xl font-black italic">$${valorVentaTotalStock.toFixed(2)}</h2>
                 </div>
-
                 <div class="grid grid-cols-2 gap-3 mb-3">
-                    <div class="card-pro border-l-4 border-blue-500 bg-blue-500/5">
-                        <p class="text-[9px] opacity-40 font-black uppercase">Costo Invertido</p>
-                        <b class="text-xl text-blue-400">$${totalActivoInventario.toFixed(2)}</b>
-                    </div>
-                    <div class="card-pro border-l-4 border-emerald-500 bg-emerald-500/5">
-                        <p class="text-[9px] opacity-40 font-black uppercase">Venta Estante (Est.)</p>
-                        <b class="text-xl text-emerald-400">$${valorVentaStock.toFixed(2)}</b>
-                    </div>
+                    <div class="card-pro border-l-4 border-blue-500"><p class="text-[9px] opacity-40 font-black uppercase">Costo Material</p><b class="text-xl">$${totalCostoReal.toFixed(2)}</b></div>
+                    <div class="card-pro border-l-4 border-green-500"><p class="text-[9px] opacity-40 font-black uppercase">Utilidad Proyectada</p><b class="text-xl">$${(valorVentaTotalStock - totalCostoReal).toFixed(2)}</b></div>
                 </div>
-
-                <div class="card-pro border-t-4 border-purple-500 bg-purple-500/5 mb-3 text-center">
-                    <p class="text-[10px] font-black opacity-40 uppercase">Utilidad Potencial en Stock</p>
-                    <h3 class="text-3xl font-black italic text-purple-400">$${(valorVentaStock - totalActivoInventario > 0 ? valorVentaStock - totalActivoInventario : 0).toFixed(2)}</h3>
-                    <p class="text-[8px] font-bold opacity-30 uppercase italic">(Venta estimada - Costo de compra)</p>
-                </div>
-
-                <div class="card-pro overflow-hidden"><canvas id="mainChart" style="max-height: 160px;"></canvas></div>
+                <div class="card-pro bg-[#0a0a14]"><p class="text-[10px] font-black opacity-40 uppercase mb-2">Flujo de Caja (Cobrado - Gastos)</p><h3 class="text-2xl font-black italic">$${(totalCobrado - totalGastosFijos).toFixed(2)}</h3></div>
             `;
-            
-            setTimeout(() => {
-                new Chart(document.getElementById('mainChart'), {
-                    type: 'bar',
-                    data: {
-                        labels: ['CAJA', 'COSTO INV', 'P. VENTA'],
-                        datasets: [{
-                            data: [totalCobrado, totalActivoInventario, valorVentaStock],
-                            backgroundColor: ['#7c3aed', '#3b82f6', '#10b981'],
-                            borderRadius: 8
-                        }]
-                    },
-                    options: { plugins: { legend: { display: false } }, scales: { y: { grid: { color: '#2d2d44' } } } }
-                });
-            }, 100);
+        }
+
+        if(window.currentView === "ventas") {
+            app.innerHTML = `
+                <div class="card-pro">
+                    <h2 class="text-lg font-black uppercase italic mb-4">Nueva Venta</h2>
+                    <input type="date" id="fV" value="${new Date().toISOString().split('T')[0]}">
+                    <input id="cli" placeholder="CLIENTE">
+                    <input id="tel" type="number" placeholder="WHATSAPP">
+                    <div class="bg-white/5 p-4 rounded-xl mt-3">
+                        <select id="pS" onchange="updateCalcVenta()">
+                            <option value="">Material...</option>
+                            ${Object.keys(inv).map(m=>`<option value="${m}">${m}</option>`).join("")}
+                        </select>
+                        <input id="qV" type="number" step="0.01" placeholder="Largo (Metros)" oninput="updateCalcVenta()">
+                        <div id="calcPreview" class="text-[10px] font-bold text-purple-400 mb-2 uppercase"></div>
+                        <input id="pL" type="number" placeholder="Precio Final $">
+                        <button onclick="addCart()" class="btn-main !p-3 mt-3">+ AÑADIR AL TRABAJO</button>
+                    </div>
+                    <div id="cart-list" class="mt-4"></div>
+                    <div id="total-disp" class="text-5xl font-black text-center my-6 text-purple-400">$0.00</div>
+                    <button onclick="finalizarVenta()" class="btn-main">GUARDAR Y REGISTRAR</button>
+                </div>
+            `;
+        }
+
+        if(window.currentView === "cobros") {
+            const deudas = vM.filter(v => !v.pagado);
+            app.innerHTML = `<div class="space-y-2">${deudas.reverse().map(v => `<div class="card-pro border-l-4 border-purple-500 flex justify-between items-center"><div><b class="text-xs uppercase">${v.cliente}</b><br><span class="text-orange-400 text-[10px] font-black italic">DEBE: $${(v.total - (v.abonado||0)).toFixed(2)}</span></div><div class="flex gap-1"><button onclick="showBill('${v.cliente}', ${(v.total-(v.abonado||0))}, '${v.telefono}', 'TRABAJO PENDIENTE')" class="bg-green-600 p-2 rounded-lg text-xs">📋</button><button onclick="abonoM('${v.cliente}')" class="bg-purple-600 px-3 py-1 rounded-lg text-[9px] font-black uppercase">Cobrar</button></div></div>`).join("")}</div>`;
+        }
+
+        if(window.currentView === "gastos") {
+            app.innerHTML = `<div class="card-pro"><input type="date" id="fG" value="${new Date().toISOString().split('T')[0]}"><input id="dG" placeholder="Descripción Gasto"><input id="aG" type="number" placeholder="Monto $"><button onclick="saveGasto()" class="btn-main !bg-red-600 mt-4">GUARDAR GASTO</button></div>`;
+        }
+
+        if(window.currentView === "compras") {
+            app.innerHTML = `<div class="card-pro"><input type="date" id="fC" value="${new Date().toISOString().split('T')[0]}"><select id="mInv"><option value="">Material...</option>${Object.keys(inv).map(m=>`<option value="${m}">${m}</option>`).join("")}</select><input id="qInv" type="number" placeholder="Metros Comprados"><input id="pInv" type="number" placeholder="Costo Total de Compra $"><button onclick="saveInv()" class="btn-main !bg-blue-600 mt-4">CARGAR STOCK</button></div>`;
         }
 
         if(window.currentView === "inventario") {
             app.innerHTML = `<div class="space-y-2">${Object.entries(inv).map(([n, i]) => {
-                const estVenta = (i.stock * 9).toFixed(2);
-                return `<div class="card-pro flex justify-between items-center ${i.stock < 5 ? 'border-red-600 bg-red-900/10' : ''}">
-                    <div>
-                        <p class="text-[9px] font-black opacity-50 uppercase">${n}</p>
-                        <h4 class="text-3xl font-black italic ${i.stock < 5 ? 'text-red-500' : ''}">${(i.stock || 0).toFixed(2)}</h4>
-                        <p class="text-[10px] text-emerald-500 font-bold uppercase tracking-tighter">Proy. Venta: $${estVenta}</p>
-                    </div>
-                    <div class="flex flex-col gap-1">
-                        <button onclick="editMatInv('${n}')" class="bg-white/5 p-2 rounded-lg text-xs">✏️</button>
-                        <button onclick="registrarMerma('${n}')" class="bg-orange-600/20 p-2 rounded-lg text-[9px] font-black text-orange-400 uppercase">MERMA</button>
-                    </div>
-                </div>`
+                const m2 = (i.stock * (i.ancho || 1)).toFixed(2);
+                return `<div class="card-pro flex justify-between items-center ${i.stock < 10 ? 'border-red-600' : ''}"><div><p class="text-[9px] font-black opacity-50 uppercase">${n}</p><h4 class="text-3xl font-black italic">${i.stock} <span class="text-sm">ML</span></h4><p class="text-[10px] text-purple-400 font-bold">EQUIVALE A: ${m2} M^2</p></div><button onclick="registrarMerma('${n}')" class="bg-orange-600/20 p-2 rounded-lg text-[9px] font-black text-orange-400">MERMA</button></div>`
             }).join("")}</div>`;
         }
-        
-        // --- RESTO DE VISTAS (GASTOS, VENTAS, COBROS, CATALOGO) PERMANECEN IGUAL ---
-        if(window.currentView === "ventas") { app.innerHTML = `<div class="card-pro"><h2 class="text-lg font-black uppercase italic mb-4">Nueva Venta</h2><input type="date" id="fV" value="${new Date().toISOString().split('T')[0]}"><input id="cli" placeholder="CLIENTE"><input id="tel" type="number" placeholder="WHATSAPP"><div class="bg-white/5 p-4 rounded-xl mt-3"><div class="grid grid-cols-2 gap-2"><select id="pS"><option value="">Material...</option>${Object.keys(window.state.inventario || {}).map(m=>`<option value="${m}">${m}</option>`).join("")}</select><select id="sS"><option value="">Servicio...</option>${(window.state.serviciosExtra || []).map(s=>`<option value="${s}">${s}</option>`).join("")}</select></div><input id="qV" type="number" placeholder="Cantidad" value="1"><select id="tC" onchange="document.getElementById('pL').classList.toggle('hidden', this.value !== 'libre')"><option value="detal">DETAL ($9)</option><option value="mayor">MAYOR ($10)</option><option value="libre">LIBRE</option></select><input id="pL" class="hidden" type="number" placeholder="Precio $"><button onclick="addCart()" class="btn-main !p-3 mt-3">+ AÑADIR</button></div><div id="cart-list" class="mt-4"></div><div id="total-disp" class="text-5xl font-black text-center my-6 text-purple-400">$0.00</div><button onclick="finalizarVenta()" class="btn-main">GUARDAR TRABAJO</button></div>`; updateCartUI(); }
-        if(window.currentView === "cobros") { const deudas = vM.filter(v => !v.pagado); app.innerHTML = `<div class="space-y-2">${deudas.reverse().map(v => { const det = v.items ? v.items.map(i=>i.d).join(' / ') : 'TRABAJO'; return `<div class="card-pro border-l-4 border-purple-500 flex justify-between items-center"><div><b class="text-xs uppercase">${v.cliente}</b><br><span class="text-purple-400 text-[9px] font-black uppercase leading-none">${det}</span><br><span class="text-orange-400 text-[10px] font-black italic">DEBE: $${(v.total - (v.abonado||0)).toFixed(2)}</span></div><div class="flex gap-1"><button onclick="editVentaProfunda(${v.id})" class="bg-white/5 p-2 rounded-lg text-xs">✏️</button><button onclick="showBill('${v.cliente}', ${(v.total-(v.abonado||0))}, '${v.telefono}', '${det}')" class="bg-green-600 p-2 rounded-lg text-xs">📋</button><button onclick="abonoM('${v.cliente}')" class="bg-purple-600 px-3 py-1 rounded-lg text-[9px] font-black italic">Cobrar</button></div></div>`}).join("")}</div>`; }
-        if(window.currentView === "gastos") { const totalG = gM.reduce((a, b) => a + Number(b.amount), 0); app.innerHTML = `<div class="card-pro border-t-4 border-red-600 mb-4"><input type="date" id="fG" value="${new Date().toISOString().split('T')[0]}"><input id="dG" placeholder="Descripción"><input id="aG" type="number" placeholder="Monto $"><button onclick="saveGasto()" class="btn-main !bg-red-600 mt-4">GUARDAR GASTO</button></div><div class="flex justify-between px-2 text-red-500 text-[10px] font-black mb-2 uppercase"><span>Historial Gastos</span><span>Total: $${totalG.toFixed(2)}</span></div><div class="space-y-2">${gM.slice().reverse().map(g => `<div class="card-pro !py-3 flex justify-between items-center border-l-2 border-red-900 bg-[#160a0a]"><div><p class="text-xs font-black uppercase">${g.desc}</p><p class="text-[9px] font-bold text-gray-600 font-mono">${fmtFecha(g.fecha)}</p></div><b class="text-red-500 font-black">-$${Number(g.amount).toFixed(2)}</b></div>`).join("")}</div>`; }
-        if(window.currentView === "compras") { const totalC = cM.reduce((a, b) => a + Number(b.amount), 0); app.innerHTML = `<div class="card-pro border-t-4 border-blue-600 mb-4"><input type="date" id="fC" value="${new Date().toISOString().split('T')[0]}"><select id="mInv"><option value="">Material...</option>${Object.keys(window.state.inventario || {}).map(m=>`<option value="${m}">${m}</option>`).join("")}</select><input id="qInv" type="number" placeholder="Cantidad"><input id="pInv" type="number" placeholder="Costo $"><button onclick="saveInv()" class="btn-main !bg-blue-600 mt-4">CARGAR STOCK</button></div><div class="flex justify-between px-2 text-blue-500 text-[10px] font-black mb-2 uppercase"><span>Historial Compras</span><span>Total: $${totalC.toFixed(2)}</span></div><div class="space-y-2">${cM.slice().reverse().map(c => `<div class="card-pro !py-3 flex justify-between items-center border-l-2 border-blue-900 bg-[#0a0d16]"><div><p class="text-xs font-black uppercase">${c.material}</p><p class="text-[9px] font-bold text-gray-600 font-mono">${fmtFecha(c.fecha)}</p></div><b class="text-blue-400 font-black">$${Number(c.amount).toFixed(2)}</b></div>`).join("")}</div>`; }
-        if(window.currentView === "catalogo") { app.innerHTML = `<div class="card-pro"><h2 class="text-[10px] font-black opacity-40 mb-4 uppercase italic">Materiales</h2><input id="newM" placeholder="NUEVO MATERIAL"><button onclick="addMat()" class="btn-main !p-3 mb-6">AÑADIR MATERIAL</button><div class="flex flex-wrap gap-2 mb-8">${Object.keys(window.state.inventario).map(m=>`<span class="bg-white/5 px-3 py-1 rounded-full text-[10px] font-bold uppercase border border-white/10">${m} <button onclick="delMat('${m}')" class="text-red-500 ml-1">×</button></span>`).join("")}</div><hr class="border-white/5 my-6"><h2 class="text-[10px] font-black opacity-40 mb-4 uppercase italic">Servicios</h2><input id="newS" placeholder="NUEVO SERVICIO"><button onclick="addServicio()" class="btn-main !p-3 mb-6">AÑADIR SERVICIO</button><div class="flex flex-wrap gap-2">${(window.state.serviciosExtra || []).map(s=>`<span class="bg-purple-600/10 px-3 py-1 rounded-full text-[10px] font-bold uppercase border border-purple-500/20 text-purple-400">${s} <button onclick="delServ('${s}')" class="text-red-500 ml-1">×</button></span>`).join("")}</div></div>`; }
+
+        if(window.currentView === "catalogo") {
+            app.innerHTML = `<div class="card-pro"><h2 class="text-xs font-black opacity-40 mb-4 uppercase italic">Configuración de Materiales</h2><input id="nMat" placeholder="Nombre (Ej: VINIL)"><input id="pMat" type="number" placeholder="Precio Venta x M2 ($)"><input id="aMat" type="number" step="0.01" placeholder="Ancho del Rollo (Ej: 1.52)"><button onclick="addMat()" class="btn-main mt-2">GUARDAR CONFIG</button><div class="mt-6 space-y-2">${Object.entries(inv).map(([n, d]) => `<div class="flex justify-between items-center bg-white/5 p-3 rounded-xl border border-white/10"><div><b>${n}</b><br><span class="text-[10px] opacity-50">$${d.precio}/M2 | Ancho: ${d.ancho}m</span></div><button onclick="delMat('${n}')" class="text-red-500 font-bold px-2">X</button></div>`).join("")}</div></div>`;
+        }
     };
 
     // --- FUNCIONES MOTOR ---
+    window.updateCalcVenta = () => {
+        const m = document.getElementById("pS").value;
+        const q = parseFloat(document.getElementById("qV").value) || 0;
+        const info = window.state.inventario[m];
+        if(info && q) {
+            const m2 = q * info.ancho;
+            const sugerido = m2 * info.precio;
+            document.getElementById("calcPreview").innerText = `${m2.toFixed(2)} M2 totales | Sugerido: $${sugerido.toFixed(2)}`;
+            document.getElementById("pL").value = sugerido.toFixed(2);
+        }
+    };
+
     let cart = [];
-    window.updateCartUI = () => { const list = document.getElementById("cart-list"); const disp = document.getElementById("total-disp"); if(list && disp) { list.innerHTML = cart.map((c, index) => `<div class="flex justify-between items-center py-1 border-b border-white/5 italic text-[11px] font-bold"><span>${c.d}</span><b>$${c.p}</b></div>`).join(""); disp.innerText = "$" + cart.reduce((a,b)=>a+b.p,0).toFixed(2); } };
-    window.addCart = () => { let m = document.getElementById("pS").value, s = document.getElementById("sS").value, q = parseFloat(document.getElementById("qV").value) || 1, t = document.getElementById("tC").value, p = (t === "detal") ? 9 : (t === "mayor") ? 10 : parseFloat(document.getElementById("pL").value) || 0, d = (m && s) ? m + " + " + s : m || s; if(d) { cart.push({ d, p: (p*q), mat: m, qtyV: q }); updateCartUI(); } };
-    window.finalizarVenta = async () => { let cli = document.getElementById("cli").value; if(!cli || !cart.length) return; cart.forEach(c => { if(c.mat && window.state.inventario[c.mat]) window.state.inventario[c.mat].stock -= c.qtyV; }); window.state.ventas.push({ id: Date.now(), fecha: document.getElementById('fV').value, cliente: cli.toUpperCase(), telefono: document.getElementById("tel").value, total: cart.reduce((a,b)=>a+b.p,0), abonado: 0, pagado: false, items: [...cart] }); await window.sync(); cart = []; setView('inicio'); };
-    window.saveGasto = async () => { const d = document.getElementById("dG").value, a = parseFloat(document.getElementById("aG").value), f = document.getElementById('fG').value; if(d && a) { window.state.gastos.push({ id: Date.now(), fecha: f, desc: d.toUpperCase(), amount: a }); await window.sync(); render(); } };
-    window.saveInv = async () => { const m = document.getElementById("mInv").value, q = parseFloat(document.getElementById("qInv").value), p = parseFloat(document.getElementById("pInv").value), f = document.getElementById('fC').value; if(m && q) { window.state.inventario[m].stock += q; if(!window.state.comprasInversion) window.state.comprasInversion = []; window.state.comprasInversion.push({ id: Date.now(), fecha: f, material: m, amount: p, qty: q }); await window.sync(); render(); } };
-    window.showBill = (cli, mon, tel, det) => { document.getElementById('b-cli').innerText = cli; document.getElementById('b-monto').innerText = "$" + mon.toFixed(2); document.getElementById('b-det').innerText = det; document.getElementById('bill-modal').style.display = 'flex'; document.getElementById('btn-wa').onclick = () => window.open(`https://api.whatsapp.com/send?phone=${tel}&text=👻 *GHOSTPRINT*%0A*CLIENTE:* ${cli}%0A*DETALLE:* ${det}%0A*SALDO:* $${mon.toFixed(2)}`, '_blank'); };
+    window.addCart = () => {
+        const m = document.getElementById("pS").value;
+        const q = parseFloat(document.getElementById("qV").value) || 0;
+        const p = parseFloat(document.getElementById("pL").value) || 0;
+        if(m && q) {
+            cart.push({ d: `${m} (${q}ml)`, p, mat: m, qtyV: q });
+            document.getElementById("total-disp").innerText = "$" + cart.reduce((a,b)=>a+b.p,0).toFixed(2);
+            document.getElementById("cart-list").innerHTML += `<div class="text-xs italic py-1 border-b border-white/5 flex justify-between"><span>${m} x ${q}m</span><b>$${p}</b></div>`;
+        }
+    };
+
+    window.finalizarVenta = async () => {
+        let cli = document.getElementById("cli").value;
+        if(!cli || !cart.length) return;
+        cart.forEach(c => { if(window.state.inventario[c.mat]) window.state.inventario[c.mat].stock -= c.qtyV; });
+        window.state.ventas.push({ id: Date.now(), fecha: document.getElementById('fV').value, cliente: cli.toUpperCase(), telefono: document.getElementById("tel").value, total: cart.reduce((a,b)=>a+b.p,0), abonado: 0, pagado: false, items: [...cart] });
+        await window.sync(); cart = []; setView('inicio');
+    };
+
+    window.saveGasto = async () => {
+        const d = document.getElementById("dG").value;
+        const a = parseFloat(document.getElementById("aG").value);
+        if(d && a) { window.state.gastos.push({ id: Date.now(), fecha: document.getElementById('fG').value, desc: d.toUpperCase(), amount: a }); await window.sync(); setView('inicio'); }
+    };
+
+    window.saveInv = async () => {
+        const m = document.getElementById("mInv").value, q = parseFloat(document.getElementById("qInv").value), p = parseFloat(document.getElementById("pInv").value);
+        if(m && q) { 
+            window.state.inventario[m].stock += q; 
+            window.state.comprasInversion.push({ id: Date.now(), fecha: document.getElementById('fC').value, material: m, amount: p, qty: q });
+            await window.sync(); setView('inicio'); 
+        }
+    };
+
+    window.addMat = async () => {
+        const n = document.getElementById("nMat").value.toUpperCase(), p = parseFloat(document.getElementById("pMat").value), a = parseFloat(document.getElementById("aMat").value);
+        if(n && p && a) { window.state.inventario[n] = { stock: window.state.inventario[n]?.stock || 0, precio: p, ancho: a }; await window.sync(); render(); }
+    };
+
+    window.delMat = async (m) => { if(confirm("¿Eliminar?")) { delete window.state.inventario[m]; await window.sync(); render(); } };
+    window.showBill = (cli, mon, tel, det) => { document.getElementById('b-cli').innerText = cli; document.getElementById('b-monto').innerText = "$" + mon.toFixed(2); document.getElementById('b-det').innerText = det; document.getElementById('bill-modal').style.display = 'flex'; document.getElementById('btn-wa').onclick = () => window.open(`https://api.whatsapp.com/send?phone=${tel}&text=👻 *GHOSTPRINT*%0A*CLIENTE:* ${cli}%0A*DEUDA:* $${mon.toFixed(2)}`, '_blank'); };
     window.closeBill = () => document.getElementById('bill-modal').style.display = 'none';
-    window.abonoM = async (name) => { let m = parseFloat(prompt(`Pago de ${name}:`)); if(!m) return; let vCli = window.state.ventas.filter(v => v.cliente === name && !v.pagado); vCli.forEach(v => { if(m <= 0) return; let p = v.total - (v.abonado||0); if(m >= p) { v.abonado = v.total; v.pagado = true; m -= p; } else { v.abonado = (v.abonado||0) + m; m = 0; } }); await window.sync(); render(); };
-    window.editVentaProfunda = async (id) => { const v = window.state.ventas.find(x => x.id === id); if(!v) return; if(confirm(`Devolver stock y editar?`)) { if(v.items) v.items.forEach(i => { if(i.mat && window.state.inventario[i.mat]) window.state.inventario[i.mat].stock += i.qtyV; }); cart = [...v.items]; const c = v.cliente, t = v.telefono; window.state.ventas = window.state.ventas.filter(x => x.id !== id); await window.sync(); setView('ventas'); setTimeout(() => { document.getElementById('cli').value = c; document.getElementById('tel').value = t; updateCartUI(); }, 100); } };
-    window.addMat = async () => { let n = document.getElementById("newM").value.toUpperCase(); if(n) { if(!window.state.inventario) window.state.inventario = {}; window.state.inventario[n] = {stock: 0}; await window.sync(); render(); } };
-    window.delMat = async (m) => { if(confirm(`Eliminar material ${m}?`)){ delete window.state.inventario[m]; await window.sync(); render(); } };
-    window.addServicio = async () => { let s = document.getElementById("newS").value.toUpperCase(); if(s) { if(!window.state.serviciosExtra) window.state.serviciosExtra = []; window.state.serviciosExtra.push(s); await window.sync(); render(); } };
-    window.delServ = async (s) => { if(confirm(`Eliminar ${s}?`)) { window.state.serviciosExtra = window.state.serviciosExtra.filter(x => x !== s); await window.sync(); render(); } };
-    window.registrarMerma = async (mat) => { let q = parseFloat(prompt(`Merma para ${mat}:`)); if(q > 0) { window.state.inventario[mat].stock -= q; await window.sync(); render(); } };
-    window.editMatInv = async (old) => { let n = prompt("Nuevo nombre material:", old); if(n) { window.state.inventario[n.toUpperCase()] = window.state.inventario[old]; delete window.state.inventario[old]; await window.sync(); render(); } };
+    window.abonoM = async (name) => { let m = parseFloat(prompt(`Pago de ${name}:`)); if(m > 0) { let vCli = window.state.ventas.find(v => v.cliente === name && !v.pagado); if(vCli) { vCli.abonado += m; if(vCli.abonado >= vCli.total) vCli.pagado = true; } await window.sync(); render(); } };
+    window.registrarMerma = async (mat) => { let q = parseFloat(prompt(`ML de merma:`)); if(q > 0) { window.state.inventario[mat].stock -= q; await window.sync(); render(); } };
 
     window.currentView = "inicio";
     render();
