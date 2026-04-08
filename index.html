@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>GhostPrint PRO v18.8 - Fixed</title>
+    <title>GhostPrint PRO v18.9</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap');
@@ -14,8 +14,7 @@
         .active { background: #7c3aed !important; color: white !important; }
         input, select { background: #070712; border: 1px solid #334155; color: white; padding: 14px; border-radius: 14px; width: 100%; margin: 6px 0; font-weight: 700; outline: none; }
         .btn-main { background: linear-gradient(135deg, #7c3aed 0%, #4c1d95 100%); color: white; padding: 16px; border-radius: 16px; width: 100%; font-weight: 900; text-transform: uppercase; cursor: pointer; border: none; }
-        #bill-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.95); z-index:200; padding:20px; display: flex; align-items: center; justify-content: center; }
-        .bill-card { background: white; color: black; border-radius: 25px; padding: 25px; width: 100%; max-width: 350px; }
+        #bill-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.95); z-index:200; padding:20px; align-items: center; justify-content: center; }
     </style>
 </head>
 <body>
@@ -37,18 +36,15 @@
 
 <div id="app" class="p-4 max-w-2xl mx-auto"></div>
 
-<div id="bill-modal" style="display: none;">
-    <div class="bill-card shadow-2xl">
-        <div class="text-center">
-            <h2 class="text-xl font-black italic uppercase text-purple-600">GhostPrint PRO</h2>
-            <p id="b-fecha" class="text-[10px] font-bold text-gray-400"></p>
-        </div>
-        <div class="border-t-2 border-dashed border-gray-100 my-4"></div>
-        <p class="text-[10px] font-black text-gray-400 uppercase">Cliente:</p>
-        <p id="b-cli" class="text-lg font-black uppercase text-gray-800"></p>
-        <p class="text-[10px] font-black text-gray-400 uppercase mt-4">Saldo Pendiente:</p>
+<div id="bill-modal" onclick="closeBill()">
+    <div class="bg-white p-6 rounded-3xl w-full max-w-xs text-black" onclick="event.stopPropagation()">
+        <h2 class="text-center font-black text-purple-600 uppercase">GhostPrint PRO</h2>
+        <div class="border-t border-dashed my-4"></div>
+        <p class="text-[10px] font-bold opacity-40 uppercase">Cliente:</p>
+        <p id="b-cli" class="text-xl font-black uppercase mb-4"></p>
+        <p class="text-[10px] font-bold opacity-40 uppercase">Saldo a Pagar:</p>
         <p id="b-monto" class="text-4xl font-black text-purple-700"></p>
-        <button id="btn-wa" class="btn-main !from-green-600 !to-green-800 mt-6">ENVIAR POR WHATSAPP</button>
+        <button id="btn-wa" class="btn-main !from-green-600 !to-green-800 mt-6">WhatsApp</button>
         <button onclick="closeBill()" class="w-full text-gray-400 font-bold py-2 mt-2">Cerrar</button>
     </div>
 </div>
@@ -62,13 +58,13 @@
     const db = firebase.firestore();
     const docRef = db.collection("sistema").doc("datos_principales");
 
-    window.state = JSON.parse(localStorage.getItem('gp_v18_8')) || { ventas: [], gastos: [], inventario: {}, serviciosExtra: ["OJALETES", "DISEÑO", "MONTAJE", "CORTE"], comprasInversion: [] };
+    window.state = JSON.parse(localStorage.getItem('gp_v18_9')) || { ventas: [], gastos: [], inventario: {}, serviciosExtra: ["OJALETES", "DISEÑO", "MONTAJE", "CORTE"], comprasInversion: [] };
     window.currentView = "inicio";
     let cart = [];
 
     window.sync = async function() {
-        localStorage.setItem('gp_v18_8', JSON.stringify(window.state));
-        await docRef.set(window.state).catch(e => console.log("Error sync"));
+        localStorage.setItem('gp_v18_9', JSON.stringify(window.state));
+        await docRef.set(window.state);
     };
 
     docRef.onSnapshot(doc => { if(doc.exists) { window.state = doc.data(); render(); } });
@@ -82,118 +78,110 @@
 
     window.render = function() {
         const app = document.getElementById("app");
-        const mesActual = new Date().getMonth();
-        const vM = (window.state.ventas || []).filter(v => new Date(v.id).getMonth() === mesActual);
-        const gM = (window.state.gastos || []).filter(g => new Date(g.id).getMonth() === mesActual);
-        const cM = (window.state.comprasInversion || []).filter(c => new Date(c.id).getMonth() === mesActual);
+        const vM = (window.state.ventas || []);
+        const gM = (window.state.gastos || []);
+        const cM = (window.state.comprasInversion || []);
 
-        const totalVendido = vM.reduce((a, b) => a + Number(b.total), 0);
         const totalCobrado = vM.reduce((a, b) => a + (Number(b.abonado) || (b.pagado ? b.total : 0)), 0);
         const totalGastos = gM.reduce((a, b) => a + Number(b.amount), 0);
-        const totalInversion = cM.reduce((a, b) => a + Number(b.amount), 0);
-        const neta = totalCobrado - totalGastos - totalInversion;
+        const totalStock = cM.reduce((a, b) => a + Number(b.amount), 0);
+        const neta = totalCobrado - totalGastos - totalStock;
 
         if(window.currentView === "inicio") {
-            app.innerHTML = `
-                <div class="card-pro !bg-gradient-to-br !from-purple-600 !to-indigo-900 border-none">
-                    <p class="text-[10px] font-black text-center uppercase italic opacity-80 tracking-widest">Caja Real Hoy</p>
-                    <h2 class="text-6xl font-black text-center italic mt-2 leading-none">$${neta.toFixed(2)}</h2>
-                </div>
-                <div class="grid grid-cols-2 gap-3">
-                    <div class="card-pro"><p class="text-[8px] opacity-40 uppercase">Total Cobros</p><b class="text-xl">$${totalCobrado.toFixed(0)}</b></div>
-                    <div class="card-pro"><p class="text-[8px] opacity-40 uppercase">Total Gastos</p><b class="text-xl text-red-400">$${(totalGastos + totalInversion).toFixed(0)}</b></div>
-                </div>`;
-        }
-
-        if(window.currentView === "reportes") {
-            // TOP CLIENTES
-            const topCli = {};
-            vM.forEach(v => { topCli[v.cliente] = (topCli[v.cliente] || 0) + v.total; });
-            const topSorted = Object.entries(topCli).sort((a,b) => b[1] - a[1]).slice(0, 3);
-
-            app.innerHTML = `
-                <div class="card-pro text-center">
-                    <p class="text-[10px] font-black uppercase text-purple-400">Ganancia Neta (Mes)</p>
-                    <h3 class="text-4xl font-black italic">$${neta.toFixed(2)}</h3>
-                </div>
-                <div class="card-pro">
-                    <p class="text-[10px] font-black uppercase opacity-40 mb-3">Top Clientes</p>
-                    ${topSorted.map(([name, val], i) => `<div class="flex justify-between text-sm py-1 border-b border-white/5"><span>${i+1}. ${name}</span><b>$${val}</b></div>`).join("") || "Sin datos"}
-                </div>
-                <div class="card-pro">
-                    <p class="text-[10px] font-black uppercase opacity-40 mb-3">Cálculo de Utilidad Bruta</p>
-                    <div class="flex justify-between text-xs"><span>Ventas Brutas:</span><b>$${totalVendido.toFixed(2)}</b></div>
-                    <div class="flex justify-between text-xs mt-1"><span>(-) Inversión Stock:</span><b>-$${totalInversion.toFixed(2)}</b></div>
-                    <div class="border-t border-white/10 mt-2 pt-2 flex justify-between font-black text-green-400"><span>Utilidad:</span><b>$${(totalVendido - totalInversion).toFixed(2)}</b></div>
-                </div>`;
+            app.innerHTML = `<div class="card-pro !bg-gradient-to-br !from-purple-600 !to-indigo-900 border-none"><p class="text-[10px] font-black text-center uppercase italic opacity-70">Caja Real</p><h2 class="text-6xl font-black text-center italic mt-2">$${neta.toFixed(2)}</h2></div><div class="grid grid-cols-2 gap-3"><div class="card-pro text-center"><p class="text-[8px] opacity-40 uppercase">Total Cobrado</p><b class="text-xl">$${totalCobrado.toFixed(0)}</b></div><div class="card-pro text-center"><p class="text-[8px] opacity-40 uppercase">Egresos Totales</p><b class="text-xl text-red-400">$${(totalGastos + totalStock).toFixed(0)}</b></div></div>`;
         }
 
         if(window.currentView === "cobros") {
-            const deudas = (window.state.ventas || []).filter(v => !v.pagado);
-            app.innerHTML = `<div class="space-y-3">${deudas.map(v => `
-                <div class="card-pro border-l-4 border-orange-500">
-                    <div class="flex justify-between items-center">
-                        <div><b class="text-sm uppercase">${v.cliente}</b><br><span class="text-orange-400 text-xs font-black">Debe: $${(v.total - (v.abonado||0)).toFixed(2)}</span></div>
-                        <div class="flex gap-2">
-                            <button onclick="editVenta(${v.id})" class="bg-white/5 p-2 rounded-xl text-[10px]">✏️</button>
-                            <button onclick="showBill('${v.cliente}', ${(v.total-(v.abonado||0))}, '${v.telefono}')" class="bg-green-600 p-2 rounded-xl text-lg">📋</button>
-                            <button onclick="abono(${v.id})" class="bg-purple-600 px-3 py-2 rounded-xl text-[10px] font-black uppercase italic">Cobrar</button>
-                        </div>
+            const deudas = vM.filter(v => !v.pagado);
+            const totalDeudaGral = deudas.reduce((a, b) => a + (b.total - (b.abonado || 0)), 0);
+            
+            // Agrupar por cliente
+            const clientesMap = {};
+            deudas.forEach(v => {
+                if(!clientesMap[v.cliente]) clientesMap[v.cliente] = { total: 0, tel: v.telefono, ids: [] };
+                clientesMap[v.cliente].total += (v.total - (v.abonado || 0));
+                clientesMap[v.cliente].ids.push(v.id);
+            });
+
+            app.innerHTML = `
+                <div class="card-pro !bg-orange-600/10 border-orange-500/30 text-center mb-6">
+                    <p class="text-[10px] font-black uppercase text-orange-500 tracking-widest">Total por Cobrar</p>
+                    <h3 class="text-4xl font-black italic text-orange-400 mt-1">$${totalDeudaGral.toFixed(2)}</h3>
+                </div>
+                <div class="space-y-3">${Object.entries(clientesMap).map(([name, data]) => `
+                <div class="card-pro flex justify-between items-center border-l-4 border-purple-500">
+                    <div><b class="text-sm uppercase">${name}</b><br><span class="text-orange-400 text-xs font-black italic">Debe: $${data.total.toFixed(2)}</span></div>
+                    <div class="flex gap-2">
+                        <button onclick="showBill('${name}', ${data.total}, '${data.tel}')" class="bg-green-600 p-3 rounded-xl">📋</button>
+                        <button onclick="abonoMultiple('${name}')" class="bg-purple-600 px-4 py-2 rounded-xl text-[10px] font-black uppercase italic">Cobrar</button>
                     </div>
-                </div>`).join("") || '<p class="text-center py-10 opacity-30 font-black">¡ESTÁS AL DÍA!</p>'}</div>`;
+                </div>`).join("") || '<p class="text-center py-10 opacity-30">Todo cobrado.</p>'}</div>`;
         }
 
-        // --- LAS OTRAS PESTAÑAS (Stock, Ventas, Gastos, etc) SE MANTIENEN IGUAL QUE v18.6/7 ---
+        if(window.currentView === "gastos") {
+            app.innerHTML = `<div class="card-pro border-t-4 border-red-600"><h2 class="text-lg font-black uppercase italic mb-4">Nuevo Gasto</h2><input id="dG" placeholder="Descripción"><input id="aG" type="number" placeholder="Monto $"><button onclick="saveGasto()" class="btn-main !bg-red-600 mt-4">Guardar</button></div><div class="mt-4 space-y-1">${gM.slice(-5).reverse().map(g=>`<div class="card-pro !py-2 flex justify-between text-xs"><span>${g.desc}</span><b class="text-red-400">-$${g.amount}</b></div>`).join("")}</div>`;
+        }
+
+        if(window.currentView === "compras") {
+            app.innerHTML = `<div class="card-pro border-t-4 border-blue-600"><h2 class="text-lg font-black uppercase italic mb-4">Cargar Stock</h2><select id="mInv"><option value="">Material...</option>${Object.keys(window.state.inventario || {}).map(m=>`<option value="${m}">${m}</option>`).join("")}</select><input id="qInv" type="number" placeholder="Cantidad"><input id="pInv" type="number" placeholder="Precio $"><button onclick="saveInv()" class="btn-main !bg-blue-600 mt-4">Cargar</button></div><div class="mt-4 space-y-1">${cM.slice(-5).reverse().map(c=>`<div class="card-pro !py-2 flex justify-between text-xs"><span>${c.material}</span><b class="text-blue-400">$${c.amount}</b></div>`).join("")}</div>`;
+        }
+
+        if(window.currentView === "catalogo") {
+            app.innerHTML = `<div class="card-pro"><h2 class="text-xs font-black opacity-50 mb-4 uppercase">Configuración</h2><input id="newM" placeholder="Nuevo Material"><button onclick="addMat()" class="btn-main !p-3 mb-4">Añadir</button><hr class="border-white/5 my-4"><input id="newS" placeholder="Nuevo Servicio"><button onclick="addServicio()" class="btn-main !p-3">Añadir</button></div>`;
+        }
+
+        if(window.currentView === "ventas") {
+            app.innerHTML = `<div class="card-pro"><h2 class="text-lg font-black uppercase italic mb-4">Venta</h2><input id="cli" placeholder="CLIENTE"><input id="tel" type="number" placeholder="WHATSAPP"><div class="bg-white/5 p-4 rounded-xl mt-3"><div class="grid grid-cols-2 gap-2"><select id="pS"><option value="">Material...</option>${Object.keys(window.state.inventario || {}).map(m=>`<option value="${m}">${m}</option>`).join("")}</select><select id="sS"><option value="">Servicio...</option>${(window.state.serviciosExtra || []).map(s=>`<option value="${s}">${s}</option>`).join("")}</select></div><input id="qV" type="number" placeholder="Cant." value="1"><select id="tC" onchange="document.getElementById('pL').classList.toggle('hidden', this.value !== 'libre')"><option value="detal">DETAL ($9)</option><option value="mayor">MAYOR ($10)</option><option value="libre">LIBRE</option></select><input id="pL" class="hidden" type="number" placeholder="Precio $"><button onclick="addCart()" class="btn-main !p-3 mt-3">+ Añadir</button></div><div id="cart-list" class="mt-4 space-y-1 text-xs"></div><div id="total-disp" class="text-4xl font-black text-center my-6 italic">$0.00</div><button onclick="finalizarVenta()" class="btn-main">Registrar</button></div>`;
+        }
+        
         if(window.currentView === "inventario") {
             app.innerHTML = `<div class="space-y-3">${Object.entries(window.state.inventario || {}).map(([n, i]) => `
                 <div class="card-pro border-l-4 ${i.stock < 5 ? 'border-red-500' : 'border-green-500'}">
                     <div class="flex justify-between items-center">
                         <div><p class="text-[9px] font-black opacity-50 uppercase">${n}</p><h4 class="text-3xl font-black italic">${(i.stock || 0).toFixed(2)}</h4></div>
                         <div class="flex flex-col gap-2">
-                            <button onclick="registrarMerma('${n}')" class="bg-orange-600/20 text-orange-400 p-2 rounded-xl text-[9px] font-black uppercase">⚠ Merma</button>
+                            <button onclick="registrarMerma('${n}')" class="bg-orange-600/20 text-orange-400 p-2 rounded-xl text-[9px] font-black uppercase tracking-tighter">⚠ Merma</button>
                             <div class="flex gap-1"><button onclick="editMatInv('${n}')" class="bg-white/5 p-2 rounded-lg text-[9px]">EDIT</button><button onclick="delMatInv('${n}')" class="bg-red-600/10 text-red-500 p-2 rounded-lg text-[9px]">X</button></div>
                         </div>
                     </div>
                 </div>`).join("")}</div>`;
         }
 
-        if(window.currentView === "ventas") {
-            app.innerHTML = `<div class="card-pro"><h2 class="text-lg font-black uppercase italic mb-4">Venta</h2><input id="cli" placeholder="CLIENTE"><input id="tel" type="number" placeholder="WHATSAPP"><div class="bg-white/5 p-4 rounded-xl mt-3"><div class="grid grid-cols-2 gap-2"><select id="pS"><option value="">Material...</option>${Object.keys(window.state.inventario || {}).map(m=>`<option value="${m}">${m}</option>`).join("")}</select><select id="sS"><option value="">Servicio...</option>${(window.state.serviciosExtra || []).map(s=>`<option value="${s}">${s}</option>`).join("")}</select></div><input id="qV" type="number" placeholder="Cantidad" value="1"><select id="tC" onchange="document.getElementById('pL').classList.toggle('hidden', this.value !== 'libre')"><option value="detal">DETAL ($9)</option><option value="mayor">MAYOR ($10)</option><option value="libre">PRECIO LIBRE</option></select><input id="pL" class="hidden" type="number" placeholder="Monto $"><button onclick="addCart()" class="btn-main !p-3 mt-3">+ Añadir</button></div><div id="cart-list" class="mt-4 space-y-1 text-xs"></div><div id="total-disp" class="text-4xl font-black text-center my-6 italic">$0.00</div><button onclick="finalizarVenta()" class="btn-main">Guardar</button></div>`;
+        if(window.currentView === "reportes") {
+            app.innerHTML = `<div class="card-pro text-center"><p class="text-[10px] font-black opacity-50 uppercase">Ganancia Neta Mes</p><h3 class="text-4xl font-black italic">$${neta.toFixed(2)}</h3></div>`;
         }
     };
 
-    // FUNCIONES RESTAURADAS
+    // FUNCIONES LOGICAS
+    window.saveGasto = async () => { const d = document.getElementById("dG").value, a = parseFloat(document.getElementById("aG").value); if(d && a) { window.state.gastos.push({ id: Date.now(), desc: d.toUpperCase(), amount: a }); await window.sync(); setView('inicio'); } };
+    window.saveInv = async () => { const m = document.getElementById("mInv").value, q = parseFloat(document.getElementById("qInv").value), p = parseFloat(document.getElementById("pInv").value); if(m && q) { window.state.inventario[m].stock += q; window.state.comprasInversion.push({ id: Date.now(), material: m, amount: (q * p), qty: q }); await window.sync(); setView('inicio'); } };
+    window.addMat = async () => { let n = document.getElementById("newM").value.toUpperCase(); if(n) { window.state.inventario[n] = {stock: 0}; await window.sync(); render(); } };
+    window.addServicio = async () => { let s = document.getElementById("newS").value.toUpperCase(); if(s) { window.state.serviciosExtra.push(s); await window.sync(); render(); } };
+    window.abonoMultiple = async (name) => { 
+        let m = parseFloat(prompt(`¿Cuánto abona ${name}?`));
+        if(!m) return;
+        let vCli = window.state.ventas.filter(v => v.cliente === name && !v.pagado);
+        vCli.forEach(v => {
+            if(m <= 0) return;
+            let pendiente = v.total - (v.abonado || 0);
+            if(m >= pendiente) { v.abonado = v.total; v.pagado = true; m -= pendiente; }
+            else { v.abonado = (v.abonado || 0) + m; m = 0; }
+        });
+        await window.sync(); render();
+    };
     window.showBill = (cli, mon, tel) => {
         document.getElementById('b-cli').innerText = cli;
         document.getElementById('b-monto').innerText = "$" + mon.toFixed(2);
-        document.getElementById('b-fecha').innerText = new Date().toLocaleDateString();
         document.getElementById('bill-modal').style.display = 'flex';
-        document.getElementById('btn-wa').onclick = () => {
-            const msg = `*GHOSTPRINT PRO*%0A*Recibo de Cobro*%0A------------------%0A*Cliente:* ${cli}%0A*Saldo Pendiente:* $${mon.toFixed(2)}%0A------------------%0A_Favor reportar su pago vía capture._`;
-            window.open(`https://api.whatsapp.com/send?phone=${tel}&text=${msg}`, '_blank');
-        };
+        document.getElementById('btn-wa').onclick = () => window.open(`https://api.whatsapp.com/send?phone=${tel}&text=*GHOSTPRINT PRO*%0A*Saldo Total:* $${mon.toFixed(2)}`, '_blank');
     };
     window.closeBill = () => document.getElementById('bill-modal').style.display = 'none';
-
-    window.editVenta = (id) => {
-        let v = window.state.ventas.find(x => x.id === id);
-        let nCli = prompt("Nombre Cliente:", v.cliente);
-        let nTel = prompt("WhatsApp:", v.telefono);
-        let nTot = prompt("Monto Total:", v.total);
-        if(nCli) v.cliente = nCli.toUpperCase();
-        if(nTel) v.telefono = nTel;
-        if(nTot) v.total = parseFloat(nTot);
-        window.sync(); render();
-    };
-
-    window.abono = async (id) => { let v = window.state.ventas.find(x => x.id === id); let m = parseFloat(prompt(`Saldo: $${(v.total-v.abonado).toFixed(2)}. ¿Abono?`)); if(m) { v.abonado = (Number(v.abonado)||0) + m; if(v.abonado >= v.total) v.pagado = true; await window.sync(); render(); } };
-    window.registrarMerma = async (mat) => { let q = parseFloat(prompt(`Merma de ${mat}:`)); if(q > 0) { window.state.inventario[mat].stock -= q; await window.sync(); render(); } };
-    window.saveGasto = async () => { const d = document.getElementById("dG").value, a = parseFloat(document.getElementById("aG").value); if(d && a) { window.state.gastos.push({ id: Date.now(), desc: d.toUpperCase(), amount: a }); await window.sync(); setView('inicio'); } };
     window.addCart = () => { let m = document.getElementById("pS").value, s = document.getElementById("sS").value, q = parseFloat(document.getElementById("qV").value) || 1, t = document.getElementById("tC").value, p = (t === "detal") ? 9 : (t === "mayor") ? 10 : parseFloat(document.getElementById("pL").value) || 0, d = (m && s) ? m + " + " + s : m || s; if(d) { cart.push({ d, p: (p*q), mat: m, qtyV: q }); renderCart(); } };
     function renderCart() { document.getElementById("cart-list").innerHTML = cart.map(c => `<div class="flex justify-between"><span>${c.d}</span><b>$${c.p}</b></div>`).join(""); document.getElementById("total-disp").innerText = "$" + cart.reduce((a,b)=>a+b.p,0).toFixed(2); }
     window.finalizarVenta = async () => { let cli = document.getElementById("cli").value; if(!cli || !cart.length) return; cart.forEach(c => { if(c.mat) window.state.inventario[c.mat].stock -= c.qtyV; }); window.state.ventas.push({ id: Date.now(), cliente: cli.toUpperCase(), telefono: document.getElementById("tel").value, total: cart.reduce((a,b)=>a+b.p,0), abonado: 0, pagado: false }); await window.sync(); cart = []; setView('inicio'); };
+    window.registrarMerma = async (mat) => { let q = parseFloat(prompt(`Merma ${mat}:`)); if(q > 0) { window.state.inventario[mat].stock -= q; await window.sync(); render(); } };
     window.editMatInv = async (old) => { let n = prompt("Nuevo nombre:", old); if(n) { window.state.inventario[n.toUpperCase()] = window.state.inventario[old]; delete window.state.inventario[old]; await window.sync(); render(); } };
-    window.delMatInv = async (n) => { if(confirm(`Eliminar ${n}?`)){ delete window.state.inventario[n]; await window.sync(); render(); } };
+    window.delMatInv = async (n) => { if(confirm(`¿Eliminar ${n}?`)){ delete window.state.inventario[n]; await window.sync(); render(); } };
 
     render();
 </script>
