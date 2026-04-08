@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>GhostPrint MASTER v23.2</title>
+    <title>GhostPrint MASTER v23.3</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap');
@@ -14,6 +14,7 @@
         .active { background: #7c3aed !important; color: white !important; }
         input, select { background: #070712; border: 1px solid #334155; color: white; padding: 14px; border-radius: 14px; width: 100%; margin: 6px 0; font-weight: 700; outline: none; }
         .btn-main { background: linear-gradient(135deg, #7c3aed 0%, #4c1d95 100%); color: white; padding: 16px; border-radius: 16px; width: 100%; font-weight: 900; text-transform: uppercase; cursor: pointer; border: none; }
+        .alert-low { border: 2px solid #ef4444 !important; background: rgba(239, 68, 68, 0.1) !important; }
         .ghost-glow { filter: drop-shadow(0 0 10px #7c3aed); }
     </style>
 </head>
@@ -22,7 +23,7 @@
 <div class="p-4 flex justify-between items-center bg-[#0a0a14] border-b border-white/5">
     <div class="flex items-center gap-3">
         <span class="text-4xl ghost-glow">👻</span>
-        <div><h1 class="text-xl font-black italic text-purple-500 leading-none">GHOST PRINT</h1><p class="text-[8px] font-black opacity-40 uppercase">History Master v23.2</p></div>
+        <div><h1 class="text-xl font-black italic text-purple-500 leading-none">GHOST PRINT</h1><p class="text-[8px] font-black opacity-40 uppercase">Stock & Service v23.3</p></div>
     </div>
 </div>
 
@@ -45,9 +46,9 @@
     const db = firebase.firestore();
     const docRef = db.collection("sistema").doc("datos_principales");
 
-    window.state = JSON.parse(localStorage.getItem('gp_v23_2')) || { ventas: [], inventario: {}, compras: [], servicios: ["DISEÑO"] };
+    window.state = JSON.parse(localStorage.getItem('gp_v23_3')) || { ventas: [], inventario: {}, compras: [], servicios: ["DISEÑO", "INSTALACIÓN"] };
 
-    window.sync = async function() { localStorage.setItem('gp_v23_2', JSON.stringify(window.state)); await docRef.set(window.state); };
+    window.sync = async function() { localStorage.setItem('gp_v23_3', JSON.stringify(window.state)); await docRef.set(window.state); };
     docRef.onSnapshot(doc => { if(doc.exists) { window.state = doc.data(); render(); } });
 
     window.setView = function(v) { window.currentView = v; document.querySelectorAll('.btn-nav').forEach(b => b.classList.remove('active')); document.getElementById('n-'+v).classList.add('active'); render(); };
@@ -55,7 +56,7 @@
     window.render = function() {
         const app = document.getElementById("app");
         const inv = window.state.inventario || {};
-        const cM = window.state.compras || [];
+        const serv = window.state.servicios || [];
 
         if(window.currentView === "inicio") {
             const vM = window.state.ventas || [];
@@ -63,46 +64,66 @@
             app.innerHTML = `<div class="card-pro text-center"><p class="text-[10px] opacity-40 uppercase">Ventas Totales</p><h2 class="text-6xl font-black italic text-purple-500">$${cobrado.toFixed(2)}</h2></div>`;
         }
 
-        if(window.currentView === "compras") {
+        if(window.currentView === "inventario") {
+            app.innerHTML = `<h2 class="text-xs font-black opacity-30 uppercase mb-4 tracking-widest">Estado del Almacén</h2><div class="space-y-2">${Object.entries(inv).map(([n, i]) => `
+                <div class="card-pro flex justify-between items-center ${i.stock < 5 ? 'alert-low' : ''}">
+                    <div>
+                        <b class="uppercase text-purple-400 text-[10px]">${n}</b>
+                        <br><span class="text-3xl font-black italic">${i.stock} <small class="text-xs opacity-40">ML</small></span>
+                        ${i.stock < 5 ? '<p class="text-[8px] font-black text-red-500 uppercase">¡STOCK BAJO!</p>' : ''}
+                    </div>
+                    <div class="flex flex-col gap-2">
+                        <button onclick="editStock('${n}')" class="bg-blue-600/20 text-blue-400 px-3 py-1 rounded-lg text-[10px] font-black uppercase">Editar</button>
+                        <button onclick="delMat('${n}')" class="bg-red-600/20 text-red-400 px-3 py-1 rounded-lg text-[10px] font-black uppercase">Borrar</button>
+                    </div>
+                </div>`).join("")}</div>`;
+        }
+
+        if(window.currentView === "catalogo") {
             app.innerHTML = `
                 <div class="card-pro">
-                    <h2 class="text-lg font-black italic text-blue-400 mb-4 uppercase text-center">Registrar Compra</h2>
-                    <select id="cMat"><option value="">-- ELEGIR MATERIAL --</option>${Object.keys(inv).map(m=>`<option value="${m}">${m}</option>`).join("")}</select>
-                    <input id="cCant" type="number" placeholder="Metros Lineales Comprados">
-                    <input id="cCosto" type="number" placeholder="Costo Metro Lineal $">
-                    <input id="cVenta" type="number" placeholder="Nuevo Precio Venta Sugerido ($M2 o ML)">
-                    <button onclick="saveCompra()" class="btn-main !from-blue-600 !to-blue-900 mt-4">CARGAR AL STOCK</button>
+                    <h3 class="text-xs font-black opacity-40 mb-3 uppercase italic text-center">Registrar Nuevo Material</h3>
+                    <input id="nMat" placeholder="Nombre (Ej: VINIL)">
+                    <input id="aMat" type="number" step="0.01" placeholder="Ancho del Rollo (Ej: 1.52)">
+                    <button onclick="crearMat()" class="btn-main mt-2">GUARDAR BASE</button>
                 </div>
 
-                <div class="mt-8">
-                    <h3 class="text-xs font-black opacity-30 uppercase tracking-widest mb-4">Historial de Compras Recientes</h3>
-                    <div class="space-y-2">
-                        ${cM.slice(-10).reverse().map(c => {
-                            const info = inv[c.m] || {ancho: 1.52};
-                            const costoM2 = (c.co / info.ancho).toFixed(2);
-                            return `
-                            <div class="card-pro bg-white/5 border-none flex justify-between items-center">
-                                <div>
-                                    <b class="text-blue-400 uppercase text-[11px]">${c.m}</b>
-                                    <p class="text-2xl font-black">${c.c} <small class="text-xs opacity-50">ML</small></p>
-                                    <p class="text-[9px] font-bold opacity-40">${c.f || 'S/F'}</p>
-                                </div>
-                                <div class="text-right">
-                                    <p class="text-xs font-black text-white">$${c.co}/ML</p>
-                                    <p class="text-[9px] font-black text-blue-300">COSTO M²: $${costoM2}</p>
-                                </div>
-                            </div>`;
-                        }).join("")}
+                <div class="card-pro mt-4">
+                    <h3 class="text-xs font-black opacity-40 mb-3 uppercase italic text-center">Gestión de Servicios</h3>
+                    <div class="flex gap-2">
+                        <input id="newServ" placeholder="Nombre Servicio (Ej: CORTE)">
+                        <button onclick="addServ()" class="bg-purple-600 px-4 rounded-xl font-black text-xs uppercase">Añadir</button>
+                    </div>
+                    <div class="mt-4 space-y-2">
+                        ${serv.map(s => `<div class="flex justify-between items-center bg-white/5 p-2 rounded-lg text-[11px] font-bold uppercase"><span>${s}</span><button onclick="delServ('${s}')" class="text-red-500">Eliminar</button></div>`).join("")}
                     </div>
                 </div>
             `;
         }
 
+        if(window.currentView === "compras") {
+            const cM = window.state.compras || [];
+            app.innerHTML = `
+                <div class="card-pro">
+                    <h2 class="text-lg font-black italic text-blue-400 mb-4 uppercase text-center text-shadow">Registrar Compra</h2>
+                    <select id="cMat"><option value="">-- ELEGIR MATERIAL --</option>${Object.keys(inv).map(m=>`<option value="${m}">${m}</option>`).join("")}</select>
+                    <input id="cCant" type="number" placeholder="Metros Lineales Comprados">
+                    <input id="cCosto" type="number" placeholder="Costo Metro Lineal $">
+                    <input id="cVenta" type="number" placeholder="Precio Venta Sugerido ($M2 o ML)">
+                    <button onclick="saveCompra()" class="btn-main !from-blue-600 !to-blue-900 mt-4">ACTUALIZAR STOCK</button>
+                </div>
+                <div class="mt-8 space-y-2">
+                    ${cM.slice(-5).reverse().map(c => `<div class="card-pro bg-white/5 border-none flex justify-between items-center"><div class="text-[10px] font-black uppercase text-blue-400">${c.m}<br><span class="text-white text-lg">${c.c} ML</span></div><div class="text-right text-[10px] font-bold opacity-40">${c.f}</div></div>`).join("")}
+                </div>
+            `;
+        }
+        
+        // Mantener las otras vistas (Ventas)
         if(window.currentView === "ventas") {
             app.innerHTML = `
                 <div class="card-pro">
                     <h2 class="text-lg font-black italic text-purple-500 mb-4 uppercase">Facturación</h2>
-                    <input id="cli" placeholder="NOMBRE DEL CLIENTE">
+                    <input id="cli" placeholder="CLIENTE">
                     <div class="bg-white/5 p-4 rounded-xl mt-4 border border-white/10">
                         <select id="vMat" onchange="updateVentaUI()">
                             <option value="">-- MATERIAL --</option>
@@ -114,7 +135,7 @@
                         </div>
                         <p id="vCalc" class="text-[10px] font-black text-purple-400 my-2 uppercase"></p>
                         <input id="vPrec" type="number" placeholder="Precio Final $">
-                        <button onclick="addItem()" class="btn-main !p-3 mt-3 text-xs">+ AÑADIR A LISTA</button>
+                        <button onclick="addItem()" class="btn-main !p-3 mt-3 text-xs">+ AÑADIR ITEM</button>
                     </div>
                     <div id="vLista" class="mt-4 space-y-1"></div>
                     <div id="vTotal" class="text-5xl font-black text-center my-6">$0.00</div>
@@ -122,37 +143,45 @@
                 </div>
             `;
         }
+    };
 
-        if(window.currentView === "inventario") {
-            app.innerHTML = `<div class="space-y-2">${Object.entries(inv).map(([n, i]) => `
-                <div class="card-pro flex justify-between items-center">
-                    <div><b class="uppercase text-purple-400 text-xs">${n}</b><br><span class="text-3xl font-black">${i.stock} <small class="text-xs opacity-40">ML</small></span></div>
-                    <div class="text-right text-[10px] font-bold opacity-40">ANCHO: ${i.ancho}m<br>PRECIO: $${i.precio}/u</div>
-                </div>`).join("")}</div>`;
-        }
+    // --- FUNCIONES LOGICA ---
+    window.crearMat = async () => {
+        const n = document.getElementById("nMat").value.toUpperCase(), a = parseFloat(document.getElementById("aMat").value);
+        if(n && a) { window.state.inventario[n] = { stock: 0, precio: 0, ancho: a }; await window.sync(); setView('inventario'); }
+    };
 
-        if(window.currentView === "catalogo") {
-            app.innerHTML = `<div class="card-pro">
-                <h3 class="text-xs font-black opacity-40 mb-3 uppercase italic text-center">Base de Datos de Materiales</h3>
-                <input id="nMat" placeholder="Nombre (Ej: VINIL)">
-                <input id="aMat" type="number" step="0.01" placeholder="Ancho del Rollo (Ej: 1.52)">
-                <button onclick="crearMat()" class="btn-main mt-2">REGISTRAR BASE</button>
-                <div class="mt-6 border-t border-white/5 pt-4">
-                    ${Object.keys(inv).map(m=>`<div class="flex justify-between items-center p-2 text-xs"><span>${m}</span><button onclick="delMat('${m}')" class="text-red-600 font-bold">BORRAR</button></div>`).join("")}
-                </div>
-            </div>`;
+    window.editStock = async (m) => {
+        let n = parseFloat(prompt(`Editar stock actual de ${m} (ML):`, window.state.inventario[m].stock));
+        if(!isNaN(n)) { window.state.inventario[m].stock = n; await window.sync(); render(); }
+    };
+
+    window.delMat = async (m) => { if(confirm(`¿Seguro que quieres borrar ${m} del inventario?`)) { delete window.state.inventario[m]; await window.sync(); render(); } };
+
+    window.addServ = async () => {
+        const s = document.getElementById("newServ").value.toUpperCase();
+        if(s) { if(!window.state.servicios) window.state.servicios = []; window.state.servicios.push(s); await window.sync(); render(); }
+    };
+
+    window.delServ = async (s) => { if(confirm("¿Eliminar servicio?")) { window.state.servicios = window.state.servicios.filter(x => x !== s); await window.sync(); render(); } };
+
+    window.saveCompra = async () => {
+        const m = document.getElementById("cMat").value, c = parseFloat(document.getElementById("cCant").value), co = parseFloat(document.getElementById("cCosto").value), v = parseFloat(document.getElementById("cVenta").value);
+        if(m && c) {
+            window.state.inventario[m].stock += c;
+            window.state.inventario[m].precio = v;
+            if(!window.state.compras) window.state.compras = [];
+            window.state.compras.push({ m, c, co, f: new Date().toLocaleDateString() });
+            await window.sync(); setView('inventario');
         }
     };
 
     window.updateVentaUI = () => {
-        const m = document.getElementById("vMat").value;
-        const t = document.getElementById("vTipo").value;
-        const c = parseFloat(document.getElementById("vCant").value) || 0;
+        const m = document.getElementById("vMat").value, t = document.getElementById("vTipo").value, c = parseFloat(document.getElementById("vCant").value) || 0;
         const info = window.state.inventario[m];
         if(info) {
-            let final = 0;
-            if(t === "ML") { final = c * info.precio; document.getElementById("vCalc").innerText = `${c} Metros x $${info.precio}`; }
-            else { let m2 = c * info.ancho; final = m2 * info.precio; document.getElementById("vCalc").innerText = `${m2.toFixed(2)} M² Totales x $${info.precio}`; }
+            let final = (t === "ML") ? (c * info.precio) : (c * info.ancho * info.precio);
+            document.getElementById("vCalc").innerText = (t === "ML") ? `${c} Metros x $${info.precio}` : `${(c * info.ancho).toFixed(2)} M² x $${info.precio}`;
             document.getElementById("vPrec").value = final.toFixed(2);
         }
     };
@@ -169,24 +198,6 @@
         window.state.ventas.push({ id: Date.now(), cliente: document.getElementById("cli").value.toUpperCase(), total: cart.reduce((a,b)=>a+b.p,0) });
         await window.sync(); cart = []; setView('inicio');
     };
-
-    window.saveCompra = async () => {
-        const m = document.getElementById("cMat").value, c = parseFloat(document.getElementById("cCant").value), co = parseFloat(document.getElementById("cCosto").value), v = parseFloat(document.getElementById("cVenta").value);
-        if(m && c) {
-            window.state.inventario[m].stock += c;
-            window.state.inventario[m].precio = v;
-            if(!window.state.compras) window.state.compras = [];
-            window.state.compras.push({ m, c, co, f: new Date().toLocaleDateString() });
-            await window.sync(); render();
-        }
-    };
-
-    window.crearMat = async () => {
-        const n = document.getElementById("nMat").value.toUpperCase(), a = parseFloat(document.getElementById("aMat").value);
-        if(n && a) { window.state.inventario[n] = { stock: 0, precio: 0, ancho: a }; await window.sync(); setView('compras'); }
-    };
-
-    window.delMat = async (m) => { if(confirm("¿Seguro?")) { delete window.state.inventario[m]; await window.sync(); render(); } };
 
     window.currentView = "inicio";
     render();
