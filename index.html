@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>GhostPrint MASTER v29.0</title>
+    <title>GhostPrint MASTER v29.1</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&family=JetBrains+Mono:wght@500&display=swap');
@@ -102,7 +102,7 @@
             <h1 class="text-2xl font-black italic tracking-tighter text-white leading-none">GHOST<span class="text-purple-500">PRINT</span></h1>
             <div class="flex items-center gap-2">
                 <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-                <p class="text-[9px] font-bold opacity-50 uppercase tracking-[0.3em]">System v29.0 • Online</p>
+                <p class="text-[9px] font-bold opacity-50 uppercase tracking-[0.3em]">System v29.1 • Online</p>
             </div>
         </div>
     </div>
@@ -294,11 +294,6 @@
         else if(window.currentView === 'catalogo') renderCatalogo(app, inv, serv);
     };
 
-    // --- REUTILIZACIÓN DE FUNCIONES LÓGICAS (SIN CAMBIOS) ---
-    // Se mantienen todas tus funciones: saveCompra, editCompra, delCompra, renderPorCobrar, 
-    // renderGastos, saveGasto, delGasto, renderInventario, renderCatalogo, etc.
-    // Solo se actualiza el estilo visual dentro de ellas para que coincida.
-
     function renderPorCobrar(app) {
         const ventas = window.state.ventas || [];
         const deudoresMap = {};
@@ -332,8 +327,11 @@
                                             <div class="text-[10px] font-black text-purple-500">REF: ${f.id.toString().slice(-6)}</div>
                                             <div class="text-lg font-black text-white">Debe: $${(f.total - f.abono).toFixed(2)}</div>
                                         </div>
-                                        <div class="flex gap-2">
-                                            <button onclick="abonar(${f.id})" class="bg-green-600 text-white px-4 py-2 rounded-lg font-black text-[10px] uppercase">Abonar</button>
+                                        <div class="flex gap-1">
+                                            <button onclick="abonar(${f.id})" class="bg-green-600 text-white px-3 py-2 rounded-lg font-black text-[10px] uppercase">Abonar</button>
+                                            <button onclick="liquidar(${f.id})" class="bg-purple-600 text-white px-3 py-2 rounded-lg font-black text-[10px] uppercase">Liquidar</button>
+                                            <button onclick="editarFactura(${f.id})" class="bg-blue-600 text-white px-3 py-2 rounded-lg font-black text-[10px] uppercase">✏️</button>
+                                            <button onclick="eliminarVenta(${f.id})" class="bg-red-600 text-white px-3 py-2 rounded-lg font-black text-[10px] uppercase">🗑️</button>
                                             <button onclick="showReceipt(${f.id})" class="bg-white/10 p-2 rounded-lg">📄</button>
                                         </div>
                                     </div>
@@ -369,10 +367,6 @@
                     </div>`).join("")}
             </div>`;
     }
-
-    // --- COPIAR RESTO DE FUNCIONES DEL ORIGINAL ---
-    // (AQUÍ COPIAS TAL CUAL TUS FUNCIONES: renderCompras, renderGastos, renderCatalogo, 
-    // updateVentaUI, addItem, removeItem, saveVenta, abonar, etc. del código original)
 
     function renderCompras(app, inv, today) {
         const listC = window.state.compras || [];
@@ -485,6 +479,17 @@
         let n = parseFloat(prompt(`AJUSTE DE STOCK PARA ${m}:`, window.state.inventario[m].stock));
         if(!isNaN(n)) { window.state.inventario[m].stock = n; await window.sync(); }
     };
+    window.registrarMerma = async (m) => {
+        const merm = parseFloat(prompt(`MERMA para ${m} (ML):`));
+        if(!isNaN(merm) && merm > 0) {
+            if(window.state.inventario[m]) {
+                window.state.inventario[m].stock -= merm;
+                if(!window.state.gastos) window.state.gastos = [];
+                window.state.gastos.push({ desc: `MERMA: ${m}`, monto: 0, fecha: new Date().toISOString().split('T')[0] });
+                await window.sync();
+            }
+        }
+    };
     window.crearServicio = async () => {
         const s = document.getElementById("nServ").value.toUpperCase();
         if(s) { if(!window.state.servicios) window.state.servicios = [...SERVICIOS_DEFECTO]; window.state.servicios.push(s); await window.sync(); }
@@ -522,6 +527,27 @@
         const v = window.state.ventas.find(x => x.id === id);
         let monto = parseFloat(prompt(`MONTO A ABONAR PARA ${v.cliente}:`));
         if(!isNaN(monto)) { v.abono += monto; await window.sync(); }
+    };
+    window.liquidar = async (id) => {
+        const v = window.state.ventas.find(x => x.id === id);
+        if(confirm("¿Liquidar?")) { v.abono = v.total; await window.sync(); }
+    };
+    window.editarFactura = async (id) => {
+        const v = window.state.ventas.find(x => x.id === id);
+        let nT = parseFloat(prompt("Total:", v.total));
+        let nA = parseFloat(prompt("Abono:", v.abono));
+        if(!isNaN(nT)) v.total = nT;
+        if(!isNaN(nA)) v.abono = nA;
+        await window.sync();
+    };
+    window.eliminarVenta = async (id) => {
+        if(confirm("¿Eliminar esta venta? Se restablecerá el stock.")) {
+            const idx = window.state.ventas.findIndex(x => x.id === id);
+            const v = window.state.ventas[idx];
+            v.items.forEach(i => { if(window.state.inventario[i.m]) window.state.inventario[i.m].stock += i.c; });
+            window.state.ventas.splice(idx, 1);
+            await window.sync();
+        }
     };
     window.showReceipt = (id) => {
         const v = window.state.ventas.find(x => x.id === id);
