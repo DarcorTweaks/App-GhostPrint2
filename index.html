@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>GhostPrint MASTER v28.9</title>
+    <title>GhostPrint MASTER v28.9.1</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap');
@@ -30,7 +30,7 @@
         <span class="text-4xl ghost-glow">👻</span>
         <div>
             <h1 class="text-xl font-black italic text-purple-500 leading-none">GHOST PRINT</h1>
-            <p class="text-[8px] font-black opacity-40 uppercase tracking-widest text-purple-300">Master Suite v28.9</p>
+            <p class="text-[8px] font-black opacity-40 uppercase tracking-widest text-purple-300">Master Suite v28.9.1</p>
         </div>
     </div>
 </div>
@@ -42,7 +42,7 @@
     <div onclick="setView('compras')" class="btn-nav" id="n-compras">🛒 Compras</div>
     <div onclick="setView('gastos')" class="btn-nav" id="n-gastos">💸 Gastos</div>
     <div onclick="setView('inventario')" class="btn-nav" id="n-inventario">📦 Stock</div>
-    <div onclick="setView('catalogo')" class="btn-nav" id="n-catalogo">⚙️ CONFIG</div>
+    <div onclick="setView('catalogo')" class="btn-nav" id="n-catalogo">⚙️ CATALOGO</div>
 </nav>
 
 <div id="app" class="p-4 max-w-2xl mx-auto"></div>
@@ -170,7 +170,6 @@
         else if(window.currentView === 'catalogo') renderCatalogo(app, inv, serv);
     };
 
-    // --- COMPRAS CON HISTORIAL Y EDICIÓN ---
     function renderCompras(app, inv, today) {
         const listC = window.state.compras || [];
         app.innerHTML = `
@@ -211,6 +210,7 @@
     window.saveCompra = async () => {
         const m = document.getElementById("cMat").value, c = parseFloat(document.getElementById("cCant").value), co = parseFloat(document.getElementById("cCosto").value);
         if(m && c) {
+            if(!window.state.inventario[m]) return;
             window.state.inventario[m].stock += c;
             if(document.getElementById("cVentaM2").value) window.state.inventario[m].precioM2 = parseFloat(document.getElementById("cVentaM2").value);
             if(document.getElementById("cVentaML").value) window.state.inventario[m].precioML = parseFloat(document.getElementById("cVentaML").value);
@@ -228,7 +228,6 @@
         const nCost = parseFloat(prompt(`Nuevo Costo (ML) para ${comp.m}:`, comp.co));
         
         if(!isNaN(nCant) && !isNaN(nCost)) {
-            // Ajustar stock: restar vieja cantidad, sumar nueva
             if(window.state.inventario[comp.m]) {
                 window.state.inventario[comp.m].stock = (window.state.inventario[comp.m].stock - comp.c) + nCant;
             }
@@ -249,7 +248,6 @@
         }
     };
 
-    // --- POR COBRAR ---
     function renderPorCobrar(app) {
         const ventas = window.state.ventas || [];
         const deudoresMap = {};
@@ -291,7 +289,6 @@
             </div>`;
     }
 
-    // --- GASTOS ---
     function renderGastos(app, today) {
         const listG = window.state.gastos || [];
         const total = listG.reduce((a,b)=>a+b.monto,0);
@@ -363,7 +360,6 @@
             </div>`;
     }
 
-    // --- LÓGICA VENTAS ---
     window.updateVentaUI = () => {
         const m = document.getElementById("vMat").value, t = document.getElementById("vTipo").value, c = parseFloat(document.getElementById("vCant").value) || 0;
         const info = window.state.inventario[m];
