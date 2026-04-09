@@ -16,13 +16,14 @@
         .btn-main { background: linear-gradient(135deg, #7c3aed 0%, #4c1d95 100%); color: white; padding: 18px; border-radius: 18px; width: 100%; font-weight: 900; text-transform: uppercase; cursor: pointer; border: none; font-size: 14px; }
         .chart-bar { height: 8px; border-radius: 4px; background: #2d2d44; overflow: hidden; margin: 8px 0; }
         .chart-fill { height: 100%; transition: width 0.5s ease-in-out; }
+        .ghost-glow { filter: drop-shadow(0 0 10px #7c3aed); }
     </style>
 </head>
 <body>
 
 <div class="p-4 flex justify-between items-center bg-[#0a0a14] border-b border-white/5">
     <div class="flex items-center gap-3">
-        <span class="text-4xl">👻</span>
+        <span class="text-4xl ghost-glow">👻</span>
         <div>
             <h1 class="text-xl font-black italic text-purple-500 leading-none">GHOST PRINT</h1>
             <p class="text-[8px] font-black opacity-40 uppercase tracking-widest text-purple-300">Master Suite v28.9.1</p>
@@ -61,7 +62,7 @@
     const db = firebase.firestore();
     const docRef = db.collection("sistema").doc("datos_principales");
 
-    window.state = { ventas: [], inventario: {}, compras: [], gastos: [], servicios: ["DISEÑO", "IMPRESIÓN", "INSTALACIÓN"] };
+    window.state = { ventas: [], inventario: {}, compras: [], gastos: [], servicios: [] };
     window.currentView = 'inicio';
     window.cart = [];
 
@@ -78,41 +79,90 @@
     window.render = function() {
         const app = document.getElementById("app");
         const inv = window.state.inventario || {};
+        const serv = window.state.servicios || [];
         const today = new Date().toISOString().split('T')[0];
 
         if(window.currentView === 'inicio') {
-            app.innerHTML = `<h2 class="text-xl font-black italic text-purple-500 mb-4 uppercase">Panel de Control</h2><p class="opacity-40">Bienvenido al sistema Ghost Print.</p>`;
+            const vM = window.state.ventas || [];
+            const gM = window.state.gastos || [];
+            const now = new Date();
+            const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+            
+            const currentVentas = vM.filter(v => new Date(v.fecha) >= startOfMonth);
+            const currentGastos = gM.filter(g => new Date(g.fecha) >= startOfMonth);
+            
+            const totalVentas = currentVentas.reduce((a, b) => a + (Number(b.total) || 0), 0);
+            const totalAbonos = currentVentas.reduce((a, b) => a + (Number(b.abono) || 0), 0);
+            const totalGastos = currentGastos.reduce((a, b) => a + (Number(b.monto) || 0), 0);
+            const totalCaja = totalAbonos - totalGastos;
+            
+            const cobroPct = totalVentas > 0 ? (totalAbonos / totalVentas) * 100 : 0;
+            const gastoPct = totalVentas > 0 ? Math.min((totalGastos / totalVentas) * 100, 100) : 0;
+
+            app.innerHTML = `
+                <div class="card-pro text-center bg-gradient-to-br from-green-900/40 to-[#111122] border-green-500/30">
+                    <p class="text-[10px] opacity-60 uppercase font-black tracking-widest text-green-300">Caja Real (Efectivo)</p>
+                    <h2 class="text-5xl font-black italic text-green-400">$${totalCaja.toLocaleString()}</h2>
+                </div>
+                <div class="card-pro bg-[#16162a]">
+                    <div class="mb-4">
+                        <div class="flex justify-between text-[10px] font-black uppercase mb-1">
+                            <span class="text-purple-400">Cobro</span>
+                            <span class="text-white">${cobroPct.toFixed(0)}%</span>
+                        </div>
+                        <div class="chart-bar"><div class="chart-fill bg-purple-500" style="width: ${cobroPct}%"></div></div>
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-[10px] font-black uppercase mb-1">
+                            <span class="text-red-400">Gastos</span>
+                            <span class="text-white">${gastoPct.toFixed(0)}%</span>
+                        </div>
+                        <div class="chart-bar"><div class="chart-fill bg-red-500" style="width: ${gastoPct}%"></div></div>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="card-pro text-center"><p class="text-[9px] opacity-40 uppercase font-black">Ventas Mes</p><h2 class="text-2xl font-black text-purple-500">$${totalVentas.toLocaleString()}</h2></div>
+                    <div class="card-pro text-center"><p class="text-[9px] opacity-40 uppercase font-black">Por Cobrar</p><h2 class="text-2xl font-black text-red-500">$${(totalVentas - totalAbonos).toLocaleString()}</h2></div>
+                </div>`;
         }
 
         else if(window.currentView === 'ventas') {
+            const nombreActual = document.getElementById("cli")?.value || "";
             app.innerHTML = `
                 <div class="card-pro">
-                    <h2 class="text-xl font-black italic text-purple-500 mb-6 uppercase text-center">Punto de Venta</h2>
+                    <h2 class="text-xl font-black italic text-purple-500 mb-6 uppercase text-center">Ventas</h2>
                     <input id="vDate" type="date" value="${today}" class="mb-4">
                     <div class="grid grid-cols-2 gap-2 mb-4">
-                        <input id="cli" placeholder="NOMBRE DEL CLIENTE" class="!m-0 text-sm uppercase">
-                        <input id="wha" type="tel" placeholder="WHATSAPP (Ej: 58412...)" class="!m-0 text-sm">
+                        <input id="cli" placeholder="NOMBRE CLIENTE" value="${nombreActual}" class="!m-0 text-sm uppercase">
+                        <input id="wha" type="tel" placeholder="WHATSAPP" class="!m-0 text-sm">
                     </div>
                     <div class="bg-white/5 p-4 rounded-2xl border border-white/10">
                         <select id="vMat" onchange="updateVentaUI()" class="text-sm">
-                            <option value="">-- PRODUCTO/SERVICIO --</option>
-                            ${Object.keys(inv).map(m=>`<option value="${m}">${m}</option>`).join("")}
+                            <option value="">-- SELECCIONAR --</option>
+                            <optgroup label="PRODUCTOS">${Object.keys(inv).map(m=>`<option value="${m}">${m}</option>`).join("")}</optgroup>
+                            <optgroup label="SERVICIOS">${serv.map(s=>`<option value="${s}">${s}</option>`).join("")}</optgroup>
                         </select>
                         <div class="flex gap-2">
-                            <select id="vTipo" onchange="updateVentaUI()" class="w-1/3"><option value="M2">M2</option><option value="ML">ML</option><option value="UNID">UNID</option></select>
+                            <select id="vTipo" onchange="updateVentaUI()" class="w-1/3"><option value="UNID">UNID</option><option value="M2">M2</option><option value="ML">ML</option></select>
                             <input id="vCant" type="number" placeholder="CANT" oninput="updateVentaUI()" class="w-2/3">
                         </div>
                         <input id="vPrec" type="number" placeholder="PRECIO TOTAL $" class="text-xl text-purple-400">
-                        <button onclick="addItem()" class="btn-main !bg-purple-600/20 border border-purple-500/30 !text-purple-400 mt-2">+ AGREGAR ITEM</button>
+                        <button onclick="addItem()" class="btn-main !bg-purple-600/20 border border-purple-500/30 !text-purple-400 mt-2">+ AGREGAR</button>
                     </div>
                     <div id="vLista" class="mt-4 space-y-2">
-                        ${window.cart.map((item, idx) => `<div class="flex justify-between bg-white/5 p-3 rounded-xl border-l-4 border-purple-500"><div><div class="text-xs font-black uppercase">${item.m}</div><div class="text-[10px] opacity-40">${item.c} ${item.t}</div></div><b>$${item.p.toFixed(2)}</b></div>`).join("")}
+                        ${window.cart.map((item, idx) => `
+                            <div class="bg-white/5 p-4 rounded-xl border-l-4 border-purple-500">
+                                <div class="text-[10px] font-black text-purple-300 uppercase mb-1">Cliente: ${item.cliente || 'No asignado'}</div>
+                                <div class="flex justify-between items-center">
+                                    <div><b class="text-xs uppercase">${item.m}</b><br><span class="text-[10px] opacity-40">${item.c} ${item.t}</span></div>
+                                    <div class="flex items-center gap-3"><b>$${item.p.toFixed(2)}</b><button onclick="removeItem(${idx})" class="text-red-500">✕</button></div>
+                                </div>
+                            </div>`).join("")}
                     </div>
                     <div class="text-5xl font-black text-center my-6">$${window.cart.reduce((a,b)=>a+b.p, 0).toFixed(2)}</div>
-                    <input id="vAbono" type="number" placeholder="CUÁNTO ABONA? $" class="text-2xl text-green-500 font-black text-center">
-                    <button onclick="saveVenta()" class="btn-main mt-4">FINALIZAR Y GUARDAR</button>
-                </div>
-            `;
+                    <input id="vAbono" type="number" placeholder="ABONO $" class="text-2xl text-green-500 font-black text-center">
+                    <button onclick="saveVenta()" class="btn-main mt-4">GUARDAR VENTA</button>
+                </div>`;
         }
 
         else if(window.currentView === 'cobrar') {
@@ -122,26 +172,20 @@
                 <div class="space-y-4">
                     ${ventas.filter(v => (v.total - v.abono) > 0.01).map(f => `
                         <div class="card-pro border-l-4 border-red-600">
-                            <div class="flex justify-between items-start mb-2">
-                                <div>
-                                    <div class="font-black text-white uppercase mb-1">${f.cliente}</div> 
-                                    <div class="text-[10px] font-black text-purple-400">#${f.id.toString().slice(-6)}</div>
-                                    <div class="text-[10px] opacity-40">${f.fecha}</div>
-                                </div>
-                                <div class="text-right">
-                                    <div class="font-black text-red-500 text-lg">Debe: $${(f.total - f.abono).toFixed(2)}</div>
-                                    <div class="text-[10px] opacity-30">Total: $${f.total}</div>
-                                </div>
+                            <div class="font-black text-white uppercase mb-1">${f.cliente}</div> 
+                            <div class="flex justify-between text-[11px] mb-2">
+                                <span class="opacity-40">#${f.id.toString().slice(-6)} | ${f.fecha}</span>
+                                <span class="text-red-500 font-black">DEBE: $${(f.total - f.abono).toFixed(2)}</span>
                             </div>
-                            <div class="flex gap-1 justify-between mt-3">
-                                <button onclick="abonar(${f.id})" class="flex-1 bg-green-600/20 text-green-500 py-2 rounded-xl font-black uppercase text-[10px]">Abonar</button>
-                                <button onclick="liquidar(${f.id})" class="flex-1 bg-purple-600/20 text-purple-400 py-2 rounded-xl font-black uppercase text-[10px]">Liquidar</button>
-                                <button onclick="showReceipt(${f.id})" class="p-2 text-white">📄</button>
+                            <div class="text-[9px] opacity-60 italic mb-3">${f.items.map(i => `• ${i.m}`).join(" ")}</div>
+                            <div class="flex gap-2">
+                                <button onclick="abonar(${f.id})" class="flex-1 bg-green-600/20 text-green-500 py-2 rounded-xl font-black text-[10px]">ABONAR</button>
+                                <button onclick="liquidar(${f.id})" class="flex-1 bg-purple-600/20 text-purple-400 py-2 rounded-xl font-black text-[10px]">LIQUIDAR</button>
+                                <button onclick="showReceipt(${f.id})" class="bg-white/5 p-2 rounded-xl">📄</button>
                             </div>
                         </div>`).join("")}
                 </div>`;
         }
-        // ... (resto de renders: compras, gastos, etc.)
     };
 
     window.updateVentaUI = () => {
@@ -155,28 +199,24 @@
 
     window.addItem = () => {
         const m = document.getElementById("vMat").value, p = parseFloat(document.getElementById("vPrec").value) || 0, c = parseFloat(document.getElementById("vCant").value) || 0, t = document.getElementById("vTipo").value;
-        if(m && p) { window.cart.push({ m, p, c, t }); render(); }
+        const cli = document.getElementById("cli").value.trim().toUpperCase() || "SIN NOMBRE";
+        if(m && p) { window.cart.push({ m, p, c, t, cliente: cli }); render(); }
     };
+
+    window.removeItem = (idx) => { window.cart.splice(idx, 1); render(); };
 
     window.saveVenta = async () => {
         if(!window.cart.length) return;
-        
-        // CORRECCIÓN AQUÍ: Captura el nombre correctamente
-        const nombreInput = document.getElementById("cli").value.trim();
-        const whaInput = document.getElementById("wha").value.trim();
-        
-        const cli = nombreInput.toUpperCase() || "SIN NOMBRE";
-        const wha = whaInput || "";
+        const cli = document.getElementById("cli").value.trim().toUpperCase() || "SIN NOMBRE";
+        const wha = document.getElementById("wha").value || "";
         const abono = parseFloat(document.getElementById("vAbono").value) || 0;
         const total = window.cart.reduce((a,b)=>a+b.p,0);
         const fecha = document.getElementById("vDate").value;
 
         window.cart.forEach(i => { if(window.state.inventario[i.m]) window.state.inventario[i.m].stock -= i.c; });
-
         const id = Date.now();
         if(!window.state.ventas) window.state.ventas = [];
         window.state.ventas.push({ id, cliente: cli, whatsapp: wha, items: [...window.cart], total: total, abono: abono, fecha: fecha });
-        
         await window.sync();
         showReceipt(id);
         window.cart = [];
@@ -190,21 +230,19 @@
 
     window.liquidar = async (id) => {
         const v = window.state.ventas.find(x => x.id === id);
-        if(confirm(`¿Liquidar deuda de ${v.cliente}?`)) { v.abono = v.total; await window.sync(); }
+        if(confirm(`¿Liquidar de de ${v.cliente}?`)) { v.abono = v.total; await window.sync(); }
     };
 
     window.showReceipt = (id) => {
         const v = window.state.ventas.find(x => x.id === id);
         document.getElementById("receiptContent").innerHTML = `
             <h2 class="text-center font-black">GHOST PRINT</h2>
-            <p class="text-center mb-4">Recibo de Venta</p>
-            <div class="flex justify-between mb-2"><span>#${v.id.toString().slice(-6)}</span><span>${v.fecha}</span></div>
-            <p class="font-black uppercase">CLIENTE: ${v.cliente}</p>
-            <hr class="my-2 border-black">
-            ${v.items.map(i => `<div class="flex justify-between"><span>${i.m}</span><span>$${i.p.toFixed(2)}</span></div>`).join("")}
-            <hr class="my-2 border-black">
+            <div class="flex justify-between my-2"><span>#${v.id.toString().slice(-6)}</span><span>${v.fecha}</span></div>
+            <p class="font-black">CLIENTE: ${v.cliente}</p>
+            <div class="border-y border-black my-2 py-2">
+                ${v.items.map(i => `<div class="flex justify-between"><span>${i.m}</span><span>$${i.p.toFixed(2)}</span></div>`).join("")}
+            </div>
             <div class="flex justify-between font-black"><span>TOTAL:</span><span>$${v.total.toFixed(2)}</span></div>
-            <div class="flex justify-between"><span>ABONADO:</span><span>$${v.abono.toFixed(2)}</span></div>
             <div class="flex justify-between font-black text-red-600"><span>DEBE:</span><span>$${(v.total - v.abono).toFixed(2)}</span></div>
         `;
         window.currentReceiptId = id;
@@ -214,7 +252,7 @@
     window.closeReceipt = () => document.getElementById("receiptModal").classList.add("hidden");
     window.shareReceipt = () => {
         const v = window.state.ventas.find(x => x.id === window.currentReceiptId);
-        const txt = `*GHOST PRINT*%0A*Recibo:* #${v.id}%0A*Cliente:* ${v.cliente}%0A*Total:* $${v.total}%0A*Debe:* $${v.total-v.abono}`;
+        const txt = `*GHOST PRINT*%0A*Cliente:* ${v.cliente}%0A*Total:* $${v.total}%0A*Debe:* $${(v.total-v.abono).toFixed(2)}`;
         window.open(`https://wa.me/${v.whatsapp}?text=${txt}`, '_blank');
     };
 
