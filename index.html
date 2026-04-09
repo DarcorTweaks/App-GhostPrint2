@@ -101,29 +101,23 @@
             const vM = window.state.ventas || [];
             const gM = window.state.gastos || [];
             const cM = window.state.compras || [];
-            
             const now = new Date();
             const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-            
             const filterByMonth = (arr, dateKey) => arr.filter(item => {
                 const itemDate = new Date(item[dateKey] || item.fecha || item.f);
                 return itemDate >= startOfMonth;
             });
-
             const currentVentas = filterByMonth(vM, 'fecha');
             const currentGastos = filterByMonth(gM, 'fecha');
             const currentCompras = filterByMonth(cM, 'f');
-
             const totalVentas = currentVentas.reduce((a, b) => a + (Number(b.total) || 0), 0);
             const totalAbonos = currentVentas.reduce((a, b) => a + (Number(b.abono) || 0), 0);
             const totalDeuda = totalVentas - totalAbonos;
             const totalGastos = currentGastos.reduce((a, b) => a + (Number(b.monto) || 0), 0);
             const totalCompras = currentCompras.reduce((a, b) => a + (Number(b.c * b.co) || 0), 0);
-            
             const totalCaja = totalAbonos - totalGastos;
             const proyeccionGanancia = totalVentas - totalGastos;
             const valorInventario = Object.values(inv).reduce((a, b) => a + (b.stock * (b.precioML || 0)), 0);
-
             const cobroPct = totalVentas > 0 ? (totalAbonos / totalVentas) * 100 : 0;
             const gastoPct = totalVentas > 0 ? Math.min((totalGastos / totalVentas) * 100, 100) : 0;
 
@@ -188,11 +182,6 @@
                         </div>
                     </div>
                 </div>
-                <div class="card-pro mt-2 text-center py-2 border-dashed border-blue-500/30">
-                     <p class="text-[9px] opacity-40 uppercase font-black">Inversión en Mercancía (Mes)</p>
-                     <b class="text-blue-500">$${totalCompras.toLocaleString()}</b>
-                </div>
-                <p class="text-center text-[8px] opacity-20 uppercase font-black mt-4 tracking-widest">Master Suite • Ghost Print System</p>
             `;
         }
 
@@ -230,7 +219,6 @@
                                 <div class="flex items-center gap-4">
                                     <b class="text-lg text-white">$${item.p.toFixed(2)}</b>
                                     <div class="flex gap-1">
-                                        <button onclick="editCartItem(${idx})" class="p-2 text-blue-400">✏️</button>
                                         <button onclick="removeItem(${idx})" class="p-2 text-red-500">✕</button>
                                     </div>
                                 </div>
@@ -252,89 +240,13 @@
         else if(window.currentView === 'catalogo') renderCatalogo(app, inv, serv);
     };
 
-    function renderCompras(app, inv, today) {
-        const listC = window.state.compras || [];
-        app.innerHTML = `
-        <div class="card-pro">
-            <h2 class="text-lg font-black italic text-blue-400 mb-4 uppercase text-center">Carga de Stock</h2>
-            <select id="cMat"><option value="">-- SELECCIONAR MATERIAL --</option>${Object.keys(inv).map(m=>`<option value="${m}">${m}</option>`).join("")}</select>
-            <div class="grid grid-cols-2 gap-2">
-                <input id="cCant" type="number" placeholder="ML">
-                <input id="cCosto" type="number" placeholder="COSTO ML $">
-            </div>
-            <div class="grid grid-cols-2 gap-2">
-                <input id="cVentaM2" type="number" placeholder="VENTA M2 $">
-                <input id="cVentaML" type="number" placeholder="VENTA ML $">
-            </div>
-            <button onclick="saveCompra()" class="btn-main !bg-blue-600 mt-4">CARGAR COMPRA</button>
-        </div>
-
-        <h2 class="text-[10px] font-black opacity-30 uppercase tracking-widest italic mb-3 text-center">Historial</h2>
-        <div class="space-y-2">
-            ${listC.slice().reverse().map((c, idx) => {
-                const realIdx = listC.length - 1 - idx;
-                return `
-                <div class="bg-white/5 p-4 rounded-xl flex justify-between items-center border border-white/5">
-                    <div>
-                        <div class="text-[10px] font-black text-blue-400 uppercase">${c.m}</div>
-                        <div class="text-[12px] font-bold text-white">${c.c} ML x $${c.co}</div>
-                        <div class="text-[8px] opacity-30 font-bold">${c.f}</div>
-                    </div>
-                    <div class="flex gap-2">
-                        <button onclick="editCompra(${realIdx})" class="icon-btn-lg bg-blue-600/10 text-blue-400 border border-blue-500/20">✏️</button>
-                        <button onclick="delCompra(${realIdx})" class="icon-btn-lg bg-red-600/10 text-red-500 border border-red-500/20">🗑️</button>
-                    </div>
-                </div>`;
-            }).join("")}
-        </div>`;
-    }
-
-    window.saveCompra = async () => {
-        const m = document.getElementById("cMat").value, c = parseFloat(document.getElementById("cCant").value), co = parseFloat(document.getElementById("cCosto").value);
-        if(m && c) {
-            if(!window.state.inventario[m]) return;
-            window.state.inventario[m].stock += c;
-            if(document.getElementById("cVentaM2").value) window.state.inventario[m].precioM2 = parseFloat(document.getElementById("cVentaM2").value);
-            if(document.getElementById("cVentaML").value) window.state.inventario[m].precioML = parseFloat(document.getElementById("cVentaML").value);
-            if(!window.state.compras) window.state.compras = [];
-            window.state.compras.push({ m, c, co, f: new Date().toISOString() });
-            await window.sync();
-            render();
-        }
-    };
-
-    window.editCompra = async (idx) => {
-        const comp = window.state.compras[idx];
-        const nCant = parseFloat(prompt(`Nueva Cantidad (ML) para ${comp.m}:`, comp.c));
-        const nCost = parseFloat(prompt(`Nuevo Costo (ML) para ${comp.m}:`, comp.co));
-        if(!isNaN(nCant) && !isNaN(nCost)) {
-            if(window.state.inventario[comp.m]) {
-                window.state.inventario[comp.m].stock = (window.state.inventario[comp.m].stock - comp.c) + nCant;
-            }
-            window.state.compras[idx].c = nCant;
-            window.state.compras[idx].co = nCost;
-            await window.sync();
-        }
-    };
-
-    window.delCompra = async (idx) => {
-        if(confirm("¿Eliminar este registro de compra? Se restará del stock.")) {
-            const comp = window.state.compras[idx];
-            if(window.state.inventario[comp.m]) {
-                window.state.inventario[comp.m].stock -= comp.c;
-            }
-            window.state.compras.splice(idx, 1);
-            await window.sync();
-        }
-    };
-
     function renderPorCobrar(app) {
         const ventas = window.state.ventas || [];
         const deudoresMap = {};
         ventas.forEach(v => {
             const deuda = v.total - v.abono;
             if (deuda > 0.01) {
-                if (!deudoresMap[v.cliente]) deudoresMap[v.cliente] = { nombre: v.cliente, whatsapp: v.whatsapp, totalDeuda: 0, facturas: [] };
+                if (!deudoresMap[v.cliente]) deudoresMap[v.cliente] = { nombre: v.cliente, totalDeuda: 0, facturas: [] };
                 deudoresMap[v.cliente].totalDeuda += deuda;
                 deudoresMap[v.cliente].facturas.push(v);
             }
@@ -354,8 +266,17 @@
                             ${d.facturas.map(f => `
                                 <div class="bg-black/40 rounded-xl p-4 border border-white/5 text-[11px]">
                                     <div class="flex justify-between items-start mb-2">
-                                        <div><div class="font-black text-purple-400">#${f.id.toString().slice(-6)}</div><div class="opacity-40">${f.fecha}</div></div>
-                                        <div class="text-right"><div class="font-black text-white text-sm">Debe: $${(f.total - f.abono).toFixed(2)}</div></div>
+                                        <div>
+                                            <div class="font-black text-purple-400">#${f.id.toString().slice(-6)}</div>
+                                            <div class="opacity-40 mb-1">${f.fecha}</div>
+                                            <div class="text-[9px] text-white/60 font-bold uppercase italic">
+                                                ${f.items.map(i => `• ${i.m} (${i.c}${i.t})`).join('<br>')}
+                                            </div>
+                                        </div>
+                                        <div class="text-right">
+                                            <div class="font-black text-white text-sm">Debe: $${(f.total - f.abono).toFixed(2)}</div>
+                                            <div class="text-[8px] opacity-30">Total: $${f.total}</div>
+                                        </div>
                                     </div>
                                     <div class="flex gap-1 justify-between mt-3">
                                         <button onclick="abonar(${f.id})" class="flex-1 bg-green-600/20 text-green-500 py-2 rounded-xl font-black uppercase text-[10px]">Abonar</button>
@@ -370,20 +291,63 @@
             </div>`;
     }
 
+    function renderCompras(app, inv, today) {
+        const listC = window.state.compras || [];
+        app.innerHTML = `
+        <div class="card-pro">
+            <h2 class="text-lg font-black italic text-blue-400 mb-4 uppercase text-center">Carga de Stock</h2>
+            <select id="cMat"><option value="">-- SELECCIONAR MATERIAL --</option>${Object.keys(inv).map(m=>`<option value="${m}">${m}</option>`).join("")}</select>
+            <div class="grid grid-cols-2 gap-2">
+                <input id="cCant" type="number" placeholder="ML">
+                <input id="cCosto" type="number" placeholder="COSTO ML $">
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+                <input id="cVentaM2" type="number" placeholder="VENTA M2 $">
+                <input id="cVentaML" type="number" placeholder="VENTA ML $">
+            </div>
+            <button onclick="saveCompra()" class="btn-main !bg-blue-600 mt-4">CARGAR COMPRA</button>
+        </div>
+        <div class="space-y-2">
+            ${listC.slice().reverse().map((c, idx) => `
+                <div class="bg-white/5 p-4 rounded-xl flex justify-between items-center border border-white/5">
+                    <div>
+                        <div class="text-[10px] font-black text-blue-400 uppercase">${c.m}</div>
+                        <div class="text-[12px] font-bold text-white">${c.c} ML x $${c.co}</div>
+                    </div>
+                    <button onclick="delCompra(${listC.length - 1 - idx})" class="text-red-500">🗑️</button>
+                </div>`).join("")}
+        </div>`;
+    }
+
+    window.saveCompra = async () => {
+        const m = document.getElementById("cMat").value, c = parseFloat(document.getElementById("cCant").value), co = parseFloat(document.getElementById("cCosto").value);
+        if(m && c) {
+            window.state.inventario[m].stock += c;
+            if(document.getElementById("cVentaM2").value) window.state.inventario[m].precioM2 = parseFloat(document.getElementById("cVentaM2").value);
+            if(document.getElementById("cVentaML").value) window.state.inventario[m].precioML = parseFloat(document.getElementById("cVentaML").value);
+            if(!window.state.compras) window.state.compras = [];
+            window.state.compras.push({ m, c, co, f: new Date().toISOString() });
+            await window.sync();
+        }
+    };
+    window.delCompra = async (idx) => {
+        if(confirm("¿Eliminar registro?")) {
+            const comp = window.state.compras[idx];
+            window.state.inventario[comp.m].stock -= comp.c;
+            window.state.compras.splice(idx, 1);
+            await window.sync();
+        }
+    };
+
     function renderGastos(app, today) {
         const listG = window.state.gastos || [];
-        const total = listG.reduce((a,b)=>a+b.monto,0);
         app.innerHTML = `
             <div class="card-pro">
-                <h2 class="text-lg font-black italic text-red-500 mb-4 uppercase text-center text-red-500">Gastos</h2>
+                <h2 class="text-lg font-black italic text-red-500 mb-4 uppercase text-center">Gastos</h2>
                 <input id="gDate" type="date" value="${today}">
                 <input id="gDesc" placeholder="DESCRIPCIÓN">
                 <input id="gMonto" type="number" placeholder="MONTO $">
                 <button onclick="saveGasto()" class="btn-main mt-2">GUARDAR GASTO</button>
-            </div>
-            <div class="flex justify-between items-center mb-4 px-2">
-                <span class="text-[10px] font-black opacity-50 uppercase">Historial Gastos</span>
-                <span class="text-xl font-black text-red-500">$${total.toLocaleString()}</span>
             </div>
             <div class="space-y-1">
                 ${listG.slice().reverse().map((g, idx) => `
@@ -402,14 +366,12 @@
 
     function renderInventario(app, inv) {
         app.innerHTML = `
-            <h2 class="text-[10px] font-black opacity-30 uppercase tracking-widest italic mb-4 text-center">Gestión de Stock</h2>
             <div class="space-y-3">
                 ${Object.entries(inv).map(([n, i]) => `
                     <div class="card-pro flex justify-between items-center border-l-4 ${i.stock < 5 ? 'border-red-600 alert-low' : 'border-blue-600'}">
                         <div>
                             <b class="uppercase text-purple-400 text-[11px] font-black">${n}</b><br>
                             <span class="text-4xl font-black italic text-white">${i.stock.toFixed(2)} <small class="text-[10px] opacity-40">ML</small></span>
-                            <div class="text-[9px] font-bold opacity-30 uppercase">Valor Venta: $${(i.stock * (i.precioML || 0)).toFixed(2)}</div>
                         </div>
                         <div class="flex gap-2">
                             <button onclick="registrarMerma('${n}')" class="icon-btn-lg bg-red-600/20 text-red-400">📤</button>
@@ -454,13 +416,6 @@
         const m = document.getElementById("vMat").value, p = parseFloat(document.getElementById("vPrec").value) || 0, c = parseFloat(document.getElementById("vCant").value) || 0, t = document.getElementById("vTipo").value;
         if(m && p) { window.cart.push({ m, p, c, t }); render(); }
     };
-    window.editCartItem = (idx) => {
-        const nC = parseFloat(prompt("Cantidad:", window.cart[idx].c));
-        const nP = parseFloat(prompt("Precio:", window.cart[idx].p));
-        if(!isNaN(nC)) window.cart[idx].c = nC;
-        if(!isNaN(nP)) window.cart[idx].p = nP;
-        render();
-    };
     window.removeItem = (idx) => { window.cart.splice(idx, 1); render(); };
 
     window.saveVenta = async () => {
@@ -481,14 +436,8 @@
 
     window.registrarMerma = async (m) => {
         const merm = parseFloat(prompt(`MERMA para ${m} (ML):`));
-        if(!isNaN(merm) && merm > 0) {
-            window.state.inventario[m].stock -= merm;
-            if(!window.state.gastos) window.state.gastos = [];
-            window.state.gastos.push({ desc: `MERMA: ${m}`, monto: 0, fecha: new Date().toISOString().split('T')[0] });
-            await window.sync();
-        }
+        if(!isNaN(merm) && merm > 0) { window.state.inventario[m].stock -= merm; await window.sync(); }
     };
-
     window.crearMat = async () => {
         const n = document.getElementById("nMat").value.toUpperCase(), a = parseFloat(document.getElementById("aMat").value);
         if(n && a) { if(!window.state.inventario) window.state.inventario = {}; window.state.inventario[n] = { stock: 0, precioM2: 0, precioML: 0, ancho: a }; await window.sync(); }
@@ -521,9 +470,8 @@
         if(!isNaN(nA)) v.abono = nA;
         await window.sync();
     };
-
     window.eliminarVenta = async (id) => {
-        if(confirm("¿Estás seguro de eliminar esta venta permanentemente?")) {
+        if(confirm("¿Eliminar permanentemente?")) {
             window.state.ventas = window.state.ventas.filter(v => v.id !== id);
             await window.sync();
         }
