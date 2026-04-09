@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>GhostPrint MASTER v26.5</title>
+    <title>GhostPrint MASTER v26.6</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap');
@@ -29,7 +29,7 @@
         <span class="text-4xl ghost-glow">👻</span>
         <div>
             <h1 class="text-xl font-black italic text-purple-500 leading-none">GHOST PRINT</h1>
-            <p class="text-[8px] font-black opacity-40 uppercase">Master Suite v26.5</p>
+            <p class="text-[8px] font-black opacity-40 uppercase">Master Suite v26.6</p>
         </div>
     </div>
 </div>
@@ -37,11 +37,11 @@
 <nav>
     <div onclick="setView('inicio')" class="btn-nav active" id="n-inicio">📊 ADMIN</div>
     <div onclick="setView('ventas')" class="btn-nav" id="n-ventas">💵 Ventas</div>
-    <div onclick="setView('cobrar')" class="btn-nav" id="n-cobrar">📑 CxC</div>
+    <div onclick="setView('cobrar')" class="btn-nav" id="n-cobrar">📑 Por Cobrar</div>
     <div onclick="setView('compras')" class="btn-nav" id="n-compras">🛒 Compras</div>
     <div onclick="setView('gastos')" class="btn-nav" id="n-gastos">💸 Gastos</div>
     <div onclick="setView('inventario')" class="btn-nav" id="n-inventario">📦 Stock</div>
-    <div onclick="setView('catalogo')" class="btn-nav" id="n-catalogo">⚙️ Config</div>
+    <div onclick="setView('catalogo')" class="btn-nav" id="n-catalogo">⚙️ Catálogo</div>
 </nav>
 
 <div id="app" class="p-4 max-w-2xl mx-auto"></div>
@@ -210,7 +210,6 @@
                     </div>
                 </div>
             `;
-            // Reset local cart visual if returning to view
             cart = [];
         }
 
@@ -321,7 +320,10 @@
                                 <br><span class="text-3xl font-black italic">${i.stock} <small class="text-xs opacity-40 font-normal">ML</small></span>
                                 <div class="text-[9px] opacity-60 font-bold mt-1 uppercase">M2: $${i.precioM2} | ML: $${i.precioML} | ANCHO: ${i.ancho}m</div>
                             </div>
-                            <button onclick="editStock('${n}')" class="bg-blue-600/20 text-blue-400 icon-btn">✏️</button>
+                            <div class="flex gap-2">
+                                <button onclick="regMerma('${n}')" class="bg-red-600/20 text-red-500 icon-btn" title="Merma">🗑️</button>
+                                <button onclick="editStock('${n}')" class="bg-blue-600/20 text-blue-400 icon-btn">✏️</button>
+                            </div>
                         </div>`;
                     }).join("")}
                 </div>`;
@@ -397,6 +399,15 @@
         }
     };
 
+    window.regMerma = async (m) => {
+        let n = parseFloat(prompt(`Cantidad de MERMA para ${m} (ML):`));
+        if(!isNaN(n) && n > 0) {
+            window.state.inventario[m].stock -= n;
+            window.state.gastos.push({ desc: `MERMA: ${m}`, monto: 0, fecha: new Date().toISOString().split('T')[0] });
+            await window.sync();
+        }
+    };
+
     window.saveGasto = async () => {
         const desc = document.getElementById("gDesc").value.toUpperCase(), monto = parseFloat(document.getElementById("gMonto").value);
         if(desc && monto) { window.state.gastos.push({ desc, monto, fecha: document.getElementById("gDate").value }); await window.sync(); }
@@ -433,7 +444,6 @@
     window.delCompra = async (i) => { if(confirm("¿Borrar compra?")) { window.state.compras.splice(i, 1); await window.sync(); } };
     window.delServ = async (s) => { window.state.servicios = window.state.servicios.filter(x => x !== s); await window.sync(); };
 
-    // --- RECIBOS Y WHATSAPP ---
     window.showReceipt = (id) => {
         const v = window.state.ventas.find(x => x.id === id);
         window.currentReceiptId = id;
