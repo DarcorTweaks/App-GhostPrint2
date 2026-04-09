@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>GhostPrint MASTER v28.1</title>
+    <title>GhostPrint MASTER v28.9</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap');
@@ -12,11 +12,14 @@
         nav { background: rgba(10, 10, 20, 0.95); display: flex; gap: 8px; overflow-x: auto; padding: 14px; position: sticky; top: 0; z-index: 100; border-bottom: 1px solid #334155; }
         .btn-nav { background: #1e1e30; color: #64748b; padding: 12px 18px; border-radius: 14px; font-size: 10px; font-weight: 800; white-space: nowrap; cursor: pointer; text-transform: uppercase; }
         .active { background: #7c3aed !important; color: white !important; }
-        input, select { background: #070712; border: 1px solid #334155; color: white; padding: 14px; border-radius: 14px; width: 100%; margin: 6px 0; font-weight: 700; outline: none; }
-        .btn-main { background: linear-gradient(135deg, #7c3aed 0%, #4c1d95 100%); color: white; padding: 16px; border-radius: 16px; width: 100%; font-weight: 900; text-transform: uppercase; cursor: pointer; border: none; }
+        
+        input, select { background: #070712; border: 1px solid #334155; color: white; padding: 16px; border-radius: 14px; width: 100%; margin: 8px 0; font-size: 16px; font-weight: 700; outline: none; }
+        input::placeholder { font-size: 14px; opacity: 0.5; }
+        
+        .btn-main { background: linear-gradient(135deg, #7c3aed 0%, #4c1d95 100%); color: white; padding: 18px; border-radius: 18px; width: 100%; font-weight: 900; text-transform: uppercase; cursor: pointer; border: none; font-size: 14px; }
         .alert-low { border: 2px solid #ef4444 !important; background: rgba(239, 68, 68, 0.1) !important; }
         .ghost-glow { filter: drop-shadow(0 0 10px #7c3aed); }
-        .icon-btn { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 10px; transition: all 0.2s; cursor: pointer; }
+        .icon-btn-lg { width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; border-radius: 12px; transition: all 0.2s; cursor: pointer; font-size: 18px; }
         ::-webkit-calendar-picker-indicator { filter: invert(1); }
     </style>
 </head>
@@ -27,7 +30,7 @@
         <span class="text-4xl ghost-glow">👻</span>
         <div>
             <h1 class="text-xl font-black italic text-purple-500 leading-none">GHOST PRINT</h1>
-            <p class="text-[8px] font-black opacity-40 uppercase tracking-widest text-purple-300">Master Suite v28.1</p>
+            <p class="text-[8px] font-black opacity-40 uppercase tracking-widest text-purple-300">Master Suite v28.9</p>
         </div>
     </div>
 </div>
@@ -39,7 +42,7 @@
     <div onclick="setView('compras')" class="btn-nav" id="n-compras">🛒 Compras</div>
     <div onclick="setView('gastos')" class="btn-nav" id="n-gastos">💸 Gastos</div>
     <div onclick="setView('inventario')" class="btn-nav" id="n-inventario">📦 Stock</div>
-    <div onclick="setView('catalogo')" class="btn-nav" id="n-catalogo">⚙️ Config</div>
+    <div onclick="setView('catalogo')" class="btn-nav" id="n-catalogo">⚙️ CONFIG</div>
 </nav>
 
 <div id="app" class="p-4 max-w-2xl mx-auto"></div>
@@ -73,23 +76,16 @@
 
     window.state = { ventas: [], inventario: {}, compras: [], gastos: [], servicios: SERVICIOS_DEFECTO };
     window.currentView = 'inicio';
+    window.cart = [];
 
-    window.sync = async function() { 
-        await docRef.set(window.state); 
-        render(); 
-    };
-    
-    docRef.onSnapshot(doc => { 
-        if(doc.exists) { 
-            window.state = doc.data(); 
-            render(); 
-        } 
-    });
+    window.sync = async function() { await docRef.set(window.state); render(); };
+    docRef.onSnapshot(doc => { if(doc.exists) { window.state = doc.data(); render(); } });
 
     window.setView = function(v) { 
         window.currentView = v; 
         document.querySelectorAll('.btn-nav').forEach(b => b.classList.remove('active')); 
         document.getElementById('n-'+v)?.classList.add('active'); 
+        if(v === 'ventas') window.cart = []; 
         render(); 
     };
 
@@ -106,25 +102,14 @@
             const totalVentas = vM.reduce((a, b) => a + (Number(b.total) || 0), 0);
             const totalGastos = gM.reduce((a, b) => a + (Number(b.monto) || 0), 0);
             const totalCompras = cM.reduce((a, b) => a + (Number(b.c * b.co) || 0), 0);
-            
             app.innerHTML = `
                 <div class="card-pro text-center bg-gradient-to-br from-purple-900/40 to-[#111122]">
                     <p class="text-[10px] opacity-40 uppercase font-black tracking-widest text-purple-300">Total Facturado</p>
-                    <h2 class="text-5xl font-black italic text-purple-500">$${totalVentas.toFixed(2)}</h2>
+                    <h2 class="text-5xl font-black italic text-purple-500">$${totalVentas.toLocaleString()}</h2>
                 </div>
                 <div class="grid grid-cols-2 gap-4 mt-4">
-                    <div class="card-pro text-center bg-red-900/10 border-red-500/20">
-                        <p class="text-[9px] opacity-40 uppercase font-black">Gastos</p>
-                        <h2 class="text-2xl font-black text-red-500">$${totalGastos.toFixed(2)}</h2>
-                    </div>
-                    <div class="card-pro text-center bg-blue-900/10 border-blue-500/20">
-                        <p class="text-[9px] opacity-40 uppercase font-black">Compras Stock</p>
-                        <h2 class="text-2xl font-black text-blue-500">$${totalCompras.toFixed(2)}</h2>
-                    </div>
-                </div>
-                <div class="card-pro text-center border-green-500/20 bg-green-500/5 mt-4">
-                    <p class="text-[10px] opacity-40 uppercase font-black tracking-widest">Utilidad Estimada</p>
-                    <h2 class="text-4xl font-black italic text-green-500">$${(totalVentas - totalGastos - totalCompras).toFixed(2)}</h2>
+                    <div class="card-pro text-center bg-red-900/10 border-red-500/20"><p class="text-[9px] opacity-40 uppercase font-black">Gastos</p><h2 class="text-2xl font-black text-red-500">$${totalGastos.toLocaleString()}</h2></div>
+                    <div class="card-pro text-center bg-blue-900/10 border-blue-500/20"><p class="text-[9px] opacity-40 uppercase font-black">Compras Stock</p><h2 class="text-2xl font-black text-blue-500">$${totalCompras.toLocaleString()}</h2></div>
                 </div>
             `;
         }
@@ -132,258 +117,253 @@
         else if(window.currentView === 'ventas') {
             app.innerHTML = `
                 <div class="card-pro">
-                    <h2 class="text-lg font-black italic text-purple-500 mb-4 uppercase">Nueva Factura</h2>
-                    <input id="vDate" type="date" value="${today}">
-                    <div class="grid grid-cols-2 gap-2"><input id="cli" placeholder="CLIENTE"><input id="wha" type="tel" placeholder="WHATSAPP"></div>
-                    <div class="bg-white/5 p-4 rounded-xl mt-4 border border-white/10">
-                        <select id="vMat" onchange="updateVentaUI()">
-                            <option value="">-- SELECCIONAR --</option>
+                    <h2 class="text-xl font-black italic text-purple-500 mb-6 uppercase text-center tracking-tighter">Punto de Venta</h2>
+                    <input id="vDate" type="date" value="${today}" class="mb-4">
+                    <div class="grid grid-cols-2 gap-2 mb-4">
+                        <input id="cli" placeholder="CLIENTE" class="!m-0 text-lg uppercase">
+                        <input id="wha" type="tel" placeholder="WHA" class="!m-0 text-lg">
+                    </div>
+                    
+                    <div class="bg-white/5 p-5 rounded-2xl border border-white/10">
+                        <select id="vMat" onchange="updateVentaUI()" class="text-lg">
+                            <option value="">-- PRODUCTO --</option>
                             <optgroup label="MATERIALES">${Object.keys(inv).map(m=>`<option value="${m}">${m}</option>`).join("")}</optgroup>
                             <optgroup label="SERVICIOS">${serv.map(s=>`<option value="${s}">${s}</option>`).join("")}</optgroup>
                         </select>
                         <div class="flex gap-2">
-                            <select id="vTipo" onchange="updateVentaUI()" class="w-1/3"><option value="M2">M2</option><option value="ML">ML</option><option value="UNID">UNID</option></select>
-                            <input id="vCant" type="number" placeholder="CANT" oninput="updateVentaUI()" class="w-2/3">
+                            <select id="vTipo" onchange="updateVentaUI()" class="w-1/3 text-lg"><option value="M2">M2</option><option value="ML">ML</option><option value="UNID">UNID</option></select>
+                            <input id="vCant" type="number" placeholder="CANT" oninput="updateVentaUI()" class="w-2/3 text-lg">
                         </div>
-                        <input id="vPrec" type="number" placeholder="PRECIO $">
-                        <button onclick="addItem()" class="btn-main !p-3 mt-3 text-[10px]">+ AÑADIR A LISTA</button>
+                        <input id="vPrec" type="number" placeholder="PRECIO TOTAL $" class="text-xl text-purple-400">
+                        <button onclick="addItem()" class="btn-main !bg-purple-600/20 border border-purple-500/30 !text-purple-400 !py-3 mt-2">+ AGREGAR</button>
                     </div>
-                    <div id="vLista" class="mt-4 space-y-1"></div>
-                    <div id="vTotal" class="text-5xl font-black text-center my-6">$0.00</div>
-                    <input id="vAbono" type="number" placeholder="ABONO INICIAL $" class="mb-4">
-                    <button onclick="saveVenta()" class="btn-main">GENERAR VENTA</button>
+
+                    <div id="vLista" class="mt-6 space-y-2">
+                        ${window.cart.map((item, idx) => `
+                            <div class="flex justify-between items-center bg-white/5 p-4 rounded-xl border-l-4 border-purple-500">
+                                <div>
+                                    <div class="text-[12px] font-black uppercase text-white">${item.m}</div>
+                                    <div class="text-[10px] opacity-40 font-bold">${item.c} ${item.t}</div>
+                                </div>
+                                <div class="flex items-center gap-4">
+                                    <b class="text-lg text-white">$${item.p.toFixed(2)}</b>
+                                    <div class="flex gap-1">
+                                        <button onclick="editCartItem(${idx})" class="p-2 text-blue-400">✏️</button>
+                                        <button onclick="removeItem(${idx})" class="p-2 text-red-500">✕</button>
+                                    </div>
+                                </div>
+                            </div>
+                        `).join("")}
+                    </div>
+
+                    <div id="vTotalDisplay" class="text-6xl font-black text-center my-8 text-white tracking-tighter">$${window.cart.reduce((a,b)=>a+b.p, 0).toFixed(2)}</div>
+                    <input id="vAbono" type="number" placeholder="ABONO $" class="text-3xl text-green-500 font-black text-center bg-transparent border-none">
+                    <button onclick="saveVenta()" class="btn-main text-lg py-5 shadow-xl mt-4">FINALIZAR VENTA</button>
                 </div>
             `;
-            window.cart = [];
         }
 
         else if(window.currentView === 'cobrar') renderPorCobrar(app);
-        
         else if(window.currentView === 'compras') renderCompras(app, inv, today);
-
         else if(window.currentView === 'gastos') renderGastos(app, today);
-
-        else if(window.currentView === 'inventario') {
-            app.innerHTML = `
-                <h2 class="text-[10px] font-black opacity-30 uppercase mb-4 tracking-widest italic text-center">Inventario de Rollos</h2>
-                <div class="space-y-2">
-                    ${Object.entries(inv).map(([n, i]) => `
-                        <div class="card-pro flex justify-between items-center ${i.stock < 5 ? 'alert-low' : ''}">
-                            <div>
-                                <b class="uppercase text-purple-400 text-[10px] font-black">${n}</b><br>
-                                <span class="text-3xl font-black italic">${i.stock} <small class="text-xs opacity-30 font-normal">ML</small></span>
-                                <div class="text-[9px] opacity-60 font-bold mt-1 uppercase">M2: $${i.precioM2} | ML: $${i.precioML} | ANCHO: ${i.ancho}m</div>
-                            </div>
-                            <div class="flex gap-2">
-                                <button onclick="editStock('${n}')" class="icon-btn bg-blue-600/20 text-blue-400 border border-blue-500/20">✏️</button>
-                                <button onclick="delMat('${n}')" class="icon-btn bg-red-600/20 text-red-400 border border-red-500/20">🗑️</button>
-                            </div>
-                        </div>`).join("")}
-                </div>`;
-        }
-
-        else if(window.currentView === 'catalogo') {
-            app.innerHTML = `
-                <div class="card-pro">
-                    <h3 class="text-[10px] font-black opacity-50 mb-4 uppercase text-purple-400">Configuración Material Base</h3>
-                    <input id="nMat" placeholder="NOMBRE MATERIAL (EJ: VINIL BLANCO)">
-                    <input id="aMat" type="number" step="0.01" placeholder="ANCHO (EJ: 1.52)">
-                    <button onclick="crearMat()" class="btn-main mt-2">REGISTRAR BASE</button>
-                </div>
-            `;
-        }
+        else if(window.currentView === 'inventario') renderInventario(app, inv);
+        else if(window.currentView === 'catalogo') renderCatalogo(app, inv, serv);
     };
 
-    // --- RENDER POR COBRAR ACTUALIZADO CON DETALLES DE COMPRA ---
-    function renderPorCobrar(app) {
-        const ventas = window.state.ventas || [];
-        const deudoresMap = {};
-
-        // Agrupar facturas por cliente
-        ventas.forEach(v => {
-            const deuda = v.total - v.abono;
-            if (deuda > 0.01) {
-                if (!deudoresMap[v.cliente]) {
-                    deudoresMap[v.cliente] = { nombre: v.cliente, whatsapp: v.whatsapp, totalDeuda: 0, facturas: [] };
-                }
-                deudoresMap[v.cliente].totalDeuda += deuda;
-                deudoresMap[v.cliente].facturas.push(v);
-            }
-        });
-
-        const listaDeudores = Object.values(deudoresMap).sort((a, b) => b.totalDeuda - a.totalDeuda);
-
-        app.innerHTML = `
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-lg font-black italic text-red-500 uppercase">Por Cobrar</h2>
-                <span class="bg-red-500/20 text-red-500 px-3 py-1 rounded-full text-[10px] font-black">CLIENTES: ${listaDeudores.length}</span>
-            </div>
-            
-            <div class="space-y-6">
-                ${listaDeudores.map(d => `
-                    <div class="card-pro !bg-[#16162a] border border-white/5 p-0 overflow-hidden shadow-xl">
-                        <!-- Cabecera Cliente -->
-                        <div class="p-4 bg-white/5 flex justify-between items-center border-b border-white/5">
-                            <div>
-                                <div class="flex items-center gap-2">
-                                    <b class="text-sm uppercase text-white font-black">${d.nombre}</b>
-                                    <a href="https://wa.me/${d.whatsapp}" target="_blank" class="text-green-500 bg-green-500/10 p-1 rounded">💬</a>
-                                </div>
-                                <p class="text-[8px] opacity-40 uppercase font-black">${d.facturas.length} Nota(s) pendiente(s)</p>
-                            </div>
-                            <div class="text-right">
-                                <span class="text-[8px] opacity-40 block uppercase font-bold">Saldo Total</span>
-                                <div class="text-xl font-black text-red-500 leading-none">$${d.totalDeuda.toFixed(2)}</div>
-                            </div>
-                        </div>
-                        
-                        <!-- Lista de Facturas con DETALLES -->
-                        <div class="p-3 space-y-3">
-                            ${d.facturas.map(f => `
-                                <div class="bg-black/20 rounded-xl p-3 border border-white/5">
-                                    <div class="flex justify-between items-start mb-2">
-                                        <div>
-                                            <div class="text-[9px] font-black text-purple-400 uppercase tracking-tighter">FACTURA #${f.id} <span class="text-gray-500 ml-2">${f.fecha}</span></div>
-                                            <!-- Detalle de lo comprado -->
-                                            <div class="text-[10px] text-gray-400 mt-1 italic">
-                                                ${f.items.map(i => `• ${i.m}`).join(", ")}
-                                            </div>
-                                        </div>
-                                        <div class="text-right">
-                                            <div class="text-sm font-black text-white">$${(f.total - f.abono).toFixed(2)}</div>
-                                            <div class="text-[8px] text-gray-500 line-through italic">Monto: $${f.total.toFixed(2)}</div>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="flex gap-2 mt-3 pt-2 border-t border-white/5">
-                                        <button onclick="editVenta(${f.id})" class="flex-1 bg-blue-600/10 text-blue-400 py-2 rounded-lg text-[9px] font-black uppercase">Editar</button>
-                                        <button onclick="abonar(${f.id})" class="flex-1 bg-green-600/10 text-green-500 py-2 rounded-lg text-[9px] font-black uppercase">Abonar</button>
-                                        <button onclick="liquidar(${f.id})" class="flex-1 bg-purple-600/10 text-purple-400 py-2 rounded-lg text-[9px] font-black uppercase">Liquidar</button>
-                                        <button onclick="showReceipt(${f.id})" class="bg-white/5 text-white p-2 rounded-lg text-[10px]">📄</button>
-                                    </div>
-                                </div>
-                            `).join("")}
-                        </div>
-                    </div>
-                `).join("")}
-                ${listaDeudores.length === 0 ? '<div class="text-center opacity-20 py-20"><span class="text-6xl block mb-2">💎</span><p class="font-black uppercase tracking-widest">Cartera Limpia</p></div>' : ''}
-            </div>`;
-    }
-
-    // --- RENDER COMPRAS ---
+    // --- COMPRAS CON HISTORIAL Y EDICIÓN ---
     function renderCompras(app, inv, today) {
+        const listC = window.state.compras || [];
         app.innerHTML = `
-            <div class="card-pro">
-                <h2 class="text-lg font-black italic text-blue-400 mb-6 uppercase tracking-tight text-center">Carga de Rollos</h2>
-                <input id="cDate" type="date" value="${today}" class="mb-2">
-                <select id="cMat" class="mb-2">
-                    <option value="">-- MATERIAL --</option>
-                    ${Object.keys(inv).map(m=>`<option value="${m}">${m}</option>`).join("")}
-                </select>
-                <div class="grid grid-cols-2 gap-2 mb-2">
-                    <input id="cCant" type="number" placeholder="Metros (ML)">
-                    <input id="cCosto" type="number" placeholder="Costo ML $">
-                </div>
-                
-                <div class="bg-blue-900/10 p-4 rounded-xl border border-blue-500/20 mt-2 mb-4">
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <p class="text-[8px] font-black text-blue-400 uppercase mb-1">Precio M2 $</p>
-                            <input id="cVentaM2" type="number" class="!m-0 text-center">
-                        </div>
-                        <div>
-                            <p class="text-[8px] font-black text-blue-400 uppercase mb-1">Precio ML $</p>
-                            <input id="cVentaML" type="number" class="!m-0 text-center">
-                        </div>
+        <div class="card-pro">
+            <h2 class="text-lg font-black italic text-blue-400 mb-4 uppercase text-center">Carga de Stock</h2>
+            <select id="cMat"><option value="">-- SELECCIONAR MATERIAL --</option>${Object.keys(inv).map(m=>`<option value="${m}">${m}</option>`).join("")}</select>
+            <div class="grid grid-cols-2 gap-2">
+                <input id="cCant" type="number" placeholder="ML">
+                <input id="cCosto" type="number" placeholder="COSTO ML $">
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+                <input id="cVentaM2" type="number" placeholder="VENTA M2 $">
+                <input id="cVentaML" type="number" placeholder="VENTA ML $">
+            </div>
+            <button onclick="saveCompra()" class="btn-main !bg-blue-600 mt-4">CARGAR COMPRA</button>
+        </div>
+
+        <h2 class="text-[10px] font-black opacity-30 uppercase tracking-widest italic mb-3">Historial de Compras</h2>
+        <div class="space-y-2">
+            ${listC.slice().reverse().map((c, idx) => {
+                const realIdx = listC.length - 1 - idx;
+                return `
+                <div class="bg-white/5 p-4 rounded-xl flex justify-between items-center border border-white/5">
+                    <div>
+                        <div class="text-[10px] font-black text-blue-400 uppercase">${c.m}</div>
+                        <div class="text-[12px] font-bold text-white">${c.c} ML x $${c.co}</div>
+                        <div class="text-[8px] opacity-30 font-bold">${c.f}</div>
                     </div>
-                </div>
-
-                <button onclick="saveCompra()" class="btn-main !bg-blue-600 !from-blue-600 !to-blue-900 mt-2">INGRESAR COMPRA</button>
-            </div>
-            
-            <div class="mt-8">
-                <h3 class="text-[10px] font-black opacity-30 uppercase tracking-[0.2em] mb-4 text-center italic">Historial Reciente</h3>
-                <div class="space-y-2">
-                    ${(window.state.compras || []).slice().reverse().slice(0,10).map(c => `
-                        <div class="card-pro flex justify-between items-center py-3 bg-white/5 border-white/5">
-                            <div>
-                                <b class="text-blue-400 text-[10px] uppercase">${c.m}</b>
-                                <div class="text-white text-lg font-black leading-none mt-1">${c.c} ML <small class="text-[9px] opacity-30 font-normal italic">($${c.co}/ML)</small></div>
-                                <div class="text-[8px] opacity-30 mt-1 uppercase font-bold">${c.f}</div>
-                            </div>
-                        </div>
-                    `).join("")}
-                </div>
-            </div>
-        `;
+                    <div class="flex gap-2">
+                        <button onclick="editCompra(${realIdx})" class="icon-btn-lg bg-blue-600/10 text-blue-400 border border-blue-500/20">✏️</button>
+                        <button onclick="delCompra(${realIdx})" class="icon-btn-lg bg-red-600/10 text-red-500 border border-red-500/20">🗑️</button>
+                    </div>
+                </div>`;
+            }).join("")}
+        </div>`;
     }
-
-    // --- RENDER GASTOS ---
-    function renderGastos(app, today) {
-        const listG = window.state.gastos || [];
-        const filterDate = window.gFilterDate || today;
-        const filtrados = listG.filter(g => g.fecha === filterDate);
-
-        app.innerHTML = `
-            <div class="card-pro">
-                <h2 class="text-lg font-black italic text-red-500 mb-4 uppercase">Registrar Gasto</h2>
-                <input id="gDate" type="date" value="${today}">
-                <input id="gDesc" placeholder="DESCRIPCIÓN">
-                <input id="gMonto" type="number" placeholder="MONTO $">
-                <button onclick="saveGasto()" class="btn-main !from-red-600 !to-red-900 mt-2">GUARDAR GASTO</button>
-            </div>
-            <div class="mt-8">
-                <div class="flex justify-between items-center mb-4">
-                    <h3 class="text-[10px] font-black opacity-30 uppercase tracking-widest text-center">Historial Gastos</h3>
-                    <input type="date" value="${filterDate}" onchange="window.gFilterDate=this.value; render();" class="!w-auto !p-2 !text-[10px]">
-                </div>
-                <div class="space-y-2">
-                    ${filtrados.slice().reverse().map((g, idx) => `
-                        <div class="card-pro flex justify-between items-center py-2 bg-white/5 border-white/5">
-                            <div><b class="text-[10px] uppercase text-white">${g.desc}</b><p class="text-[8px] opacity-30">${g.fecha}</p></div>
-                            <div class="text-right flex items-center gap-3">
-                                <div class="text-sm font-black text-red-500">$${Number(g.monto).toFixed(2)}</div>
-                                <button onclick="delGasto(${idx})" class="text-red-500/50 text-[10px]">🗑️</button>
-                            </div>
-                        </div>
-                    `).join("")}
-                </div>
-            </div>
-        `;
-    }
-
-    // --- FUNCIONALIDADES ---
-    window.crearMat = async () => {
-        const n = document.getElementById("nMat").value.toUpperCase(), a = parseFloat(document.getElementById("aMat").value);
-        if(n && a) { 
-            window.state.inventario[n] = { stock: 0, precioM2: 0, precioML: 0, ancho: a }; 
-            await window.sync(); 
-            setView('inventario');
-        }
-    };
 
     window.saveCompra = async () => {
         const m = document.getElementById("cMat").value, c = parseFloat(document.getElementById("cCant").value), co = parseFloat(document.getElementById("cCosto").value);
         if(m && c) {
             window.state.inventario[m].stock += c;
-            window.state.inventario[m].precioM2 = parseFloat(document.getElementById("cVentaM2").value) || 0;
-            window.state.inventario[m].precioML = parseFloat(document.getElementById("cVentaML").value) || 0;
-            window.state.compras.push({ m, c, co, f: document.getElementById("cDate").value });
+            if(document.getElementById("cVentaM2").value) window.state.inventario[m].precioM2 = parseFloat(document.getElementById("cVentaM2").value);
+            if(document.getElementById("cVentaML").value) window.state.inventario[m].precioML = parseFloat(document.getElementById("cVentaML").value);
+            
+            if(!window.state.compras) window.state.compras = [];
+            window.state.compras.push({ m, c, co, f: new Date().toLocaleDateString() });
             await window.sync();
-            setView('inventario');
+            render();
         }
     };
+
+    window.editCompra = async (idx) => {
+        const comp = window.state.compras[idx];
+        const nCant = parseFloat(prompt(`Nueva Cantidad (ML) para ${comp.m}:`, comp.c));
+        const nCost = parseFloat(prompt(`Nuevo Costo (ML) para ${comp.m}:`, comp.co));
+        
+        if(!isNaN(nCant) && !isNaN(nCost)) {
+            // Ajustar stock: restar vieja cantidad, sumar nueva
+            if(window.state.inventario[comp.m]) {
+                window.state.inventario[comp.m].stock = (window.state.inventario[comp.m].stock - comp.c) + nCant;
+            }
+            window.state.compras[idx].c = nCant;
+            window.state.compras[idx].co = nCost;
+            await window.sync();
+        }
+    };
+
+    window.delCompra = async (idx) => {
+        if(confirm("¿Eliminar este registro de compra? Se restará del stock.")) {
+            const comp = window.state.compras[idx];
+            if(window.state.inventario[comp.m]) {
+                window.state.inventario[comp.m].stock -= comp.c;
+            }
+            window.state.compras.splice(idx, 1);
+            await window.sync();
+        }
+    };
+
+    // --- POR COBRAR ---
+    function renderPorCobrar(app) {
+        const ventas = window.state.ventas || [];
+        const deudoresMap = {};
+        ventas.forEach(v => {
+            const deuda = v.total - v.abono;
+            if (deuda > 0.01) {
+                if (!deudoresMap[v.cliente]) deudoresMap[v.cliente] = { nombre: v.cliente, whatsapp: v.whatsapp, totalDeuda: 0, facturas: [] };
+                deudoresMap[v.cliente].totalDeuda += deuda;
+                deudoresMap[v.cliente].facturas.push(v);
+            }
+        });
+        const listaDeudores = Object.values(deudoresMap).sort((a, b) => b.totalDeuda - a.totalDeuda);
+        app.innerHTML = `
+            <h2 class="text-lg font-black italic text-red-500 mb-4 uppercase">Cuentas por Cobrar</h2>
+            <div class="space-y-4">
+                ${listaDeudores.length === 0 ? '<p class="text-center opacity-30 py-10 font-black uppercase text-xs">Sin deudas</p>' : ''}
+                ${listaDeudores.map(d => `
+                    <div class="card-pro !bg-[#16162a] p-0 overflow-hidden border-l-4 border-red-600">
+                        <div class="p-4 bg-white/5 flex justify-between items-center border-b border-white/5">
+                            <b class="text-sm uppercase text-white font-black">${d.nombre}</b>
+                            <div class="text-xl font-black text-red-500">$${d.totalDeuda.toFixed(2)}</div>
+                        </div>
+                        <div class="p-3 space-y-3">
+                            ${d.facturas.map(f => `
+                                <div class="bg-black/40 rounded-xl p-4 border border-white/5 text-[11px]">
+                                    <div class="flex justify-between items-start mb-2">
+                                        <div><div class="font-black text-purple-400">#${f.id.toString().slice(-6)}</div><div class="opacity-40">${f.fecha}</div></div>
+                                        <div class="text-right"><div class="font-black text-white text-sm">Debe: $${(f.total - f.abono).toFixed(2)}</div></div>
+                                    </div>
+                                    <div class="flex gap-1 justify-between mt-3">
+                                        <button onclick="abonar(${f.id})" class="flex-1 bg-green-600/20 text-green-500 py-2 rounded-xl font-black uppercase text-[10px]">Abonar</button>
+                                        <button onclick="liquidar(${f.id})" class="flex-1 bg-purple-600/20 text-purple-400 py-2 rounded-xl font-black uppercase text-[10px]">Liquidar</button>
+                                        <button onclick="editarFactura(${f.id})" class="p-2 text-blue-400">✏️</button>
+                                        <button onclick="showReceipt(${f.id})" class="p-2 text-white">📄</button>
+                                    </div>
+                                </div>`).join("")}
+                        </div>
+                    </div>`).join("")}
+            </div>`;
+    }
+
+    // --- GASTOS ---
+    function renderGastos(app, today) {
+        const listG = window.state.gastos || [];
+        const total = listG.reduce((a,b)=>a+b.monto,0);
+        app.innerHTML = `
+            <div class="card-pro">
+                <h2 class="text-lg font-black italic text-red-500 mb-4 uppercase text-center text-red-500">Gastos</h2>
+                <input id="gDate" type="date" value="${today}">
+                <input id="gDesc" placeholder="DESCRIPCIÓN">
+                <input id="gMonto" type="number" placeholder="MONTO $">
+                <button onclick="saveGasto()" class="btn-main mt-2">GUARDAR GASTO</button>
+            </div>
+            <div class="flex justify-between items-center mb-4 px-2">
+                <span class="text-[10px] font-black opacity-50 uppercase">Historial</span>
+                <span class="text-xl font-black text-red-500">$${total.toLocaleString()}</span>
+            </div>
+            <div class="space-y-1">
+                ${listG.slice().reverse().map((g, idx) => `
+                    <div class="bg-white/5 p-4 rounded-xl flex justify-between items-center text-[10px] uppercase">
+                        <div><div class="font-black text-white">${g.desc}</div><div class="opacity-30">${g.fecha}</div></div>
+                        <div class="flex items-center gap-4"><b class="text-red-400">$${g.monto.toFixed(2)}</b><button onclick="delGasto(${listG.length - 1 - idx})" class="opacity-20">✕</button></div>
+                    </div>`).join("")}
+            </div>`;
+    }
 
     window.saveGasto = async () => {
-        const d = document.getElementById("gDesc").value.toUpperCase(), m = parseFloat(document.getElementById("gMonto").value);
-        if(d && m) { 
-            window.state.gastos.push({ desc: d, monto: m, fecha: document.getElementById("gDate").value }); 
-            await window.sync(); 
-        }
+        const d = document.getElementById("gDesc").value, m = parseFloat(document.getElementById("gMonto").value), f = document.getElementById("gDate").value;
+        if(d && m) { if(!window.state.gastos) window.state.gastos = []; window.state.gastos.push({ desc: d, monto: m, fecha: f }); await window.sync(); }
     };
+    window.delGasto = async (idx) => { if(confirm("¿Eliminar gasto?")) { window.state.gastos.splice(idx, 1); await window.sync(); } };
 
-    window.delGasto = async (idx) => { if(confirm("¿Borrar gasto?")) { window.state.gastos.splice(idx, 1); await window.sync(); } };
+    function renderInventario(app, inv) {
+        app.innerHTML = `
+            <h2 class="text-[10px] font-black opacity-30 uppercase tracking-widest italic mb-4">Stock de Materiales</h2>
+            <div class="space-y-3">
+                ${Object.entries(inv).map(([n, i]) => `
+                    <div class="card-pro flex justify-between items-center border-l-4 ${i.stock < 5 ? 'border-red-600 alert-low' : 'border-blue-600'}">
+                        <div>
+                            <b class="uppercase text-purple-400 text-[11px] font-black">${n}</b><br>
+                            <span class="text-4xl font-black italic text-white">${i.stock.toFixed(2)} <small class="text-[10px] opacity-40">ML</small></span>
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick="registrarMerma('${n}')" class="icon-btn-lg bg-red-600/20 text-red-400">🔪</button>
+                            <button onclick="editStock('${n}')" class="icon-btn-lg bg-blue-600/20 text-blue-400">✏️</button>
+                        </div>
+                    </div>`).join("")}
+            </div>`;
+    }
 
+    function renderCatalogo(app, inv, serv) {
+        app.innerHTML = `
+            <div class="card-pro">
+                <h3 class="text-xs font-black text-blue-400 uppercase mb-4">Crear Material</h3>
+                <input id="nMat" placeholder="NOMBRE">
+                <input id="aMat" type="number" step="0.01" placeholder="ANCHO (Mts)">
+                <button onclick="crearMat()" class="btn-main !py-3 !bg-blue-600/20">+ REGISTRAR</button>
+                <div class="mt-4 space-y-1">
+                    ${Object.keys(inv).map(m => `<div class="bg-black/40 p-2 rounded flex justify-between text-xs"><span>${m}</span><button onclick="delMat('${m}')" class="text-red-500 font-bold">✕</button></div>`).join("")}
+                </div>
+            </div>
+            <div class="card-pro mt-4">
+                <h3 class="text-xs font-black text-purple-400 uppercase mb-4">Servicios</h3>
+                <div class="flex gap-2">
+                    <input id="nServ" placeholder="Nombre" class="!m-0 text-sm">
+                    <button onclick="crearServicio()" class="btn-main !w-auto !px-4">+</button>
+                </div>
+                <div class="grid grid-cols-2 gap-2 mt-4">
+                    ${serv.map((s, idx) => `<div class="bg-black/40 p-2 rounded flex justify-between text-[10px]"><span>${s}</span><button onclick="delServicio(${idx})" class="text-red-500">✕</button></div>`).join("")}
+                </div>
+            </div>`;
+    }
+
+    // --- LÓGICA VENTAS ---
     window.updateVentaUI = () => {
         const m = document.getElementById("vMat").value, t = document.getElementById("vTipo").value, c = parseFloat(document.getElementById("vCant").value) || 0;
         const info = window.state.inventario[m];
@@ -392,86 +372,99 @@
             if(p > 0) document.getElementById("vPrec").value = p.toFixed(2);
         }
     };
-
     window.addItem = () => {
-        const m = document.getElementById("vMat").value, p = parseFloat(document.getElementById("vPrec").value) || 0, c = parseFloat(document.getElementById("vCant").value) || 0;
-        if(m && p) {
-            window.cart.push({ m, p, c });
-            document.getElementById("vTotal").innerText = "$" + window.cart.reduce((a,b)=>a+b.p,0).toFixed(2);
-            document.getElementById("vLista").innerHTML += `<div class="flex justify-between bg-white/5 p-3 rounded-lg text-[10px] font-black uppercase border-l-4 border-purple-500"><span>${m}</span><b class="text-purple-400">$${p.toFixed(2)}</b></div>`;
-        }
+        const m = document.getElementById("vMat").value, p = parseFloat(document.getElementById("vPrec").value) || 0, c = parseFloat(document.getElementById("vCant").value) || 0, t = document.getElementById("vTipo").value;
+        if(m && p) { window.cart.push({ m, p, c, t }); render(); }
     };
+    window.editCartItem = (idx) => {
+        const nC = parseFloat(prompt("Cantidad:", window.cart[idx].c));
+        const nP = parseFloat(prompt("Precio:", window.cart[idx].p));
+        if(!isNaN(nC)) window.cart[idx].c = nC;
+        if(!isNaN(nP)) window.cart[idx].p = nP;
+        render();
+    };
+    window.removeItem = (idx) => { window.cart.splice(idx, 1); render(); };
 
     window.saveVenta = async () => {
         if(!window.cart.length) return;
+        const cli = document.getElementById("cli").value.toUpperCase() || "FINAL";
+        const wha = document.getElementById("wha").value || "";
+        const abono = parseFloat(document.getElementById("vAbono").value) || 0;
+        const total = window.cart.reduce((a,b)=>a+b.p,0);
+        const fecha = document.getElementById("vDate").value;
         window.cart.forEach(i => { if(window.state.inventario[i.m]) window.state.inventario[i.m].stock -= i.c; });
         const id = Date.now();
-        window.state.ventas.push({ id, cliente: document.getElementById("cli").value.toUpperCase(), whatsapp: document.getElementById("wha").value, items: window.cart, total: window.cart.reduce((a,b)=>a+b.p,0), abono: parseFloat(document.getElementById("vAbono").value) || 0, fecha: document.getElementById("vDate").value });
+        if(!window.state.ventas) window.state.ventas = [];
+        window.state.ventas.push({ id, cliente: cli, whatsapp: wha, items: [...window.cart], total: total, abono: abono, fecha: fecha });
         await window.sync();
         showReceipt(id);
+        window.cart = [];
     };
 
-    window.editVenta = async (id) => {
-        const idx = window.state.ventas.findIndex(x => x.id === id);
-        const v = window.state.ventas[idx];
-        const nuevoNombre = prompt("Nombre del cliente:", v.cliente);
-        if(nuevoNombre === null) return;
-        const nuevoTotal = parseFloat(prompt("Total de la factura:", v.total));
-        const nuevoAbono = parseFloat(prompt("Abono actual:", v.abono));
-        
-        if(!isNaN(nuevoTotal) && !isNaN(nuevoAbono)) {
-            v.cliente = nuevoNombre.toUpperCase();
-            v.total = nuevoTotal;
-            v.abono = nuevoAbono;
+    window.registrarMerma = async (m) => {
+        const merm = parseFloat(prompt(`MERMA para ${m} (ML):`));
+        if(!isNaN(merm) && merm > 0) {
+            window.state.inventario[m].stock -= merm;
+            if(!window.state.gastos) window.state.gastos = [];
+            window.state.gastos.push({ desc: `MERMA: ${m}`, monto: 0, fecha: new Date().toISOString().split('T')[0] });
             await window.sync();
         }
     };
 
-    window.abonar = async (id) => {
-        const v = window.state.ventas.find(x => x.id === id);
-        let monto = parseFloat(prompt(`DEUDA: $${(v.total - v.abono).toFixed(2)}\nIngrese abono:`));
-        if(!isNaN(monto) && monto > 0) { v.abono += monto; await window.sync(); }
+    window.crearMat = async () => {
+        const n = document.getElementById("nMat").value.toUpperCase(), a = parseFloat(document.getElementById("aMat").value);
+        if(n && a) { if(!window.state.inventario) window.state.inventario = {}; window.state.inventario[n] = { stock: 0, precioM2: 0, precioML: 0, ancho: a }; await window.sync(); }
+    };
+    window.delMat = async (n) => { if(confirm(`¿ELIMINAR ${n}?`)) { delete window.state.inventario[n]; await window.sync(); } };
+    window.crearServicio = async () => {
+        const s = document.getElementById("nServ").value.toUpperCase();
+        if(s) { if(!window.state.servicios) window.state.servicios = [...SERVICIOS_DEFECTO]; window.state.servicios.push(s); await window.sync(); }
+    };
+    window.delServicio = async (idx) => { window.state.servicios.splice(idx, 1); await window.sync(); };
+    window.editStock = async (m) => {
+        let n = parseFloat(prompt(`AJUSTE STOCK (${m}):`, window.state.inventario[m].stock));
+        if(!isNaN(n)) { window.state.inventario[m].stock = n; await window.sync(); }
     };
 
+    window.abonar = async (id) => {
+        const v = window.state.ventas.find(x => x.id === id);
+        let monto = parseFloat(prompt(`Abono para ${v.cliente}:`));
+        if(!isNaN(monto)) { v.abono += monto; await window.sync(); }
+    };
     window.liquidar = async (id) => {
         const v = window.state.ventas.find(x => x.id === id);
-        if(confirm("¿Liquidar deuda completa?")) { v.abono = v.total; await window.sync(); }
+        if(confirm("¿Liquidar?")) { v.abono = v.total; await window.sync(); }
+    };
+    window.editarFactura = async (id) => {
+        const v = window.state.ventas.find(x => x.id === id);
+        let nT = parseFloat(prompt("Total:", v.total));
+        let nA = parseFloat(prompt("Abono:", v.abono));
+        if(!isNaN(nT)) v.total = nT;
+        if(!isNaN(nA)) v.abono = nA;
+        await window.sync();
     };
 
     window.showReceipt = (id) => {
         const v = window.state.ventas.find(x => x.id === id);
-        const modal = document.getElementById("receiptModal");
-        const content = document.getElementById("receiptContent");
-        content.innerHTML = `
-            <p>ID: #${v.id} | ${v.fecha}</p>
-            <p>CLIENTE: ${v.cliente}</p>
-            <div class="border-y border-dashed border-black my-2 py-2">
+        document.getElementById("receiptContent").innerHTML = `
+            <div class="flex justify-between font-bold border-b border-black mb-2"><span>#${v.id.toString().slice(-6)}</span><span>${v.fecha}</span></div>
+            <p class="font-black uppercase">${v.cliente}</p>
+            <div class="border-y border-dashed border-black my-4 py-2">
                 ${v.items.map(i => `<div class="flex justify-between"><span>${i.m}</span><span>$${i.p.toFixed(2)}</span></div>`).join("")}
             </div>
-            <div class="text-right">
-                <p>TOTAL: $${v.total.toFixed(2)}</p>
-                <p>ABONADO: $${v.abono.toFixed(2)}</p>
-                <p class="font-bold text-lg">PENDIENTE: $${(v.total - v.abono).toFixed(2)}</p>
-            </div>
+            <div class="flex justify-between font-black text-lg"><span>TOTAL:</span><span>$${v.total.toFixed(2)}</span></div>
+            <div class="flex justify-between text-green-700"><span>PAGADO:</span><span>$${v.abono.toFixed(2)}</span></div>
+            <div class="flex justify-between text-red-600 font-black border-t border-black"><span>DEBE:</span><span>$${(v.total - v.abono).toFixed(2)}</span></div>
         `;
         window.currentReceiptId = id;
-        modal.classList.remove("hidden");
+        document.getElementById("receiptModal").classList.remove("hidden");
     };
-
     window.closeReceipt = () => document.getElementById("receiptModal").classList.add("hidden");
-    
     window.shareReceipt = () => {
         const v = window.state.ventas.find(x => x.id === window.currentReceiptId);
-        const txt = `👻 *GHOST PRINT*%0A*Recibo:* #${v.id}%0A*Cliente:* ${v.cliente}%0A--------------------------%0A*Total:* $${v.total.toFixed(2)}%0A*Pendiente:* $${(v.total-v.abono).toFixed(2)}`;
+        const txt = `*GHOST PRINT*%0A*Recibo:* #${v.id}%0A*Cliente:* ${v.cliente}%0A*Total:* $${v.total}%0A*Debe:* $${v.total-v.abono}`;
         window.open(`https://wa.me/${v.whatsapp}?text=${txt}`, '_blank');
     };
-
-    window.editStock = async (m) => {
-        let n = parseFloat(prompt(`Ajustar Stock ${m}`, window.state.inventario[m].stock));
-        if(!isNaN(n)) { window.state.inventario[m].stock = n; await window.sync(); }
-    };
-
-    window.delMat = async (m) => { if(confirm(`¿Borrar ${m}?`)) { delete window.state.inventario[m]; await window.sync(); } };
 
     render();
 </script>
