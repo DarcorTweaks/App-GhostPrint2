@@ -36,13 +36,13 @@
 </div>
 
 <nav id="mainNav">
-    <div onclick="setView('inicio')" class="btn-nav active" id="n-inicio">📊 ADMIN</div>
-    <div onclick="setView('ventas')" class="btn-nav" id="n-ventas">💵 Ventas</div>
-    <div onclick="setView('cobrar')" class="btn-nav" id="n-cobrar">📑 POR COBRAR</div>
-    <div onclick="setView('compras')" class="btn-nav" id="n-compras">🛒 Compras</div>
-    <div onclick="setView('gastos')" class="btn-nav" id="n-gastos">💸 Gastos</div>
-    <div onclick="setView('inventario')" class="btn-nav" id="n-inventario">📦 Stock</div>
-    <div onclick="setView('catalogo')" class="btn-nav" id="n-catalogo">⚙️ CATALOGO</div>
+    <div onclick="setView('inicio')" class="btn-nav active" id="n-inicio" title="Panel de Administración">📊 ADMIN</div>
+    <div onclick="setView('ventas')" class="btn-nav" id="n-ventas" title="Nueva Venta">💵 Ventas</div>
+    <div onclick="setView('cobrar')" class="btn-nav" id="n-cobrar" title="Cuentas pendientes de cobro">📑 POR COBRAR</div>
+    <div onclick="setView('compras')" class="btn-nav" id="n-compras" title="Carga de mercancía al stock">🛒 Compras</div>
+    <div onclick="setView('gastos')" class="btn-nav" id="n-gastos" title="Gastos operativos">💸 Gastos</div>
+    <div onclick="setView('inventario')" class="btn-nav" id="n-inventario" title="Control de existencias">📦 Stock</div>
+    <div onclick="setView('catalogo')" class="btn-nav" id="n-catalogo" title="Configurar materiales y servicios">⚙️ CATALOGO</div>
 </nav>
 
 <div id="app" class="p-4 max-w-2xl mx-auto"></div>
@@ -148,8 +148,8 @@
                                 <div class="flex items-center gap-4">
                                     <b class="text-lg text-white">$${item.p.toFixed(2)}</b>
                                     <div class="flex gap-1">
-                                        <button onclick="editCartItem(${idx})" class="p-2 text-blue-400">✏️</button>
-                                        <button onclick="removeItem(${idx})" class="p-2 text-red-500">✕</button>
+                                        <button onclick="editCartItem(${idx})" class="p-2 text-blue-400" title="Editar este item">✏️</button>
+                                        <button onclick="removeItem(${idx})" class="p-2 text-red-500" title="Eliminar este item">✕</button>
                                     </div>
                                 </div>
                             </div>
@@ -199,8 +199,8 @@
                         <div class="text-[8px] opacity-30 font-bold">${c.f}</div>
                     </div>
                     <div class="flex gap-2">
-                        <button onclick="editCompra(${realIdx})" class="icon-btn-lg bg-blue-600/10 text-blue-400 border border-blue-500/20">✏️</button>
-                        <button onclick="delCompra(${realIdx})" class="icon-btn-lg bg-red-600/10 text-red-500 border border-red-500/20">🗑️</button>
+                        <button onclick="editCompra(${realIdx})" class="icon-btn-lg bg-blue-600/10 text-blue-400 border border-blue-500/20" title="Editar registro de compra">✏️</button>
+                        <button onclick="delCompra(${realIdx})" class="icon-btn-lg bg-red-600/10 text-red-500 border border-red-500/20" title="Eliminar registro y descontar stock">🗑️</button>
                     </div>
                 </div>`;
             }).join("")}
@@ -278,10 +278,10 @@
                                         <div class="text-right"><div class="font-black text-white text-sm">Debe: $${(f.total - f.abono).toFixed(2)}</div></div>
                                     </div>
                                     <div class="flex gap-1 justify-between mt-3">
-                                        <button onclick="abonar(${f.id})" class="flex-1 bg-green-600/20 text-green-500 py-2 rounded-xl font-black uppercase text-[10px]">Abonar</button>
-                                        <button onclick="liquidar(${f.id})" class="flex-1 bg-purple-600/20 text-purple-400 py-2 rounded-xl font-black uppercase text-[10px]">Liquidar</button>
-                                        <button onclick="editarFactura(${f.id})" class="p-2 text-blue-400">✏️</button>
-                                        <button onclick="showReceipt(${f.id})" class="p-2 text-white">📄</button>
+                                        <button onclick="abonar(${f.id})" class="flex-1 bg-green-600/20 text-green-500 py-2 rounded-xl font-black uppercase text-[10px]" title="Añadir abono a esta cuenta">Abonar</button>
+                                        <button onclick="liquidar(${f.id})" class="flex-1 bg-purple-600/20 text-purple-400 py-2 rounded-xl font-black uppercase text-[10px]" title="Marcar como pagado totalmente">Liquidar</button>
+                                        <button onclick="editarFactura(${f.id})" class="p-2 text-blue-400" title="Corregir montos de la factura">✏️</button>
+                                        <button onclick="showReceipt(${f.id})" class="p-2 text-white" title="Ver recibo de pago">📄</button>
                                     </div>
                                 </div>`).join("")}
                         </div>
@@ -308,7 +308,7 @@
                 ${listG.slice().reverse().map((g, idx) => `
                     <div class="bg-white/5 p-4 rounded-xl flex justify-between items-center text-[10px] uppercase">
                         <div><div class="font-black text-white">${g.desc}</div><div class="opacity-30">${g.fecha}</div></div>
-                        <div class="flex items-center gap-4"><b class="text-red-400">$${g.monto.toFixed(2)}</b><button onclick="delGasto(${listG.length - 1 - idx})" class="opacity-20">✕</button></div>
+                        <div class="flex items-center gap-4"><b class="text-red-400">$${g.monto.toFixed(2)}</b><button onclick="delGasto(${listG.length - 1 - idx})" class="opacity-20" title="Eliminar gasto">✕</button></div>
                     </div>`).join("")}
             </div>`;
     }
@@ -330,8 +330,8 @@
                             <span class="text-4xl font-black italic text-white">${i.stock.toFixed(2)} <small class="text-[10px] opacity-40">ML</small></span>
                         </div>
                         <div class="flex gap-2">
-                            <button onclick="registrarMerma('${n}')" class="icon-btn-lg bg-red-600/20 text-red-400">🔪</button>
-                            <button onclick="editStock('${n}')" class="icon-btn-lg bg-blue-600/20 text-blue-400">✏️</button>
+                            <button onclick="registrarMerma('${n}')" class="icon-btn-lg bg-red-600/20 text-red-400" title="Registrar pérdida de material (Merma)">🔪</button>
+                            <button onclick="editStock('${n}')" class="icon-btn-lg bg-blue-600/20 text-blue-400" title="Ajustar stock manualmente">✏️</button>
                         </div>
                     </div>`).join("")}
             </div>`;
@@ -343,19 +343,19 @@
                 <h3 class="text-xs font-black text-blue-400 uppercase mb-4">Crear Material</h3>
                 <input id="nMat" placeholder="NOMBRE">
                 <input id="aMat" type="number" step="0.01" placeholder="ANCHO (Mts)">
-                <button onclick="crearMat()" class="btn-main !py-3 !bg-blue-600/20">+ REGISTRAR</button>
+                <button onclick="crearMat()" class="btn-main !py-3 !bg-blue-600/20" title="Registrar nuevo material en la base de datos">+ REGISTRAR</button>
                 <div class="mt-4 space-y-1">
-                    ${Object.keys(inv).map(m => `<div class="bg-black/40 p-2 rounded flex justify-between text-xs"><span>${m}</span><button onclick="delMat('${m}')" class="text-red-500 font-bold">✕</button></div>`).join("")}
+                    ${Object.keys(inv).map(m => `<div class="bg-black/40 p-2 rounded flex justify-between text-xs"><span>${m}</span><button onclick="delMat('${m}')" class="text-red-500 font-bold" title="Eliminar material definitivamente">✕</button></div>`).join("")}
                 </div>
             </div>
             <div class="card-pro mt-4">
                 <h3 class="text-xs font-black text-purple-400 uppercase mb-4">Servicios</h3>
                 <div class="flex gap-2">
                     <input id="nServ" placeholder="Nombre" class="!m-0 text-sm">
-                    <button onclick="crearServicio()" class="btn-main !w-auto !px-4">+</button>
+                    <button onclick="crearServicio()" class="btn-main !w-auto !px-4" title="Añadir nuevo tipo de servicio">+</button>
                 </div>
                 <div class="grid grid-cols-2 gap-2 mt-4">
-                    ${serv.map((s, idx) => `<div class="bg-black/40 p-2 rounded flex justify-between text-[10px]"><span>${s}</span><button onclick="delServicio(${idx})" class="text-red-500">✕</button></div>`).join("")}
+                    ${serv.map((s, idx) => `<div class="bg-black/40 p-2 rounded flex justify-between text-[10px]"><span>${s}</span><button onclick="delServicio(${idx})" class="text-red-500" title="Eliminar servicio">✕</button></div>`).join("")}
                 </div>
             </div>`;
     }
