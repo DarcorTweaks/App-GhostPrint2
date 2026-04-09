@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>GhostPrint MASTER v26.9</title>
+    <title>GhostPrint MASTER v27.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap');
@@ -14,35 +14,18 @@
         .active { background: #7c3aed !important; color: white !important; }
         input, select { background: #070712; border: 1px solid #334155; color: white; padding: 14px; border-radius: 14px; width: 100%; margin: 6px 0; font-weight: 700; outline: none; }
         .btn-main { background: linear-gradient(135deg, #7c3aed 0%, #4c1d95 100%); color: white; padding: 16px; border-radius: 16px; width: 100%; font-weight: 900; text-transform: uppercase; cursor: pointer; border: none; }
-        .ghost-glow { filter: drop-shadow(0 0 10px #7c3aed); }
         .icon-btn { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 10px; transition: all 0.2s; position: relative; }
-        
-        /* Tooltip simple (Leyenda) */
-        .icon-btn:hover::after {
-            content: attr(title);
-            position: absolute;
-            bottom: 45px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: #7c3aed;
-            color: white;
-            padding: 4px 8px;
-            border-radius: 6px;
-            font-size: 8px;
-            white-space: nowrap;
-            z-index: 50;
-            font-weight: 900;
-        }
+        .icon-btn:hover::after { content: attr(title); position: absolute; bottom: 45px; left: 50%; transform: translateX(-50%); background: #7c3aed; color: white; padding: 4px 8px; border-radius: 6px; font-size: 8px; white-space: nowrap; z-index: 50; }
     </style>
 </head>
 <body>
 
 <div class="p-4 flex justify-between items-center bg-[#0a0a14] border-b border-white/5">
     <div class="flex items-center gap-3">
-        <span class="text-4xl ghost-glow">👻</span>
+        <span class="text-4xl">👻</span>
         <div>
             <h1 class="text-xl font-black italic text-purple-500 leading-none">GHOST PRINT</h1>
-            <p class="text-[8px] font-black opacity-40 uppercase">Master Suite v26.9</p>
+            <p class="text-[8px] font-black opacity-40 uppercase tracking-widest">Master System v27.0</p>
         </div>
     </div>
 </div>
@@ -63,13 +46,13 @@
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 
 <script>
-    // Firebase Config
     const firebaseConfig = { apiKey: "AIzaSyBCm5JlhTxvvtlwjA1EYEtLvxb1AH5v1WI", authDomain: "ghost-print-contabilidad.firebaseapp.com", projectId: "ghost-print-contabilidad", storageBucket: "ghost-print-contabilidad.firebasestorage.app", messagingSenderId: "867057362556", appId: "1:867057362556:web:6bd2a461817219a4000bf9" };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
     const docRef = db.collection("sistema").doc("datos_principales");
 
     window.state = { ventas: [], inventario: {}, compras: [], gastos: [], servicios: [] };
+    let cart = [];
 
     window.sync = async function() { 
         await docRef.set(window.state); 
@@ -88,111 +71,122 @@
     window.render = function() {
         const app = document.getElementById("app");
         const inv = window.state.inventario || {};
+        const serv = window.state.servicios || [];
         const today = new Date().toISOString().split('T')[0];
 
-        // --- MÓDULO GASTOS (CON TOTAL E HISTORIAL) ---
-        if(window.currentView === "gastos") {
-            const listaGastos = window.state.gastos || [];
-            const totalEfectivo = listaGastos.reduce((a, b) => a + (Number(b.monto) || 0), 0);
-
+        // --- MÓDULO ADMIN (RESTAURADO) ---
+        if(window.currentView === "inicio") {
+            const vM = window.state.ventas || [];
+            const gM = window.state.gastos || [];
+            const cM = window.state.compras || [];
+            const tVentas = vM.reduce((a,b) => a + (Number(b.total) || 0), 0);
+            const tGastos = gM.reduce((a,b) => a + (Number(b.monto) || 0), 0);
+            const tCompras = cM.reduce((a,b) => a + (Number(b.c * b.co) || 0), 0);
+            
             app.innerHTML = `
-                <div class="card-pro text-center bg-red-900/20 border-red-500/30">
-                    <p class="text-[10px] opacity-40 uppercase font-black tracking-widest">Total Gastado (Efectivo)</p>
-                    <h2 class="text-4xl font-black italic text-red-500">$${totalEfectivo.toFixed(2)}</h2>
+                <div class="card-pro text-center bg-gradient-to-br from-purple-900/40 to-[#111122]">
+                    <p class="text-[10px] opacity-40 uppercase font-black tracking-widest">Facturación Total</p>
+                    <h2 class="text-5xl font-black italic text-purple-500">$${tVentas.toFixed(2)}</h2>
                 </div>
-
-                <div class="card-pro mt-4">
-                    <h2 class="text-xs font-black text-red-400 mb-4 uppercase">Nuevo Gasto</h2>
-                    <input id="gDate" type="date" value="${today}">
-                    <input id="gDesc" placeholder="DESCRIPCIÓN DEL GASTO">
-                    <input id="gMonto" type="number" placeholder="MONTO $">
-                    <button onclick="saveGasto()" class="btn-main !from-red-600 !to-red-900 mt-2">GUARDAR GASTO</button>
+                <div class="grid grid-cols-2 gap-4 mt-4">
+                    <div class="card-pro text-center bg-red-900/10"><p class="text-[9px] opacity-40 uppercase">Gastos</p><h2 class="text-2xl font-black text-red-500">$${tGastos.toFixed(2)}</h2></div>
+                    <div class="card-pro text-center bg-blue-900/10"><p class="text-[9px] opacity-40 uppercase">Compras</p><h2 class="text-2xl font-black text-blue-500">$${tCompras.toFixed(2)}</h2></div>
                 </div>
+                <div class="card-pro text-center border-green-500/20 bg-green-500/5 mt-4">
+                    <p class="text-[10px] opacity-40 uppercase font-black">Utilidad Neta</p>
+                    <h2 class="text-4xl font-black text-green-500">$${(tVentas - tGastos - tCompras).toFixed(2)}</h2>
+                </div>
+            `;
+        }
 
-                <div class="mt-6">
-                    <h3 class="text-[10px] font-black opacity-30 uppercase mb-4 tracking-widest">Historial Reciente</h3>
-                    <div class="space-y-2 max-h-[400px] overflow-y-auto pr-2">
-                        ${listaGastos.length > 0 ? [...listaGastos].reverse().map((g, idx) => `
-                            <div class="card-pro flex justify-between items-center py-3 bg-white/5 border-white/5 ${g.monto === 0 ? 'opacity-50' : ''}">
-                                <div>
-                                    <b class="text-[10px] uppercase ${g.monto === 0 ? 'text-orange-400' : 'text-white'}">${g.desc}</b>
-                                    <p class="text-[8px] opacity-30">${g.fecha}</p>
-                                </div>
-                                <div class="text-right">
-                                    <span class="text-lg font-black ${g.monto === 0 ? 'text-gray-500' : 'text-red-500'}">
-                                        ${g.monto === 0 ? 'MERMA' : '$' + g.monto.toFixed(2)}
-                                    </span>
-                                </div>
-                            </div>
-                        `).join("") : '<p class="text-center opacity-20 py-10">Sin movimientos</p>'}
+        // --- MÓDULO VENTAS (RECUPERADO COMPLETO) ---
+        if(window.currentView === "ventas") {
+            app.innerHTML = `
+                <div class="card-pro">
+                    <h2 class="text-lg font-black italic text-purple-500 mb-4 uppercase tracking-tighter">Nueva Venta</h2>
+                    <input id="vDate" type="date" value="${today}">
+                    <div class="grid grid-cols-2 gap-2"><input id="cli" placeholder="CLIENTE"><input id="wha" type="tel" placeholder="WHATSAPP"></div>
+                    
+                    <div class="bg-white/5 p-4 rounded-xl mt-4 border border-white/10">
+                        <select id="vMat" onchange="updateVentaUI()">
+                            <option value="">-- SELECCIONAR --</option>
+                            <optgroup label="STOCK">${Object.keys(inv).map(m=>`<option value="${m}">${m}</option>`).join("")}</optgroup>
+                            <optgroup label="SERVICIOS">${serv.map(s=>`<option value="${s}">${s}</option>`).join("")}</optgroup>
+                        </select>
+                        <div class="flex gap-2">
+                            <select id="vTipo" onchange="updateVentaUI()" class="w-1/3"><option value="ML">ML</option><option value="M2">M2</option><option value="UNID">UNID</option></select>
+                            <input id="vCant" type="number" placeholder="CANT" oninput="updateVentaUI()" class="w-2/3">
+                        </div>
+                        <input id="vPrec" type="number" placeholder="PRECIO $">
+                        <button onclick="addItem()" class="btn-main !p-3 mt-3 text-[10px]">+ AÑADIR A LISTA</button>
                     </div>
+                    <div id="vLista" class="mt-4 space-y-1"></div>
+                    <div id="vTotal" class="text-5xl font-black text-center my-6">$0.00</div>
+                    <input id="vAbono" type="number" placeholder="ABONO INICIAL $" class="card-pro !bg-purple-900/10">
+                    <button onclick="saveVenta()" class="btn-main">GUARDAR VENTA</button>
                 </div>
             `;
-            return;
+            cart = [];
         }
 
-        // --- MÓDULO STOCK (CON LEYENDAS / TOOLTIPS) ---
+        // --- MÓDULO GASTOS (CON HISTORIAL) ---
+        if(window.currentView === "gastos") {
+            const lista = window.state.gastos || [];
+            app.innerHTML = `
+                <div class="card-pro text-center bg-red-900/20"><p class="text-[10px] opacity-40 uppercase">Total Egresos</p><h2 class="text-4xl font-black text-red-500">$${lista.reduce((a,b)=>a+Number(b.monto),0).toFixed(2)}</h2></div>
+                <div class="card-pro mt-4">
+                    <input id="gDate" type="date" value="${today}"><input id="gDesc" placeholder="DESCRIPCIÓN"><input id="gMonto" type="number" placeholder="MONTO $">
+                    <button onclick="saveGasto()" class="btn-main !from-red-600 !to-red-900 mt-2">REGISTRAR GASTO</button>
+                </div>
+                <div class="mt-6 space-y-2 max-h-60 overflow-y-auto">
+                    ${lista.reverse().map(g => `<div class="card-pro flex justify-between py-2 text-[10px]"><span>${g.desc}</span><b class="${g.monto==0?'text-orange-500':'text-red-500'}">${g.monto==0?'MERMA':'$'+g.monto}</b></div>`).join("")}
+                </div>
+            `;
+        }
+
+        // --- MÓDULO STOCK (CON LEYENDAS) ---
         if(window.currentView === "inventario") {
-            app.innerHTML = `
-                <h2 class="text-[10px] font-black opacity-30 uppercase mb-4 tracking-widest italic">Existencias Actuales</h2>
-                <div class="space-y-3">
-                    ${Object.entries(inv).map(([n, i]) => `
-                        <div class="card-pro flex justify-between items-center ${i.stock < 5 ? 'border-red-500/50 bg-red-900/10' : ''}">
-                            <div class="flex-1">
-                                <b class="uppercase text-purple-400 text-[10px]">${n}</b>
-                                <div class="flex items-baseline gap-1">
-                                    <span class="text-3xl font-black italic">${i.stock}</span>
-                                    <span class="text-[8px] opacity-40 font-bold uppercase">Metros</span>
-                                </div>
-                            </div>
-                            <div class="flex gap-2">
-                                <button onclick="regMerma('${n}')" class="icon-btn bg-red-600/20 text-red-500 border border-red-500/20" title="Cargar Material Dañado">
-                                    🗑️
-                                </button>
-                                <button onclick="editStock('${n}')" class="icon-btn bg-blue-600/20 text-blue-400 border border-blue-500/20" title="Ajuste Manual de Stock">
-                                    ✏️
-                                </button>
-                            </div>
-                        </div>
-                    `).join("")}
-                </div>`;
-            return;
+            app.innerHTML = `<div class="space-y-3">${Object.entries(inv).map(([n, i]) => `
+                <div class="card-pro flex justify-between items-center ${i.stock < 5 ? 'border-red-500/50 bg-red-900/10' : ''}">
+                    <div><b class="uppercase text-purple-400 text-[10px]">${n}</b><br><span class="text-3xl font-black">${i.stock} <small class="text-xs opacity-40">ML</small></span></div>
+                    <div class="flex gap-2">
+                        <button onclick="regMerma('${n}')" class="icon-btn bg-red-600/20 text-red-500" title="Cargar Merma (Dañado)">🗑️</button>
+                        <button onclick="editStock('${n}')" class="icon-btn bg-blue-600/20 text-blue-400" title="Ajustar Stock Manual">✏️</button>
+                    </div>
+                </div>`).join("")}</div>`;
         }
-
-        // --- MÓDULO CATALOGO (BLOQUEADO) ---
-        if(window.currentView === "catalogo") {
-            app.innerHTML = `
-                <div class="card-pro border-purple-500/30">
-                    <h3 class="text-[10px] font-black opacity-50 mb-4 uppercase text-purple-400">Panel de Configuración Bloqueado</h3>
-                    <input id="nMat" placeholder="Nombre de Material">
-                    <input id="aMat" type="number" step="0.01" placeholder="Ancho m">
-                    <button onclick="crearMat()" class="btn-main mt-2">Registrar en Catálogo</button>
-                </div>
-                <div class="mt-4 space-y-2 overflow-y-auto max-h-60">
-                    ${Object.keys(inv).map(m => `
-                        <div class="flex justify-between bg-white/5 p-3 rounded-xl text-[10px] font-black uppercase">
-                            <span>${m}</span>
-                            <button onclick="delMat('${m}')" class="text-red-500" title="Eliminar del Sistema">BORRAR</button>
-                        </div>
-                    `).join("")}
-                </div>
-            `;
-            return;
-        }
-
-        // Carga genérica para otras vistas
-        app.innerHTML = `<p class="text-center py-20 opacity-20 font-black uppercase">Cargando Módulo...</p>`;
-        if(window.currentView === "inicio") renderInicio(app);
-        if(window.currentView === "ventas") renderVentas(app, inv, today);
     };
 
-    // --- ACCIONES ASEGURADAS ---
+    // --- LÓGICA DE NEGOCIO ---
+    window.updateVentaUI = () => {
+        const m = document.getElementById("vMat").value, t = document.getElementById("vTipo").value, c = parseFloat(document.getElementById("vCant").value) || 0;
+        const info = window.state.inventario[m];
+        if(info) {
+            let p = (t === "ML") ? c * info.precioML : (t === "M2") ? c * info.precioM2 : 0;
+            if(p > 0) document.getElementById("vPrec").value = p.toFixed(2);
+        }
+    };
+
+    window.addItem = () => {
+        const m = document.getElementById("vMat").value, p = parseFloat(document.getElementById("vPrec").value) || 0, c = parseFloat(document.getElementById("vCant").value) || 0;
+        if(m && p) {
+            cart.push({ m, p, c });
+            document.getElementById("vTotal").innerText = "$" + cart.reduce((a,b)=>a+b.p,0).toFixed(2);
+            document.getElementById("vLista").innerHTML += `<div class="flex justify-between bg-white/5 p-2 rounded text-[10px] uppercase font-black"><span>${m}</span><b>$${p}</b></div>`;
+        }
+    };
+
+    window.saveVenta = async () => {
+        if(!cart.length) return;
+        const abono = parseFloat(document.getElementById("vAbono").value) || 0;
+        cart.forEach(i => { if(window.state.inventario[i.m]) window.state.inventario[i.m].stock = parseFloat((window.state.inventario[i.m].stock - i.c).toFixed(2)); });
+        window.state.ventas.push({ id: Date.now(), cliente: document.getElementById("cli").value.toUpperCase(), items: cart, total: cart.reduce((a,b)=>a+b.p,0), abono, fecha: document.getElementById("vDate").value });
+        await window.sync(); setView('inicio');
+    };
+
     window.saveGasto = async () => {
         const d = document.getElementById("gDesc").value.toUpperCase(), m = parseFloat(document.getElementById("gMonto").value);
-        if(d && !isNaN(m)) { 
-            window.state.gastos.push({ desc: d, monto: m, fecha: document.getElementById("gDate").value }); 
-            await window.sync(); 
-        }
+        if(d && !isNaN(m)) { window.state.gastos.push({ desc: d, monto: m, fecha: document.getElementById("gDate").value }); await window.sync(); }
     };
 
     window.regMerma = async (m) => {
@@ -205,25 +199,9 @@
     };
 
     window.editStock = async (m) => {
-        let n = parseFloat(prompt(`Ajustar Stock Manual: ${m}`, window.state.inventario[m].stock));
+        let n = parseFloat(prompt(`Ajuste Manual: ${m}`, window.state.inventario[m].stock));
         if(!isNaN(n)) { window.state.inventario[m].stock = n; await window.sync(); }
     };
-
-    window.crearMat = async () => {
-        const n = document.getElementById("nMat").value.toUpperCase(), a = parseFloat(document.getElementById("aMat").value);
-        if(n && a) { window.state.inventario[n] = { stock: 0, precioM2: 0, precioML: 0, ancho: a }; await window.sync(); }
-    };
-
-    window.delMat = async (m) => { if(confirm(`¿Borrar ${m}?`)) { delete window.state.inventario[m]; await window.sync(); } };
-
-    function renderInicio(app) {
-        const total = (window.state.ventas || []).reduce((a, b) => a + (Number(b.total) || 0), 0);
-        app.innerHTML = `<div class="card-pro text-center"><p class="text-[10px] opacity-40 uppercase">Ventas</p><h2 class="text-5xl font-black text-purple-500">$${total.toFixed(2)}</h2></div>`;
-    }
-
-    function renderVentas(app, inv, today) {
-        app.innerHTML = `<div class="card-pro"><h2 class="text-lg font-black text-purple-500 mb-4 uppercase">Ventas</h2><input id="cli" placeholder="CLIENTE"><select id="vMat">${Object.keys(inv).map(m=>`<option value="${m}">${m}</option>`).join("")}</select><button class="btn-main mt-4">Vender</button></div>`;
-    }
 
     render();
 </script>
