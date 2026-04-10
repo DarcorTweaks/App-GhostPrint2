@@ -223,7 +223,8 @@
         compras: [], 
         gastos: [], 
         servicios: SERVICIOS_DEFECTO,
-        metaMensual: 3000 
+        metaMensual: 3000,
+        tasaBCV: 0 
     };
     window.currentView = 'inicio';
     window.cart = [];
@@ -275,12 +276,17 @@
 
             const meta = window.state.metaMensual || 3000;
             const porcentajeMeta = Math.min((totalVentasBrutas / meta) * 100, 100);
+            const tasaActual = window.state.tasaBCV || 0;
 
             app.innerHTML = `
                 <div class="card-pro bg-gradient-to-br from-purple-800/40 via-black/40 to-black/60 border-purple-500/30 text-center py-8 relative overflow-hidden">
                     <div class="absolute -top-10 -right-10 w-32 h-32 bg-purple-600/10 blur-[50px]"></div>
                     <p class="text-[11px] opacity-60 uppercase font-black tracking-[0.3em] mb-2 text-purple-300">Balance Real 💸</p>
                     <h2 class="text-6xl font-black italic text-white tracking-tighter">$${cajaDisponible.toLocaleString()}</h2>
+                    <div class="mt-4 inline-block bg-white/5 px-4 py-2 rounded-2xl border border-white/10 cursor-pointer" onclick="cambiarTasa()">
+                         <p class="text-[8px] opacity-40 uppercase font-black">Tasa BCV Oficial</p>
+                         <span class="text-xs font-black text-purple-300">${tasaActual > 0 ? 'Bs. ' + tasaActual.toFixed(2) : 'DEFINIR TASA'}</span>
+                    </div>
                     <div class="flex justify-center gap-10 mt-8">
                          <div class="text-center"><p class="text-[9px] opacity-40 uppercase font-black mb-1">Entradas</p><span class="text-sm font-black text-green-400">+$${totalRecaudado.toLocaleString()}</span></div>
                          <div class="text-center"><p class="text-[9px] opacity-40 uppercase font-black mb-1">Gastos</p><span class="text-sm font-black text-red-400">-$${totalGastos.toLocaleString()}</span></div>
@@ -344,6 +350,15 @@
         app.innerHTML = `
             <h2 class="text-xl font-black italic text-white mb-8 uppercase text-center tracking-tighter">Centro de Gestión</h2>
             <div class="grid grid-cols-1 gap-4">
+                <div class="card-pro border-purple-500/20 bg-purple-500/5 p-4">
+                     <p class="text-[10px] opacity-50 uppercase font-black mb-1">Configuración Monetaria 🇻🇪</p>
+                     <div class="flex items-center justify-between">
+                         <span class="text-sm font-bold">Tasa BCV del día:</span>
+                         <button onclick="cambiarTasa()" class="bg-purple-600 px-4 py-2 rounded-xl text-xs font-black">
+                            ${window.state.tasaBCV > 0 ? 'Bs. ' + window.state.tasaBCV : 'CONFIGURAR'}
+                         </button>
+                     </div>
+                </div>
                 <div onclick="setView('gastos')" class="card-pro flex items-center gap-5 active:scale-95 transition-all cursor-pointer border-red-500/20 bg-red-500/5">
                     <div class="text-4xl">💸</div>
                     <div><b class="text-xl font-black italic">REGISTRAR GASTOS</b><p class="text-[10px] opacity-50 font-bold uppercase tracking-widest">Egresos y fijos</p></div>
@@ -525,6 +540,13 @@
     }
 
     // --- ACCIONES ---
+    window.cambiarTasa = async () => {
+        const nueva = prompt("Ingrese Tasa BCV Oficial (Bolívares por $):", window.state.tasaBCV || "");
+        if (nueva && !isNaN(nueva)) {
+            window.state.tasaBCV = parseFloat(nueva);
+            await window.sync();
+        }
+    };
     window.cambiarMeta = async () => { const nueva = prompt("Nueva Meta Mensual ($):", window.state.metaMensual || 3000); if(nueva && !isNaN(nueva)) { window.state.metaMensual = parseFloat(nueva); await window.sync(); } };
     window.updateVentaUI = () => {
         const mat = document.getElementById("vMat").value, tipo = document.getElementById("vTipo").value, cant = parseFloat(document.getElementById("vCant").value) || 1;
@@ -628,6 +650,10 @@
 
     window.showReceipt = (id) => {
         const v = window.state.ventas.find(x => x.id === id);
+        const tasa = window.state.tasaBCV || 0;
+        const totalBs = (v.total * tasa).toFixed(2);
+        const deudaBs = ((v.total - v.abono) * tasa).toFixed(2);
+
         document.getElementById("receiptContent").innerHTML = `
             <div class="text-center mb-6">
                 <span class="text-4xl">👻</span>
@@ -641,26 +667,30 @@
             </div>
             <div class="space-y-2">
                 <div class="flex justify-between font-black text-xl italic tracking-tighter"><span>TOTAL:</span><span>$${v.total.toFixed(2)}</span></div>
+                ${tasa > 0 ? `<div class="flex justify-between text-[10px] font-black opacity-60"><span>MONTO BS. (TASA ${tasa.toFixed(2)}):</span><span>Bs. ${totalBs}</span></div>` : ''}
                 <div class="flex justify-between text-green-700 font-black text-sm"><span>PAGADO:</span><span>$${v.abono.toFixed(2)}</span></div>
                 <div class="flex justify-between text-red-600 font-black text-lg border-t-4 border-black pt-2 italic tracking-tighter"><span>DEUDA:</span><span>$${((v.total - v.abono) < 0.01 ? 0 : v.total - v.abono).toFixed(2)}</span></div>
+                ${tasa > 0 && (v.total - v.abono) > 0.01 ? `<div class="text-right text-[10px] font-black text-red-600">Bs. ${deudaBs}</div>` : ''}
             </div>`;
         window.currentReceiptId = id; document.getElementById("receiptModal").classList.remove("hidden");
     };
     window.closeReceipt = () => document.getElementById("receiptModal").classList.add("hidden");
     
-    // FUNCIÓN DE COMPARTIR CORREGIDA
     window.shareReceipt = () => { 
         const v = window.state.ventas.find(x => x.id === window.currentReceiptId); 
         if (!v) return;
-
-        // Limpiar el número de teléfono (solo dejar números)
+        const tasa = window.state.tasaBCV || 0;
         const phone = v.whatsapp ? v.whatsapp.replace(/\D/g, '') : '';
-        
-        // Formatear conceptos de los items
         const conceptos = v.items.map(i => `▫️ ${i.concepto || 'Trabajo'} (${i.m})`).join("\n");
         const deuda = Math.max(0, v.total - v.abono).toFixed(2);
+        
+        let extraBs = "";
+        if (tasa > 0) {
+            const totalBs = (v.total * tasa).toFixed(2);
+            const deudaBs = (deuda * tasa).toFixed(2);
+            extraBs = `\n💰 *Equivalente en Bolívares:* \n👉 Tasa BCV: ${tasa.toFixed(2)}\n👉 Total Bs: ${totalBs}${deuda > 0 ? `\n👉 Pendiente Bs: ${deudaBs}` : ''}\n`;
+        }
 
-        // Crear el mensaje formateado para WhatsApp
         const msgText = 
             `👻 *GHOST PRINT* 👻\n` +
             `_Publicidad & Diseño_\n\n` +
@@ -672,10 +702,10 @@
             `*TOTAL:* $${v.total.toFixed(2)}\n` +
             `*PAGADO:* $${v.abono.toFixed(2)}\n` +
             `*PENDIENTE:* $${deuda}\n` +
-            `*--------------------------*\n\n` +
-            `_¡Gracias por tu confianza!_`;
+            `*--------------------------*` +
+            extraBs +
+            `\n_¡Gracias por tu confianza!_`;
 
-        // Abrir WhatsApp con el texto codificado
         const msgEncoded = encodeURIComponent(msgText);
         window.open(`https://wa.me/${phone}?text=${msgEncoded}`, '_blank'); 
     };
