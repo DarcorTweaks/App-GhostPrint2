@@ -249,7 +249,7 @@
             const totalGastos = gM.reduce((acc, g) => acc + (Number(g.monto) || 0), 0);
             
             // 🔥 SOLUCIÓN CRÍTICA PARA "POR COBRAR EN 0" 🔥
-            // Solo suma la diferencia SI hay deuda. Así los errores viejos (abonos mayores al total) no dañan la suma.
+            // Solo suma la diferencia SI hay deuda.
             const porCobrar = vM.reduce((acc, v) => {
                 const deuda = (Number(v.total) || 0) - (Number(v.abono) || 0);
                 return acc + (deuda > 0 ? deuda : 0);
@@ -362,7 +362,7 @@
                 <button onclick="saveVenta()" class="btn-main mt-5 py-5 shadow-2xl font-black italic tracking-widest">REGISTRAR VENTA</button>
             </div>
             
-            <!-- 🔥 SOLUCIÓN CRÍTICA: HISTORIAL COMPLETO PARA BORRAR VENTAS VIEJAS 🔥 -->
+            <!-- HISTORIAL COMPLETO DE VENTAS PARA PODER BORRAR -->
             <div class="mt-10 border-t border-white/10 pt-6">
                 <h3 class="text-xs font-black text-purple-400 uppercase mb-4 italic tracking-widest text-center">Historial Completo de Ventas</h3>
                 <p class="text-[9px] text-center opacity-40 mb-4 uppercase">Borra aquí las ventas de prueba o canceladas</p>
@@ -395,25 +395,47 @@
     function renderPorCobrar(app, tasa) {
         const ventas = window.state.ventas || [];
         const deudas = ventas.filter(v => (Number(v.total) - Number(v.abono)) > 0.01);
+        
+        // AGRUPACIÓN DE DEUDAS POR CLIENTE
+        const clientesDeuda = {};
+        deudas.forEach(v => {
+            const nombre = v.cliente ? v.cliente.trim().toUpperCase() : 'DESCONOCIDO';
+            if(!clientesDeuda[nombre]) clientesDeuda[nombre] = { totalDeuda: 0, tickets: [] };
+            clientesDeuda[nombre].totalDeuda += (Number(v.total) - Number(v.abono));
+            clientesDeuda[nombre].tickets.push(v);
+        });
+
         app.innerHTML = `
             <h2 class="text-xl font-black italic text-red-500 mb-8 uppercase text-center tracking-tighter font-black italic">Cuentas por Cobrar 📑</h2>
-            <div class="space-y-4">
-                ${deudas.length === 0 ? '<div class="card-pro text-center py-20 opacity-30 font-black uppercase tracking-widest font-black">No hay deudas activas</div>' : ''}
-                ${deudas.slice().reverse().map(v => `
-                    <div class="card-pro !p-0 overflow-hidden border-red-500/20 shadow-xl bg-black/40">
-                        <div class="p-5 flex justify-between items-center border-b border-white/5">
-                            <div><h3 class="text-lg font-black text-white uppercase italic tracking-tighter leading-none font-black">${v.cliente}</h3><span class="text-[9px] opacity-40 font-bold uppercase italic">${v.fecha}</span></div>
+            <div class="space-y-6">
+                ${Object.keys(clientesDeuda).length === 0 ? '<div class="card-pro text-center py-20 opacity-30 font-black uppercase tracking-widest font-black">No hay deudas activas</div>' : ''}
+                ${Object.entries(clientesDeuda).map(([clienteName, data]) => `
+                    <div class="card-pro !p-0 overflow-hidden border-red-500/30 shadow-2xl bg-black/60">
+                        <div class="bg-red-900/20 p-5 flex justify-between items-center border-b border-red-500/20">
+                            <div>
+                                <p class="text-[10px] text-red-400 font-black uppercase tracking-widest mb-1">Cliente</p>
+                                <h3 class="text-xl font-black text-white uppercase italic tracking-tighter leading-none">${clienteName}</h3>
+                            </div>
                             <div class="text-right">
-                                <p class="text-2xl font-black text-red-500 italic leading-none font-black">$${(Number(v.total) - Number(v.abono)).toFixed(2)}</p>
-                                <p class="text-[9px] font-black text-red-500/60 uppercase font-black">Bs. ${formatVE(Number(v.total) - Number(v.abono))}</p>
+                                <p class="text-[10px] text-red-400 font-black uppercase tracking-widest mb-1">Deuda Total</p>
+                                <p class="text-3xl font-black text-red-500 italic leading-none">$${data.totalDeuda.toFixed(2)}</p>
+                                <p class="text-[10px] font-black text-red-500/60 uppercase mt-1">Bs. ${formatVE(data.totalDeuda)}</p>
                             </div>
                         </div>
-                        <div class="p-4 grid grid-cols-2 gap-2">
-                            <button onclick="abonar(${v.id})" class="bg-green-600/10 text-green-500 py-3 rounded-xl text-[10px] font-black uppercase italic font-black">Abonar</button>
-                            <button onclick="liquidar(${v.id})" class="bg-green-600 text-white py-3 rounded-xl text-[10px] font-black shadow-lg italic font-black">Liquidar</button>
-                            <button onclick="showReceipt(${v.id})" class="bg-purple-600/20 text-purple-400 py-3 rounded-xl col-span-2 text-[10px] font-black uppercase tracking-widest italic font-black">Ver Factura</button>
-                            <button onclick="editVenta(${v.id})" class="bg-white/5 text-gray-400 py-2 rounded-xl text-[9px] font-black uppercase italic font-black">Editar</button>
-                            <button onclick="delVenta(${v.id})" class="bg-red-900/10 text-red-500 py-2 rounded-xl text-[9px] font-black uppercase italic font-black">Borrar</button>
+                        <div class="p-4 bg-black/40 space-y-3">
+                            ${data.tickets.map(v => `
+                                <div class="border border-white/5 rounded-2xl p-4 bg-white/5">
+                                    <div class="flex justify-between items-center mb-3">
+                                        <span class="text-[10px] opacity-50 font-bold uppercase">${v.fecha} | TICKET #${v.id.toString().slice(-6)}</span>
+                                        <span class="text-sm font-black text-red-400">$${(Number(v.total) - Number(v.abono)).toFixed(2)}</span>
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <button onclick="abonar(${v.id})" class="bg-green-600/10 text-green-500 py-2 rounded-xl text-[10px] font-black uppercase italic">Abonar</button>
+                                        <button onclick="liquidar(${v.id})" class="bg-green-600 text-white py-2 rounded-xl text-[10px] font-black italic">Liquidar</button>
+                                        <button onclick="showReceipt(${v.id})" class="bg-purple-600/20 text-purple-400 py-2 rounded-xl col-span-2 text-[10px] font-black uppercase tracking-widest italic">Ver Factura</button>
+                                    </div>
+                                </div>
+                            `).join("")}
                         </div>
                     </div>`).join("")}
             </div>`;
@@ -421,22 +443,25 @@
 
     function renderInventario(app, inv, tasa) {
         app.innerHTML = `
-            <h2 class="text-xl font-black italic text-blue-400 mb-8 uppercase text-center tracking-tighter font-black italic font-black">Control de Stock 📦</h2>
-            <div class="space-y-3">
+            <h2 class="text-xl font-black italic text-blue-400 mb-8 uppercase text-center tracking-tighter font-black italic">Control de Stock 📦</h2>
+            <div class="space-y-4">
                 ${Object.entries(inv).map(([n, i]) => `
-                    <div class="card-pro flex justify-between items-center border-l-8 ${Number(i.stock) < 5 ? 'border-red-600 bg-red-500/5' : 'border-blue-600 bg-blue-500/5'} py-6">
-                        <div class="flex-1">
-                            <b class="uppercase text-purple-400 text-[11px] font-black tracking-widest mb-1 block leading-none font-black">${n}</b>
-                            <span class="text-5xl font-black italic text-white tracking-tighter leading-none font-black">${(Number(i.stock) || 0).toFixed(2)}</span>
-                            <p class="text-[9px] opacity-30 font-black uppercase italic font-black">Cantidad en existencia</p>
-                            <div class="mt-2 text-[10px] font-bold text-white/50 italic tracking-tighter font-black">Precio Venta: $${(Number(i.precioDetal) || 0).toFixed(2)} <span class="text-purple-400">/ Bs. ${formatVE(Number(i.precioDetal) || 0)}</span></div>
-                        </div>
-                        <div class="flex flex-col gap-2">
-                            <button onclick="registrarMerma('${n}')" class="bg-red-600/20 text-red-500 px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest font-black italic">Merma</button>
-                            <div class="flex gap-2">
-                                <button onclick="editItemInv('${n}')" class="p-3 bg-blue-600/10 text-blue-400 rounded-xl">✏️</button>
-                                <button onclick="delMat('${n}')" class="p-3 bg-red-600/10 text-red-500 rounded-xl">🗑️</button>
+                    <div class="card-pro border-l-8 ${Number(i.stock) < 5 ? 'border-red-600 bg-red-500/5' : 'border-blue-600 bg-blue-500/5'} py-6">
+                        <div class="flex justify-between items-start mb-4 border-b border-white/10 pb-4">
+                            <div class="flex-1">
+                                <b class="uppercase text-purple-400 text-[13px] font-black tracking-widest mb-1 block leading-none font-black">${n}</b>
+                                <div class="mt-2 text-[11px] font-bold text-white/50 italic tracking-tighter font-black">Precio Venta: $${(Number(i.precioDetal) || 0).toFixed(2)} <span class="text-purple-400">/ Bs. ${formatVE(Number(i.precioDetal) || 0)}</span></div>
                             </div>
+                            <div class="text-right">
+                                <span class="text-5xl font-black italic text-white tracking-tighter leading-none font-black">${(Number(i.stock) || 0).toFixed(2)}</span>
+                                <p class="text-[9px] opacity-50 font-black uppercase italic font-black mt-1">Stock Actual</p>
+                            </div>
+                        </div>
+                        
+                        <div class="grid grid-cols-3 gap-2">
+                            <button onclick="registrarMerma('${n}')" class="bg-red-600/20 text-red-500 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest italic">Merma</button>
+                            <button onclick="editItemInv('${n}')" class="bg-blue-600/20 text-blue-400 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest italic">Editar</button>
+                            <button onclick="delMat('${n}')" class="bg-red-900/40 text-red-400 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest italic">Eliminar</button>
                         </div>
                     </div>`).join("")}
             </div>`;
@@ -491,12 +516,27 @@
     }
 
     function renderGastos(app) {
+        const totalGastos = (window.state.gastos || []).reduce((acc, g) => acc + (Number(g.monto) || 0), 0);
+        
         app.innerHTML = `
             <div class="card-pro">
                 <h2 class="text-xl font-black italic text-red-500 mb-6 uppercase text-center tracking-tighter font-black italic leading-none">Registrar Gasto 💸</h2>
                 <input id="gDate" type="date" value="${new Date().toISOString().split('T')[0]}"><input id="gDesc" placeholder="CONCEPTO DEL GASTO"><input id="gMonto" type="number" placeholder="MONTO $">
                 <button onclick="saveGasto()" class="btn-main mt-3 !bg-red-600 shadow-lg font-black italic tracking-widest">GUARDAR EGRESO</button>
             </div>
+            
+            <!-- HISTORIAL Y TOTAL DE GASTOS -->
+            <div class="mt-8 mb-4 flex justify-between items-end border-b border-white/10 pb-4">
+                <div>
+                    <h3 class="text-xs font-black text-red-400 uppercase tracking-widest">Historial de Gastos</h3>
+                    <p class="text-[9px] opacity-50 uppercase font-black">Todos los egresos</p>
+                </div>
+                <div class="text-right">
+                    <p class="text-[10px] text-red-500 font-black uppercase mb-1">Gasto Total</p>
+                    <p class="text-2xl font-black text-red-500 italic leading-none">$${totalGastos.toFixed(2)}</p>
+                </div>
+            </div>
+
             <div class="space-y-3">
                 ${(window.state.gastos || []).slice().reverse().map((g, idx) => `
                     <div class="bg-white/5 p-4 rounded-[22px] flex justify-between items-center text-xs border border-white/5 font-black italic">
@@ -627,6 +667,11 @@
             options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.03)' }, ticks: { color: '#64748b', font: { size: 9, weight: 'bold' } } }, x: { grid: { display: false }, ticks: { color: '#64748b', font: { size: 9, weight: 'bold' } } } } }
         });
     }
+
+    window.registrarMerma = async (n) => {
+        let m = parseFloat(prompt(`Cantidad Merma para ${n}:`));
+        if(!isNaN(m)) { window.state.inventario[n].stock -= m; window.state.gastos.push({ desc: `MERMA: ${n}`, monto: 0, fecha: new Date().toISOString().split('T')[0] }); await window.sync(); }
+    };
 
     render();
 </script>
