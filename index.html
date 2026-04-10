@@ -647,11 +647,37 @@
         window.currentReceiptId = id; document.getElementById("receiptModal").classList.remove("hidden");
     };
     window.closeReceipt = () => document.getElementById("receiptModal").classList.add("hidden");
+    
+    // FUNCIÓN DE COMPARTIR CORREGIDA
     window.shareReceipt = () => { 
         const v = window.state.ventas.find(x => x.id === window.currentReceiptId); 
-        const conceptos = v.items.map(i => `• ${i.concepto} (${i.m})`).join("%0A");
-        const msg = `*GHOST PRINT*%0A*Recibo:* #${v.id.toString().slice(-6)}%0A*Cliente:* ${v.cliente}%0A*Trabajos:*%0A${conceptos}%0A*Total:* $${v.total}%0A*Pagado:* $${v.abono}%0A*Pendiente:* $${(v.total-v.abono).toFixed(2)}`;
-        window.open(`https://wa.me/${v.whatsapp}?text=${msg}`, '_blank'); 
+        if (!v) return;
+
+        // Limpiar el número de teléfono (solo dejar números)
+        const phone = v.whatsapp ? v.whatsapp.replace(/\D/g, '') : '';
+        
+        // Formatear conceptos de los items
+        const conceptos = v.items.map(i => `▫️ ${i.concepto || 'Trabajo'} (${i.m})`).join("\n");
+        const deuda = Math.max(0, v.total - v.abono).toFixed(2);
+
+        // Crear el mensaje formateado para WhatsApp
+        const msgText = 
+            `👻 *GHOST PRINT* 👻\n` +
+            `_Publicidad & Diseño_\n\n` +
+            `*Recibo:* #${v.id.toString().slice(-6)}\n` +
+            `*Cliente:* ${v.cliente}\n` +
+            `*Fecha:* ${v.fecha}\n\n` +
+            `*TRABAJOS:* \n${conceptos}\n\n` +
+            `*--------------------------*\n` +
+            `*TOTAL:* $${v.total.toFixed(2)}\n` +
+            `*PAGADO:* $${v.abono.toFixed(2)}\n` +
+            `*PENDIENTE:* $${deuda}\n` +
+            `*--------------------------*\n\n` +
+            `_¡Gracias por tu confianza!_`;
+
+        // Abrir WhatsApp con el texto codificado
+        const msgEncoded = encodeURIComponent(msgText);
+        window.open(`https://wa.me/${phone}?text=${msgEncoded}`, '_blank'); 
     };
 
     window.registrarMerma = async (n) => {
