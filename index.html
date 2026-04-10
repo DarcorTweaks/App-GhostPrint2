@@ -899,7 +899,13 @@
         if(!v) return;
         let nT = parseFloat(prompt("Corregir Total ($):", v.total)?.replace(',', '.'));
         let nA = parseFloat(prompt("Corregir Abono ($):", v.abono)?.replace(',', '.'));
-        if (!isNaN(nT) && !isNaN(nA)) { v.total = nT; v.abono = nA; await window.sync(); }
+        let nWha = prompt("Corregir WhatsApp (Opcional):", v.whatsapp || "");
+        
+        let changed = false;
+        if (!isNaN(nT) && !isNaN(nA)) { v.total = nT; v.abono = nA; changed = true; }
+        if (nWha !== null) { v.whatsapp = nWha; changed = true; }
+        
+        if(changed) { await window.sync(); showToast("✅ VENTA EDITADA"); }
     };
     window.crearMat = async () => { const n = document.getElementById("nMat").value.toUpperCase(); if (n) { window.state.inventario[n] = { stock: 0, precioDetal: 0, precioMayor: 0 }; await window.sync(); } };
     window.delMat = async (n) => { if (confirm(`¿ELIMINAR ${n}?`)) { delete window.state.inventario[n]; await window.sync(); } };
@@ -938,13 +944,24 @@
         window.currentReceiptId = id; document.getElementById("receiptModal").classList.remove("hidden");
     };
     window.closeReceipt = () => document.getElementById("receiptModal").classList.add("hidden");
+    
     window.shareReceipt = () => { 
         const v = window.state.ventas.find(x => x.id === window.currentReceiptId); if (!v) return;
         const t = parseFloat(v.total) || 0;
         const a = parseFloat(v.abono) || 0;
-        const phone = v.whatsapp ? v.whatsapp.replace(/\D/g, '') : '', dUSD = Math.max(0, t - a);
+        const dUSD = Math.max(0, t - a);
+        
+        // --- LIMPIEZA Y CORRECCIÓN DE NÚMERO (VENEZUELA) ---
+        let phone = v.whatsapp ? v.whatsapp.replace(/\D/g, '') : '';
+        if (phone.startsWith('0') && phone.length === 11) {
+            phone = '58' + phone.substring(1); // Cambia el 0 por 58
+        } else if (phone.length === 10) {
+            phone = '58' + phone; // Si lo pusieron sin 0 y sin 58, agrega 58
+        }
+
         let bsMsg = window.state.tasaBCV > 0 ? `\n💰 *Monto en Bolívares (BCV)*\n📈 Tasa: ${window.state.tasaBCV.toFixed(2)}\n💵 Total: Bs. ${formatVE(t)}${dUSD > 0.01 ? `\n🔺 Pendiente: Bs. ${formatVE(dUSD)}` : ''}\n` : '';
         const msg = encodeURIComponent(`👻 *GHOST PRINT* 👻\n_Recibo:_ #${v.id.toString().slice(-6)}\n*Cliente:* ${v.cliente}\n*Total:* $${t.toFixed(2)}\n*Abono:* $${a.toFixed(2)}\n*Deuda:* $${dUSD.toFixed(2)}${bsMsg}\n_¡Gracias por elegirnos!_`);
+        
         window.open(`https://wa.me/${phone}?text=${msg}`, '_blank'); 
     };
 
