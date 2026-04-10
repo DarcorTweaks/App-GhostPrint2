@@ -2,95 +2,194 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>GhostPrint MASTER v30.2</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>GhostPrint MASTER v31.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap');
         
         :root {
-            --ghost-purple: #7c3aed;
-            --ghost-dark: #030308;
-            --ghost-card: #111122;
+            --ghost-purple: #8b5cf6;
+            --ghost-dark: #05050a;
+            --ghost-card: rgba(15, 15, 30, 0.7);
+            --safe-top: env(safe-area-inset-top);
+            --safe-bottom: env(safe-area-inset-bottom);
         }
 
         body { 
             background-color: var(--ghost-dark); 
             color: #f8fafc; 
             font-family: 'Inter', sans-serif; 
-            padding-bottom: 100px;
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+            -webkit-tap-highlight-color: transparent;
             background-image: 
-                radial-gradient(circle at 10% 20%, rgba(124, 58, 237, 0.05) 0%, transparent 40%),
-                radial-gradient(circle at 90% 80%, rgba(124, 58, 237, 0.05) 0%, transparent 40%),
-                linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
-            background-size: 100% 100%, 100% 100%, 30px 30px, 30px 30px;
+                radial-gradient(circle at 50% 0%, rgba(139, 92, 246, 0.15) 0%, transparent 50%),
+                radial-gradient(circle at 0% 100%, rgba(139, 92, 246, 0.05) 0%, transparent 40%);
         }
 
+        /* App Header */
+        .app-header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 70px;
+            background: rgba(5, 5, 10, 0.8);
+            backdrop-filter: blur(20px);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        /* Bottom Navigation */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 75px;
+            background: rgba(10, 10, 20, 0.95);
+            backdrop-filter: blur(20px);
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            padding-bottom: var(--safe-bottom);
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            z-index: 1000;
+            box-shadow: 0 -10px 30px rgba(0,0,0,0.5);
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: #64748b;
+            text-decoration: none;
+            font-size: 10px;
+            font-weight: 700;
+            transition: all 0.3s;
+            flex: 1;
+        }
+
+        .nav-item.active {
+            color: var(--ghost-purple);
+        }
+
+        .nav-item span:first-child {
+            font-size: 22px;
+            margin-bottom: 4px;
+            transition: transform 0.3s;
+        }
+
+        .nav-item.active span:first-child {
+            transform: translateY(-4px);
+            filter: drop-shadow(0 0 8px var(--ghost-purple));
+        }
+
+        /* Main Content area */
+        #app {
+            padding-top: 85px;
+            padding-bottom: 100px;
+            min-height: 100vh;
+        }
+
+        /* Enhanced Cards */
         .card-pro { 
-            background: rgba(17, 17, 34, 0.8); 
-            border: 1px solid #2d2d44; 
-            border-radius: 20px; 
-            padding: 18px; 
-            margin-bottom: 12px; 
+            background: var(--ghost-card); 
+            border: 1px solid rgba(255, 255, 255, 0.05); 
+            border-radius: 24px; 
+            padding: 20px; 
+            margin-bottom: 16px; 
             backdrop-filter: blur(10px);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
         }
 
-        nav { 
-            background: rgba(10, 10, 20, 0.9); 
-            display: flex; 
-            gap: 8px; 
-            overflow-x: auto; 
-            padding: 14px; 
-            position: sticky; 
-            top: 0; 
-            z-index: 100; 
-            border-bottom: 1px solid rgba(124, 58, 237, 0.2); 
-            backdrop-filter: blur(15px);
-        }
+        .ghost-glow { filter: drop-shadow(0 0 12px var(--ghost-purple)); }
+        
+        .progress-bar { height: 12px; background: rgba(255,255,255,0.05); border-radius: 12px; overflow: hidden; margin-top: 12px; }
+        .progress-fill { height: 100%; background: linear-gradient(90deg, #8b5cf6, #d946ef); transition: width 1s ease; }
 
-        .btn-nav { background: #1e1e30; color: #64748b; padding: 12px 18px; border-radius: 14px; font-size: 10px; font-weight: 800; white-space: nowrap; cursor: pointer; text-transform: uppercase; border: 1px solid transparent; transition: all 0.3s; }
-        .active { background: var(--ghost-purple) !important; color: white !important; border-color: rgba(255,255,255,0.2); box-shadow: 0 0 15px rgba(124, 58, 237, 0.4); }
+        input, select, textarea { 
+            background: rgba(255,255,255,0.03); 
+            border: 1px solid rgba(255,255,255,0.1); 
+            color: white; 
+            padding: 16px; 
+            border-radius: 16px; 
+            width: 100%; 
+            margin: 8px 0; 
+            font-size: 16px; 
+            font-weight: 600; 
+            outline: none; 
+            transition: border 0.3s;
+        }
+        input:focus { border-color: var(--ghost-purple); }
+
+        .btn-main { 
+            background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%); 
+            color: white; 
+            padding: 18px; 
+            border-radius: 20px; 
+            width: 100%; 
+            font-weight: 800; 
+            text-transform: uppercase; 
+            cursor: pointer; 
+            border: none; 
+            font-size: 14px; 
+            letter-spacing: 1px;
+            box-shadow: 0 10px 20px rgba(139, 92, 246, 0.2);
+        }
         
-        input, select, textarea { background: #070712; border: 1px solid #334155; color: white; padding: 16px; border-radius: 14px; width: 100%; margin: 8px 0; font-size: 16px; font-weight: 700; outline: none; }
-        .btn-main { background: linear-gradient(135deg, #7c3aed 0%, #4c1d95 100%); color: white; padding: 18px; border-radius: 18px; width: 100%; font-weight: 900; text-transform: uppercase; cursor: pointer; border: none; font-size: 14px; transition: transform 0.2s; }
-        .btn-main:active { transform: scale(0.98); }
-        
-        .ghost-glow { filter: drop-shadow(0 0 10px #7c3aed); }
-        .progress-bar { height: 10px; background: #1e1e30; border-radius: 10px; overflow: hidden; margin-top: 8px; }
-        .progress-fill { height: 100%; background: linear-gradient(90deg, #7c3aed, #10b981); transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1); }
-        
-        nav::-webkit-scrollbar { display: none; }
+        /* Ocultar barra de desplazamiento */
+        ::-webkit-scrollbar { display: none; }
     </style>
 </head>
 <body>
 
-<div class="p-4 flex justify-between items-center bg-[#0a0a14]/80 border-b border-white/5 backdrop-blur-md">
+<header class="app-header">
     <div class="flex items-center gap-3">
-        <span class="text-4xl ghost-glow">👻</span>
+        <span class="text-3xl ghost-glow">👻</span>
         <div>
-            <h1 class="text-xl font-black italic text-purple-500 leading-none">GHOST PRINT</h1>
-            <p class="text-[8px] font-black opacity-40 uppercase tracking-widest text-purple-300">Inteligencia Financiera v30.2</p>
+            <h1 class="text-lg font-black italic tracking-tighter text-white leading-none">GHOST PRINT</h1>
+            <p class="text-[8px] font-bold opacity-40 uppercase tracking-[0.2em] text-purple-400">Business Control</p>
         </div>
     </div>
-</div>
+    <div id="status-dot" class="w-2 h-2 rounded-full bg-green-500 animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.8)]"></div>
+</header>
 
-<nav id="mainNav">
-    <div onclick="setView('inicio')" class="btn-nav active" id="n-inicio">📊 CONTROL</div>
-    <div onclick="setView('ventas')" class="btn-nav" id="n-ventas">💵 Ventas</div>
-    <div onclick="setView('cobrar')" class="btn-nav" id="n-cobrar">📑 POR COBRAR</div>
-    <div onclick="setView('compras')" class="btn-nav" id="n-compras">🛒 Compras</div>
-    <div onclick="setView('gastos')" class="btn-nav" id="n-gastos">💸 Gastos</div>
-    <div onclick="setView('inventario')" class="btn-nav" id="n-inventario">📦 Stock</div>
-    <div onclick="setView('catalogo')" class="btn-nav" id="n-catalogo">⚙️ CATALOGO</div>
+<div id="app" class="px-4 max-w-2xl mx-auto"></div>
+
+<nav class="bottom-nav">
+    <div onclick="setView('inicio')" class="nav-item active" id="n-inicio">
+        <span>📊</span>
+        <span>CONTROL</span>
+    </div>
+    <div onclick="setView('ventas')" class="nav-item" id="n-ventas">
+        <span>💵</span>
+        <span>VENTAS</span>
+    </div>
+    <div onclick="setView('cobrar')" class="nav-item" id="n-cobrar">
+        <span>📑</span>
+        <span>DEUDAS</span>
+    </div>
+    <div onclick="setView('inventario')" class="nav-item" id="n-inventario">
+        <span>📦</span>
+        <span>STOCK</span>
+    </div>
+    <div onclick="setView('more')" class="nav-item" id="n-more">
+        <span>➕</span>
+        <span>MÁS</span>
+    </div>
 </nav>
 
-<div id="app" class="p-4 max-w-2xl mx-auto"></div>
-
 <!-- Modal Recibo -->
-<div id="receiptModal" class="fixed inset-0 bg-black/90 z-[200] hidden flex items-center justify-center p-4">
-    <div class="bg-white text-black p-6 rounded-2xl w-full max-w-sm shadow-2xl relative">
+<div id="receiptModal" class="fixed inset-0 bg-black/90 z-[2000] hidden flex items-center justify-center p-4">
+    <div class="bg-white text-black p-6 rounded-3xl w-full max-w-sm shadow-2xl relative">
         <div id="receiptContent" class="text-[11px] font-mono border-black pt-4"></div>
         <div class="mt-6 flex gap-2">
             <button onclick="closeReceipt()" class="flex-1 bg-gray-200 p-3 rounded-xl font-bold">Cerrar</button>
@@ -120,15 +219,17 @@
     };
     window.currentView = 'inicio';
     window.cart = [];
+    window.myChart = null; // Variable global para el gráfico
 
     window.sync = async function() { await docRef.set(window.state); render(); };
     docRef.onSnapshot(doc => { if(doc.exists) { window.state = doc.data(); render(); } });
 
     window.setView = function(v) { 
         window.currentView = v; 
-        document.querySelectorAll('.btn-nav').forEach(b => b.classList.remove('active')); 
+        document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active')); 
         document.getElementById('n-'+v)?.classList.add('active'); 
         render(); 
+        window.scrollTo({top: 0, behavior: 'smooth'});
     };
 
     window.render = function() {
@@ -158,70 +259,65 @@
 
             // AJUSTE SOLICITADO: Monto real cargado
             const totalVentasBrutas = 236.10; 
-            
-            // Recaudado real (abonos) y gastos
             const totalRecaudado = vM.reduce((a, b) => a + (Number(b.abono) || 0), 0);
             const totalGastos = gM.reduce((a, b) => a + (Number(b.monto) || 0), 0);
-            
-            // Balance dinámico
             const porCobrarTotal = Math.max(0, totalVentasBrutas - totalRecaudado);
             const gananciaNeta = totalVentasBrutas - totalGastos;
             const cajaDisponible = totalRecaudado - totalGastos;
-            
-            // Nueva Proyección (Venta Total Esperada - Costo de lo que queda)
             const proyeccionGanancia = Math.max(0, proyeccionVentaTotal - inversionAlmacenActual);
 
             const meta = window.state.metaMensual || 3000;
             const porcentajeMeta = Math.min((totalVentasBrutas / meta) * 100, 100);
 
             app.innerHTML = `
-                <div class="card-pro bg-gradient-to-br from-[#1a1a3a] to-[#070712] border-purple-500/40 text-center py-2 relative overflow-hidden">
-                    <div class="absolute top-0 right-0 p-2 opacity-10 text-4xl">💰</div>
-                    <p class="text-[10px] opacity-50 uppercase font-black mb-1">Caja Real (En Mano)</p>
-                    <h2 class="text-5xl font-black italic text-white">$${cajaDisponible.toLocaleString()}</h2>
-                    <div class="flex justify-center gap-6 mt-4">
-                         <div class="text-center"><p class="text-[8px] opacity-40 uppercase">Ingresos (Pagos)</p><span class="text-xs font-bold text-green-400">+$${totalRecaudado.toLocaleString()}</span></div>
-                         <div class="text-center"><p class="text-[8px] opacity-40 uppercase">Egresos</p><span class="text-xs font-bold text-red-400">-$${totalGastos.toLocaleString()}</span></div>
+                <div class="card-pro bg-gradient-to-br from-purple-900/40 to-black/40 border-purple-500/20 text-center py-6 relative overflow-hidden">
+                    <p class="text-[11px] opacity-60 uppercase font-black tracking-widest mb-2">Caja en Mano 💵</p>
+                    <h2 class="text-6xl font-black italic text-white">$${cajaDisponible.toLocaleString()}</h2>
+                    <div class="flex justify-center gap-8 mt-6">
+                         <div class="text-center"><p class="text-[9px] opacity-40 uppercase font-bold">Cobrado</p><span class="text-sm font-black text-green-400">+$${totalRecaudado.toLocaleString()}</span></div>
+                         <div class="text-center"><p class="text-[9px] opacity-40 uppercase font-bold">Gastos</p><span class="text-sm font-black text-red-400">-$${totalGastos.toLocaleString()}</span></div>
                     </div>
                 </div>
 
-                <div class="grid grid-cols-3 gap-2 mb-3">
-                    <div class="card-pro border-yellow-500/30 flex flex-col justify-center items-center py-3 px-1">
-                        <p class="text-[7px] opacity-50 uppercase font-black text-yellow-500 mb-1">Por Cobrar 📑</p>
+                <div class="grid grid-cols-3 gap-3 mb-4">
+                    <div class="card-pro !mb-0 !p-3 border-yellow-500/20 text-center">
+                        <p class="text-[8px] opacity-50 uppercase font-black text-yellow-500">Deudas</p>
                         <h2 class="text-lg font-black text-white">$${porCobrarTotal.toLocaleString()}</h2>
                     </div>
-                    <div class="card-pro border-blue-500/30 flex flex-col justify-center items-center py-3 px-1">
-                        <p class="text-[7px] opacity-50 uppercase font-black text-blue-300 mb-1">Inversión Stock</p>
+                    <div class="card-pro !mb-0 !p-3 border-blue-500/20 text-center">
+                        <p class="text-[8px] opacity-50 uppercase font-black text-blue-400">Inversión</p>
                         <h2 class="text-lg font-black text-white">$${inversionAlmacenActual.toLocaleString()}</h2>
                     </div>
-                    <div class="card-pro border-green-500/30 flex flex-col justify-center items-center py-3 px-1">
-                        <p class="text-[7px] opacity-50 uppercase font-black text-green-400 mb-1">Proyección Ganar</p>
+                    <div class="card-pro !mb-0 !p-3 border-green-500/20 text-center">
+                        <p class="text-[8px] opacity-50 uppercase font-black text-green-400">Ganancia</p>
                         <h2 class="text-lg font-black text-white">$${proyeccionGanancia.toLocaleString()}</h2>
                     </div>
                 </div>
 
-                <div class="card-pro border-white/5">
-                    <div class="flex justify-between items-end">
-                        <div><p class="text-[10px] opacity-40 uppercase font-black">Ventas Totales (Reales)</p>
-                        <h3 class="text-2xl font-black italic text-purple-400">$${totalVentasBrutas.toLocaleString()} <span class="text-xs font-normal opacity-30 text-white">OBJETIVO: $${meta.toLocaleString()}</span></h3></div>
-                        <button onclick="cambiarMeta()" class="text-[9px] bg-purple-500/20 px-3 py-2 rounded-xl text-purple-300 font-black">EDITAR META</button>
+                <div class="card-pro">
+                    <div class="flex justify-between items-end mb-2">
+                        <div>
+                            <p class="text-[10px] opacity-50 uppercase font-black italic">Ventas Actuales</p>
+                            <h3 class="text-3xl font-black italic text-purple-400">$${totalVentasBrutas.toLocaleString()}</h3>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-[10px] opacity-30 font-bold">META $${meta.toLocaleString()}</p>
+                            <button onclick="cambiarMeta()" class="text-[10px] text-purple-400 font-bold">AJUSTAR</button>
+                        </div>
                     </div>
                     <div class="progress-bar"><div class="progress-fill" style="width: ${porcentajeMeta}%"></div></div>
                 </div>
 
-                <div class="card-pro bg-green-500/5 border-green-500/20 text-center py-4">
-                    <p class="text-[10px] opacity-50 uppercase font-black mb-1 text-green-400">Utilidad Actual (Bruto - Gastos)</p>
-                    <h2 class="text-4xl font-black italic text-green-500">$${gananciaNeta.toLocaleString()}</h2>
+                <div class="card-pro bg-green-500/5 border-green-500/20 flex justify-between items-center">
+                    <div>
+                        <p class="text-[10px] opacity-60 uppercase font-black text-green-400">Utilidad (Venta - Gasto)</p>
+                        <h2 class="text-3xl font-black italic text-green-500">$${gananciaNeta.toLocaleString()}</h2>
+                    </div>
+                    <div class="text-4xl opacity-20">📈</div>
                 </div>
 
                 <div class="card-pro">
-                    <div class="flex justify-between items-center mb-4">
-                         <p class="text-[10px] opacity-40 uppercase font-black italic">Flujo Reciente</p>
-                         <div class="flex gap-3">
-                            <span class="flex items-center gap-1 text-[8px] text-purple-400 font-bold">● VENTAS</span>
-                            <span class="flex items-center gap-1 text-[8px] text-red-500 font-bold">● GASTOS</span>
-                         </div>
-                    </div>
+                    <p class="text-[10px] opacity-40 uppercase font-black italic mb-4">Historial 7 Días</p>
                     <div class="h-48"><canvas id="mainChart"></canvas></div>
                 </div>
             `;
@@ -233,11 +329,36 @@
         else if(window.currentView === 'inventario') renderInventario(app, inv);
         else if(window.currentView === 'catalogo') renderCatalogo(app, inv, serv);
         else if(window.currentView === 'cobrar') renderPorCobrar(app);
+        else if(window.currentView === 'more') renderMore(app);
     };
+
+    function renderMore(app) {
+        app.innerHTML = `
+            <h2 class="text-xl font-black italic text-white mb-6 uppercase text-center">Configuración y Gastos</h2>
+            <div class="grid grid-cols-1 gap-4">
+                <div onclick="setView('gastos')" class="card-pro flex items-center gap-4 active:scale-95 transition-transform cursor-pointer">
+                    <div class="text-3xl">💸</div>
+                    <div><b class="text-lg">GASTOS</b><p class="text-xs opacity-40">Registrar egresos y costos fijos</p></div>
+                </div>
+                <div onclick="setView('compras')" class="card-pro flex items-center gap-4 active:scale-95 transition-transform cursor-pointer">
+                    <div class="text-3xl">🛒</div>
+                    <div><b class="text-lg">COMPRAS</b><p class="text-xs opacity-40">Entrada de material al stock</p></div>
+                </div>
+                <div onclick="setView('catalogo')" class="card-pro flex items-center gap-4 active:scale-95 transition-transform cursor-pointer">
+                    <div class="text-3xl">⚙️</div>
+                    <div><b class="text-lg">CATÁLOGO</b><p class="text-xs opacity-40">Gestionar materiales y servicios</p></div>
+                </div>
+                <div class="card-pro opacity-30">
+                    <p class="text-center text-[10px] font-bold">GhostPrint App v31.0 - 2026</p>
+                </div>
+            </div>
+        `;
+    }
 
     function initChart(ventas, gastos) {
         const ctx = document.getElementById('mainChart');
         if(!ctx) return;
+        if (window.myChart) { window.myChart.destroy(); }
         const dataMap = {};
         [...ventas, ...gastos].forEach(item => {
             const fecha = item.fecha || (item.f ? item.f.split('T')[0] : 'Sin fecha');
@@ -248,24 +369,23 @@
         const labels = Object.keys(dataMap).sort().slice(-7);
         const vData = labels.map(l => dataMap[l].v);
         const gData = labels.map(l => dataMap[l].g);
-
-        new Chart(ctx, {
+        window.myChart = new Chart(ctx, {
             type: 'line',
             data: {
                 labels: labels,
                 datasets: [
-                    { label: 'Ventas', data: vData, borderColor: '#a855f7', backgroundColor: 'rgba(168, 85, 247, 0.1)', fill: true, tension: 0.4, borderWidth: 3, pointRadius: 0 },
-                    { label: 'Gastos', data: gData, borderColor: '#ef4444', borderDash: [5, 5], fill: false, tension: 0.4, borderWidth: 2, pointRadius: 0 }
+                    { label: 'Ventas', data: vData, borderColor: '#8b5cf6', backgroundColor: 'rgba(139, 92, 246, 0.2)', fill: true, tension: 0.4, borderWidth: 3, pointRadius: 4, pointBackgroundColor: '#8b5cf6' },
+                    { label: 'Gastos', data: gData, borderColor: '#ef4444', fill: false, tension: 0.4, borderWidth: 2, borderDash: [5, 5], pointRadius: 0 }
                 ]
             },
-            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.03)' }, ticks: { color: '#64748b', font: { size: 8 } } }, x: { grid: { display: false }, ticks: { color: '#64748b', font: { size: 8 } } } } }
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.03)' }, ticks: { color: '#64748b', font: { size: 9 } } }, x: { grid: { display: false }, ticks: { color: '#64748b', font: { size: 9 } } } } }
         });
     }
 
     function renderVentas(app, inv, serv, today) {
         app.innerHTML = `
             <div class="card-pro">
-                <h2 class="text-xl font-black italic text-purple-500 mb-4 uppercase text-center">Nueva Venta</h2>
+                <h2 class="text-xl font-black italic text-purple-400 mb-4 uppercase text-center">Nueva Venta 💵</h2>
                 <input id="vDate" type="date" value="${today}">
                 <div class="grid grid-cols-2 gap-2"><input id="cli" placeholder="CLIENTE" class="uppercase font-bold"><input id="wha" type="tel" placeholder="WHATSAPP"></div>
                 <div class="bg-white/5 p-4 rounded-2xl border border-white/10 mt-2">
@@ -275,15 +395,15 @@
                         <select id="vServ" onchange="updateVentaUI()"><option value="">-- SERVICIO --</option>${serv.map(s=>`<option value="${s}">${s}</option>`).join("")}</select>
                     </div>
                     <div class="flex gap-2"><select id="vTipo" onchange="updateVentaUI()" class="w-1/2"><option value="DETAL">DETAL</option><option value="MAYOR">MAYOR</option><option value="LIBRE">LIBRE</option></select><input id="vCant" type="number" placeholder="CANT" oninput="updateVentaUI()" class="w-1/2"></div>
-                    <input id="vPrec" type="number" placeholder="PRECIO TOTAL $" class="text-3xl text-purple-400 font-black text-center">
-                    <button onclick="addItem()" class="btn-main !bg-purple-600/20 !text-purple-400 !py-3 mt-2">+ AÑADIR TRABAJO</button>
+                    <input id="vPrec" type="number" placeholder="PRECIO TOTAL $" class="text-4xl text-purple-400 font-black text-center bg-transparent border-none">
+                    <button onclick="addItem()" class="btn-main !bg-purple-600/20 !text-purple-300 !py-4 mt-2 shadow-none">+ AÑADIR TRABAJO</button>
                 </div>
                 <div id="vLista" class="mt-4 space-y-2">
-                    ${window.cart.map((item, idx) => `<div class="flex justify-between items-center bg-white/5 p-3 rounded-xl border-l-4 border-purple-500 text-xs"><div><div class="text-purple-300 font-black uppercase text-[9px] mb-1">${item.concepto || 'SIN CONCEPTO'}</div><b>${item.m}</b><br><span class="opacity-40">${item.c} und - ${item.t}</span></div><div class="flex items-center gap-4"><b>$${item.p.toFixed(2)}</b><button onclick="removeItem(${idx})" class="text-red-500">✕</button></div></div>`).join("")}
+                    ${window.cart.map((item, idx) => `<div class="flex justify-between items-center bg-white/5 p-4 rounded-2xl border-l-4 border-purple-500 text-xs"><div><div class="text-purple-300 font-black uppercase text-[10px] mb-1">${item.concepto || 'GENERAL'}</div><b>${item.m}</b><br><span class="opacity-40">${item.c} und - ${item.t}</span></div><div class="flex items-center gap-4"><b>$${item.p.toFixed(2)}</b><button onclick="removeItem(${idx})" class="text-red-500 text-lg">✕</button></div></div>`).join("")}
                 </div>
-                <div class="text-4xl font-black text-center my-6 text-white italic">$${window.cart.reduce((a,b)=>a+b.p, 0).toFixed(2)}</div>
-                <input id="vAbono" type="number" placeholder="ABONO / PAGO $" class="text-2xl text-green-500 font-black text-center">
-                <button onclick="saveVenta()" class="btn-main mt-4 py-4">GUARDAR VENTA</button>
+                <div class="text-5xl font-black text-center my-6 text-white italic">$${window.cart.reduce((a,b)=>a+b.p, 0).toFixed(2)}</div>
+                <input id="vAbono" type="number" placeholder="PAGO / ABONO ACTUAL $" class="text-2xl text-green-500 font-black text-center border-green-500/30">
+                <button onclick="saveVenta()" class="btn-main mt-4 py-5 shadow-lg">FINALIZAR VENTA</button>
             </div>`;
     }
 
@@ -298,27 +418,27 @@
         }, {});
         const clientesDeudores = Object.values(resumenPorCliente);
         app.innerHTML = `
-            <h2 class="text-lg font-black italic text-red-500 mb-4 uppercase px-2 tracking-tighter">Deudas Pendientes</h2>
+            <h2 class="text-xl font-black italic text-red-500 mb-6 uppercase text-center">Deudas Pendientes 📑</h2>
             <div class="space-y-6">
-                ${clientesDeudores.length === 0 ? '<p class="text-center opacity-40 py-10">NO HAY DEUDAS PENDIENTES</p>' : ''}
+                ${clientesDeudores.length === 0 ? '<div class="card-pro text-center py-20 opacity-30">NO HAY DEUDAS</div>' : ''}
                 ${clientesDeudores.map(c => `
-                    <div class="bg-[#1a1a2e] rounded-3xl overflow-hidden border border-red-500/20 shadow-xl">
-                        <div class="bg-gradient-to-r from-red-900/40 to-transparent p-5 flex justify-between items-center border-b border-white/5">
-                            <div><h3 class="text-xl font-black text-white italic uppercase">${c.nombre}</h3></div>
-                            <div class="text-right"><p class="text-2xl font-black text-red-500 italic">$${c.deudaTotal.toFixed(2)}</p></div>
+                    <div class="card-pro !p-0 overflow-hidden border-red-500/20">
+                        <div class="bg-red-500/10 p-5 flex justify-between items-center border-b border-white/5">
+                            <h3 class="text-lg font-black text-white uppercase italic">${c.nombre}</h3>
+                            <p class="text-2xl font-black text-red-500">$${c.deudaTotal.toFixed(2)}</p>
                         </div>
-                        <div class="p-4 space-y-4">
+                        <div class="p-4 space-y-3">
                             ${c.ventas.slice().reverse().map(v => `
                                 <div class="bg-black/30 p-4 rounded-2xl border border-white/5">
-                                    <div class="flex justify-between items-start mb-2"><span class="text-[9px] opacity-40">${v.fecha}</span><b class="text-red-400">$${(v.total - v.abono).toFixed(2)}</b></div>
+                                    <div class="flex justify-between items-start mb-3"><span class="text-[10px] opacity-40 font-bold">${v.fecha}</span><b class="text-red-400">$${(v.total - v.abono).toFixed(2)}</b></div>
                                     <div class="grid grid-cols-2 gap-2 mb-2">
-                                        <button onclick="abonar(${v.id})" class="bg-green-600/10 text-green-500 py-2 rounded-xl text-[9px] font-bold">Abonar</button>
-                                        <button onclick="liquidar(${v.id})" class="bg-green-600/80 text-white py-2 rounded-xl text-[9px] font-bold">Liquidar</button>
-                                        <button onclick="showReceipt(${v.id})" class="bg-purple-600/20 text-purple-400 py-2 rounded-xl col-span-2 text-[10px] font-bold">📄 Ver Recibo</button>
+                                        <button onclick="abonar(${v.id})" class="bg-green-600/10 text-green-500 py-3 rounded-xl text-xs font-black">Abonar</button>
+                                        <button onclick="liquidar(${v.id})" class="bg-green-600 text-white py-3 rounded-xl text-xs font-black">Liquidar</button>
+                                        <button onclick="showReceipt(${v.id})" class="bg-purple-600/20 text-purple-400 py-3 rounded-xl col-span-2 text-xs font-black">📄 VER RECIBO</button>
                                     </div>
-                                    <div class="flex gap-2 border-t border-white/5 pt-2">
-                                        <button onclick="editVenta(${v.id})" class="flex-1 bg-white/5 text-gray-400 py-2 rounded-lg text-[9px]">EDITAR</button>
-                                        <button onclick="delVenta(${v.id})" class="flex-1 bg-red-900/20 text-red-500 py-2 rounded-lg text-[9px]">BORRAR</button>
+                                    <div class="flex gap-2 border-t border-white/5 pt-2 mt-2">
+                                        <button onclick="editVenta(${v.id})" class="flex-1 bg-white/5 text-gray-400 py-2 rounded-lg text-[10px] font-bold">EDITAR</button>
+                                        <button onclick="delVenta(${v.id})" class="flex-1 bg-red-900/20 text-red-500 py-2 rounded-lg text-[10px] font-bold">BORRAR</button>
                                     </div>
                                 </div>`).join("")}
                         </div>
@@ -326,26 +446,51 @@
             </div>`;
     }
 
+    function renderInventario(app, inv) {
+        app.innerHTML = `
+            <h2 class="text-xl font-black italic text-blue-400 mb-6 uppercase text-center">Control de Stock 📦</h2>
+            <div class="space-y-3">
+            ${Object.entries(inv).map(([n, i]) => `
+                <div class="card-pro flex justify-between items-center border-l-8 ${i.stock < 5 ? 'border-red-600' : 'border-blue-600'}">
+                    <div class="flex-1">
+                        <b class="uppercase text-purple-400 text-[11px] font-black">${n}</b><br>
+                        <span class="text-4xl font-black italic text-white">${(i.stock || 0).toFixed(2)}</span>
+                        <p class="text-[9px] opacity-40 font-bold">UNIDADES DISPONIBLES</p>
+                    </div>
+                    <div class="flex flex-col gap-2">
+                        <button onclick="registrarMerma('${n}')" class="bg-red-600/20 text-red-500 px-4 py-2 rounded-xl text-[10px] font-black">MERMA</button>
+                        <div class="flex gap-2">
+                            <button onclick="editItemInv('${n}')" class="p-3 bg-blue-600/10 text-blue-400 rounded-xl">✏️</button>
+                            <button onclick="delItemInv('${n}')" class="p-3 bg-red-600/10 text-red-500 rounded-xl">🗑️</button>
+                        </div>
+                    </div>
+                </div>`).join("")}
+            </div>`;
+    }
+
     function renderCompras(app, inv) {
         const compras = window.state.compras || [];
         app.innerHTML = `
             <div class="card-pro">
-                <h2 class="text-lg font-black italic text-blue-400 mb-4 uppercase text-center">Entrada de Stock</h2>
+                <h2 class="text-xl font-black italic text-blue-400 mb-4 uppercase text-center">Entrada de Stock 🛒</h2>
                 <select id="cMat"><option value="">-- SELECCIONAR MATERIAL --</option>${Object.keys(inv).map(m=>`<option value="${m}">${m}</option>`).join("")}</select>
                 <div class="grid grid-cols-2 gap-2"><input id="cCant" type="number" placeholder="CANTIDAD"><input id="cCosto" type="number" placeholder="COSTO TOTAL $"></div>
                 <div class="grid grid-cols-2 gap-2 mt-2"><input id="cVentaD" type="number" placeholder="P. DETAL $"><input id="cVentaM" type="number" placeholder="P. MAYOR $"></div>
-                <button onclick="saveCompra()" class="btn-main !bg-blue-600 mt-4">INGRESAR STOCK</button>
+                <button onclick="saveCompra()" class="btn-main !bg-blue-600 mt-4">REGISTRAR ENTRADA</button>
             </div>
-            <div class="space-y-1">
+            <h3 class="text-xs font-black opacity-40 uppercase mb-2 px-2 italic">Historial de Compras</h3>
+            <div class="space-y-2">
                 ${compras.slice().reverse().map((c, idx) => {
                     const originalIdx = compras.length - 1 - idx;
                     return `
-                    <div class="bg-white/5 p-3 rounded-xl flex justify-between items-center border border-white/5 text-[11px]">
-                        <div><div class="font-black text-blue-400">${c.m}</div><div class="opacity-40">${c.f.split('T')[0]}</div></div>
-                        <div class="flex items-center gap-2 text-right">
-                            <div class="mr-2"><b>${c.c} und</b><br><span class="text-green-500">$${(c.costo || 0).toFixed(2)}</span></div>
-                            <button onclick="editCompra(${originalIdx})" class="p-2 bg-blue-600/10 text-blue-400 rounded-lg text-xs">✏️</button>
-                            <button onclick="delCompra(${originalIdx})" class="p-2 bg-red-500/10 text-red-500 rounded-lg text-xs">🗑️</button>
+                    <div class="bg-white/5 p-4 rounded-2xl flex justify-between items-center text-xs">
+                        <div><div class="font-black text-blue-400 uppercase">${c.m}</div><div class="opacity-40">${c.f ? c.f.split('T')[0] : 'S/F'}</div></div>
+                        <div class="flex items-center gap-3">
+                            <div class="text-right"><b>${c.c} und</b><br><span class="text-green-500 font-bold">$${(c.costo || 0).toFixed(2)}</span></div>
+                            <div class="flex flex-col gap-1">
+                                <button onclick="editCompra(${originalIdx})" class="p-2 bg-blue-600/20 text-blue-400 rounded-lg">✏️</button>
+                                <button onclick="delCompra(${originalIdx})" class="p-2 bg-red-500/20 text-red-500 rounded-lg">🗑️</button>
+                            </div>
                         </div>
                     </div>`}).join("")}
             </div>`;
@@ -354,51 +499,20 @@
     function renderGastos(app, today) {
         const gastos = window.state.gastos || [];
         app.innerHTML = `
-            <div class="card-pro text-center bg-red-900/10 border-red-500/30">
-                <p class="text-[10px] opacity-40 uppercase font-black italic">Gastos Totales Acumulados</p>
-                <h2 class="text-3xl font-black text-red-500">$${gastos.reduce((a,b)=>a+Number(b.monto), 0).toLocaleString()}</h2>
-            </div>
             <div class="card-pro">
-                <h2 class="text-lg font-black italic text-red-500 mb-4 uppercase text-center">Nuevo Gasto</h2>
-                <input id="gDate" type="date" value="${today}"><input id="gDesc" placeholder="CONCEPTO"><input id="gMonto" type="number" placeholder="MONTO $">
-                <button onclick="saveGasto()" class="btn-main mt-2 !bg-red-600">REGISTRAR GASTO</button>
+                <h2 class="text-xl font-black italic text-red-500 mb-4 uppercase text-center">Nuevo Gasto 💸</h2>
+                <input id="gDate" type="date" value="${today}"><input id="gDesc" placeholder="CONCEPTO DEL GASTO"><input id="gMonto" type="number" placeholder="MONTO $">
+                <button onclick="saveGasto()" class="btn-main mt-2 !bg-red-600">REGISTRAR EGRESO</button>
             </div>
-            <div class="space-y-1">
-                ${gastos.slice().reverse().map((g, idx) => `
-                    <div class="bg-white/5 p-4 rounded-xl flex justify-between items-center text-[11px] border border-white/5">
+            <h3 class="text-xs font-black opacity-40 uppercase mb-2 px-2 italic">Historial de Egresos</h3>
+            <div class="space-y-2">
+                ${gastos.slice().reverse().map((g, idx) => {
+                    const originalIdx = gastos.length - 1 - idx;
+                    return `
+                    <div class="bg-white/5 p-4 rounded-2xl flex justify-between items-center text-xs">
                         <div><div class="font-black text-white uppercase">${g.desc}</div><div class="opacity-40">${g.fecha}</div></div>
-                        <div class="flex items-center gap-4"><b class="text-red-500">$${Number(g.monto).toFixed(2)}</b><button onclick="delGasto(${gastos.length - 1 - idx})" class="text-red-500">✕</button></div>
-                    </div>`).join("")}
-            </div>`;
-    }
-
-    function renderInventario(app, inv) {
-        app.innerHTML = `<div class="space-y-3">
-            ${Object.entries(inv).map(([n, i]) => `
-                <div class="card-pro flex justify-between items-center border-l-4 ${i.stock < 5 ? 'border-red-600' : 'border-blue-600'}">
-                    <div class="flex-1"><b class="uppercase text-purple-400 text-[10px] font-black">${n}</b><br><span class="text-4xl font-black italic text-white">${(i.stock || 0).toFixed(2)}</span></div>
-                    <div class="flex flex-col gap-2">
-                        <button onclick="registrarMerma('${n}')" class="bg-red-600/20 text-red-500 px-3 py-1 rounded-lg text-[10px] font-black">MERMA</button>
-                        <div class="flex gap-2">
-                            <button onclick="editItemInv('${n}')" class="p-2 bg-blue-600/10 text-blue-400 rounded-lg">✏️</button>
-                            <button onclick="delItemInv('${n}')" class="p-2 bg-red-500/10 text-red-500 rounded-lg">🗑️</button>
-                        </div>
-                    </div>
-                </div>`).join("")}
-        </div>`;
-    }
-
-    function renderCatalogo(app, inv, serv) {
-        app.innerHTML = `
-            <div class="card-pro">
-                <h3 class="text-xs font-black text-blue-400 uppercase mb-4 italic">Materiales</h3>
-                <input id="nMat" placeholder="NOMBRE DEL PRODUCTO"><button onclick="crearMat()" class="btn-main !py-3 !bg-blue-600/20">AÑADIR MATERIAL</button>
-                <div class="mt-4 space-y-1">${Object.keys(inv).map(m => `<div class="bg-black/40 p-2 rounded flex justify-between text-xs"><span>${m}</span><button onclick="delMat('${m}')" class="text-red-500 font-bold">✕</button></div>`).join("")}</div>
-            </div>
-            <div class="card-pro mt-4">
-                <h3 class="text-xs font-black text-purple-400 uppercase mb-4 italic">Servicios</h3>
-                <input id="nServ" placeholder="Nombre"><button onclick="crearServicio()" class="btn-main !py-3 !bg-purple-600/20">AÑADIR SERVICIO</button>
-                <div class="grid grid-cols-2 gap-2 mt-4">${serv.map((s, idx) => `<div class="bg-black/40 p-2 rounded flex justify-between text-[10px]"><span>${s}</span><button onclick="delServicio(${idx})" class="text-red-500">✕</button></div>`).join("")}</div>
+                        <div class="flex items-center gap-4"><b class="text-red-500">$${Number(g.monto).toFixed(2)}</b><button onclick="delGasto(${originalIdx})" class="text-red-500 text-lg">✕</button></div>
+                    </div>`}).join("")}
             </div>`;
     }
 
@@ -430,6 +544,7 @@
         window.state.ventas.push({ id: Date.now(), cliente: cli, whatsapp: document.getElementById("wha").value, items: [...window.cart], total, abono, fecha: document.getElementById("vDate").value });
         await window.sync(); window.cart = [];
     };
+    
     window.saveCompra = async () => {
         const m = document.getElementById("cMat").value, c = parseFloat(document.getElementById("cCant").value), costo = parseFloat(document.getElementById("cCosto").value);
         if(!m || isNaN(c)) return;
@@ -439,61 +554,89 @@
         window.state.compras.push({ m, c, costo, f: new Date().toISOString() });
         await window.sync();
     };
+
+    window.delCompra = async (idx) => {
+        if(confirm("¿Borrar esta compra? El stock se restará.")) {
+            const comp = window.state.compras[idx];
+            if(window.state.inventario[comp.m]) window.state.inventario[comp.m].stock -= comp.c;
+            window.state.compras.splice(idx, 1);
+            await window.sync();
+        }
+    };
+
+    window.editCompra = async (idx) => {
+        const comp = window.state.compras[idx];
+        const m = comp.m;
+        let nCant = parseFloat(prompt("Editar Cantidad Comprada:", comp.c));
+        let nCosto = parseFloat(prompt("Editar Costo Total $:", comp.costo));
+        let nDet = parseFloat(prompt("Editar Precio Detal Actual $:", window.state.inventario[m].precioDetal));
+        let nMay = parseFloat(prompt("Editar Precio Mayor Actual $:", window.state.inventario[m].precioMayor));
+        
+        if(!isNaN(nCant) && !isNaN(nCosto)) {
+            // Reajuste de stock
+            window.state.inventario[m].stock = (window.state.inventario[m].stock - comp.c) + nCant;
+            comp.c = nCant;
+            comp.costo = nCosto;
+            if(!isNaN(nDet)) window.state.inventario[m].precioDetal = nDet;
+            if(!isNaN(nMay)) window.state.inventario[m].precioMayor = nMay;
+            await window.sync();
+        }
+    };
+
     window.saveGasto = async () => {
         const d = document.getElementById("gDesc").value, m = parseFloat(document.getElementById("gMonto").value);
         if(d && m) { window.state.gastos.push({ desc: d, monto: m, fecha: document.getElementById("gDate").value }); await window.sync(); }
     };
     window.delGasto = async (idx) => { if(confirm("¿Borrar gasto?")) { window.state.gastos.splice(idx, 1); await window.sync(); } };
-    window.delCompra = async (idx) => { if(confirm("¿Borrar compra? (Se restará del stock)")) { 
-        const c = window.state.compras[idx];
-        window.state.inventario[c.m].stock -= c.c;
-        window.state.compras.splice(idx, 1); 
-        await window.sync(); 
-    } };
-    window.registrarMerma = async (n) => {
-        let m = parseFloat(prompt(`Cantidad Merma para ${n}:`));
-        if(!isNaN(m)) { window.state.inventario[n].stock -= m; window.state.gastos.push({ desc: `MERMA: ${n}`, monto: 0, fecha: new Date().toISOString().split('T')[0] }); await window.sync(); }
+
+    window.liquidar = async (id) => { const v = window.state.ventas.find(x => x.id === id); v.abono = v.total; await window.sync(); };
+    window.abonar = async (id) => { const v = window.state.ventas.find(x => x.id === id); let m = parseFloat(prompt(`Monto del Abono:`)); if(!isNaN(m)) { v.abono += m; await window.sync(); } };
+    window.delVenta = async (id) => { if(confirm("¿Borrar venta?")) { window.state.ventas = window.state.ventas.filter(v => v.id !== id); await window.sync(); } };
+    window.editVenta = async (id) => { 
+        const v = window.state.ventas.find(x => x.id === id);
+        let nT = parseFloat(prompt("Nuevo Total ($):", v.total));
+        let nA = parseFloat(prompt("Nuevo Abono ($):", v.abono));
+        if(!isNaN(nT) && !isNaN(nA)) { v.total = nT; v.abono = nA; await window.sync(); }
     };
-    window.editItemInv = async (n) => {
-        const i = window.state.inventario[n];
-        let nStock = parseFloat(prompt("Cantidad Stock Actual:", i.stock));
-        let pD = parseFloat(prompt("Precio Detal $:", i.precioDetal));
-        let pM = parseFloat(prompt("Precio Mayor $:", i.precioMayor));
-        if(!isNaN(nStock)) window.state.inventario[n].stock = nStock;
-        if(!isNaN(pD)) window.state.inventario[n].precioDetal = pD; 
-        if(!isNaN(pM)) window.state.inventario[n].precioMayor = pM; 
-        await window.sync();
+
+    window.renderCatalogo = function(app, inv, serv) {
+        app.innerHTML = `
+            <div class="card-pro">
+                <h3 class="text-xs font-black text-blue-400 uppercase mb-4 italic">Materiales Stock</h3>
+                <input id="nMat" placeholder="NOMBRE MATERIAL"><button onclick="crearMat()" class="btn-main !py-3 !bg-blue-600/20 shadow-none">AÑADIR MATERIAL</button>
+                <div class="mt-4 space-y-1">${Object.keys(inv).map(m => `<div class="bg-black/40 p-3 rounded-xl flex justify-between text-xs"><span>${m}</span><button onclick="delMat('${m}')" class="text-red-500 font-bold">✕</button></div>`).join("")}</div>
+            </div>
+            <div class="card-pro mt-4">
+                <h3 class="text-xs font-black text-purple-400 uppercase mb-4 italic">Servicios Mano de Obra</h3>
+                <input id="nServ" placeholder="Nombre"><button onclick="crearServicio()" class="btn-main !py-3 !bg-purple-600/20 shadow-none">AÑADIR SERVICIO</button>
+                <div class="grid grid-cols-2 gap-2 mt-4">${serv.map((s, idx) => `<div class="bg-black/40 p-3 rounded-xl flex justify-between text-[10px]"><span>${s}</span><button onclick="delServicio(${idx})" class="text-red-500 font-bold">✕</button></div>`).join("")}</div>
+            </div>`;
     };
+
     window.crearMat = async () => { const n = document.getElementById("nMat").value.toUpperCase(); if(n) { window.state.inventario[n] = { stock: 0, precioDetal: 0, precioMayor: 0 }; await window.sync(); } };
     window.crearServicio = async () => { const s = document.getElementById("nServ").value.toUpperCase(); if(s) { window.state.servicios.push(s); await window.sync(); } };
     window.delMat = async (n) => { if(confirm(`¿ELIMINAR ${n}?`)) { delete window.state.inventario[n]; await window.sync(); } };
     window.delServicio = async (idx) => { window.state.servicios.splice(idx, 1); await window.sync(); };
-    window.liquidar = async (id) => { const v = window.state.ventas.find(x => x.id === id); v.abono = v.total; await window.sync(); };
-    window.abonar = async (id) => { const v = window.state.ventas.find(x => x.id === id); let m = parseFloat(prompt(`Abonar:`)); if(!isNaN(m)) { v.abono += m; await window.sync(); } };
-    window.delVenta = async (id) => { if(confirm("¿Seguro que deseas eliminar esta venta por completo?")) { window.state.ventas = window.state.ventas.filter(v => v.id !== id); await window.sync(); } };
-    window.editVenta = async (id) => { 
-        const v = window.state.ventas.find(x => x.id === id);
-        let nT = parseFloat(prompt("Nuevo Total de la Venta ($):", v.total));
-        let nA = parseFloat(prompt("Abono total actual ($):", v.abono));
-        if(!isNaN(nT) && !isNaN(nA)) { v.total = nT; v.abono = nA; await window.sync(); }
-    };
     window.removeItem = (idx) => { window.cart.splice(idx, 1); render(); };
 
     window.showReceipt = (id) => {
         const v = window.state.ventas.find(x => x.id === id);
         document.getElementById("receiptContent").innerHTML = `
-            <div class="text-center mb-4">
-                <span class="text-2xl">👻</span>
-                <h2 class="text-xl font-black italic text-purple-600">GHOST PRINT</h2>
+            <div class="text-center mb-6">
+                <span class="text-3xl">👻</span>
+                <h2 class="text-2xl font-black italic text-purple-600">GHOST PRINT</h2>
+                <p class="text-[9px] text-gray-400 uppercase font-bold">Publicidad & Diseño</p>
             </div>
-            <div class="flex justify-between mb-2"><span>#${v.id.toString().slice(-6)}</span><span>${v.fecha}</span></div>
-            <p class="font-black uppercase">${v.cliente}</p>
-            <div class="border-y border-dashed border-black my-4 py-2">
-                ${v.items.map(i => `<div class="mb-2"><div class="text-[9px] text-gray-500 italic">${i.concepto}</div><div class="flex justify-between"><span>${i.c}x ${i.m}</span><span>$${i.p.toFixed(2)}</span></div></div>`).join("")}
+            <div class="flex justify-between mb-2 text-gray-500"><span>RECIBO #${v.id.toString().slice(-6)}</span><span>${v.fecha}</span></div>
+            <p class="font-black uppercase text-sm border-b pb-2 mb-4">${v.cliente}</p>
+            <div class="border-b border-dashed border-gray-300 mb-4 py-2">
+                ${v.items.map(i => `<div class="mb-3"><div class="text-[10px] text-gray-500 font-bold">${i.concepto}</div><div class="flex justify-between font-bold"><span>${i.c}x ${i.m}</span><span>$${i.p.toFixed(2)}</span></div></div>`).join("")}
             </div>
-            <div class="flex justify-between font-black"><span>TOTAL:</span><span>$${v.total.toFixed(2)}</span></div>
-            <div class="flex justify-between text-green-700"><span>PAGADO:</span><span>$${v.abono.toFixed(2)}</span></div>
-            <div class="flex justify-between text-red-600 font-black border-t border-black"><span>DEUDA:</span><span>$${(v.total - v.abono).toFixed(2)}</span></div>`;
+            <div class="space-y-1">
+                <div class="flex justify-between font-black text-lg"><span>TOTAL:</span><span>$${v.total.toFixed(2)}</span></div>
+                <div class="flex justify-between text-green-700 font-bold"><span>PAGADO:</span><span>$${v.abono.toFixed(2)}</span></div>
+                <div class="flex justify-between text-red-600 font-black border-t-2 border-black pt-1"><span>DEUDA:</span><span>$${(v.total - v.abono).toFixed(2)}</span></div>
+            </div>`;
         window.currentReceiptId = id; document.getElementById("receiptModal").classList.remove("hidden");
     };
     window.closeReceipt = () => document.getElementById("receiptModal").classList.add("hidden");
@@ -502,6 +645,21 @@
         const conceptos = v.items.map(i => `• ${i.concepto} (${i.m})`).join("%0A");
         const msg = `*GHOST PRINT*%0A*Recibo:* #${v.id.toString().slice(-6)}%0A*Cliente:* ${v.cliente}%0A*Trabajos:*%0A${conceptos}%0A*Total:* $${v.total}%0A*Pagado:* $${v.abono}%0A*Pendiente:* $${(v.total-v.abono).toFixed(2)}`;
         window.open(`https://wa.me/${v.whatsapp}?text=${msg}`, '_blank'); 
+    };
+
+    window.registrarMerma = async (n) => {
+        let m = parseFloat(prompt(`Cantidad Merma para ${n}:`));
+        if(!isNaN(m)) { window.state.inventario[n].stock -= m; window.state.gastos.push({ desc: `MERMA: ${n}`, monto: 0, fecha: new Date().toISOString().split('T')[0] }); await window.sync(); }
+    };
+    window.editItemInv = async (n) => {
+        const i = window.state.inventario[n];
+        let nStock = parseFloat(prompt("Stock Actual:", i.stock));
+        let pD = parseFloat(prompt("Precio Detal $:", i.precioDetal));
+        let pM = parseFloat(prompt("Precio Mayor $:", i.precioMayor));
+        if(!isNaN(nStock)) window.state.inventario[n].stock = nStock;
+        if(!isNaN(pD)) window.state.inventario[n].precioDetal = pD; 
+        if(!isNaN(pM)) window.state.inventario[n].precioMayor = pM; 
+        await window.sync();
     };
 
     render();
