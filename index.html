@@ -332,22 +332,30 @@
         else if(window.currentView === 'compras') renderCompras(app, inv);
         else if(window.currentView === 'gastos') renderGastos(app);
         else if(window.currentView === 'catalogo') renderCatalogo(app, inv);
-        else if(window.currentView === 'more') renderMore(app);
+        else if(window.currentView === 'more') renderMore(app, inv); // <--- PASAMOS INV AQUÍ
     };
 
     function renderVentas(app, inv, tasa) {
         const totalUSD = window.cart.reduce((acc, item) => acc + (Number(item.p) || 0), 0);
+        
+        // EXTRAER CLIENTES ÚNICOS PARA EL AUTOCOMPLETADO
+        const clientesUnicos = [...new Set((window.state.ventas || []).map(v => v.cliente).filter(Boolean))];
         
         app.innerHTML = `
             <div class="card-pro">
                 <h2 class="text-xl font-black italic text-purple-400 mb-6 uppercase text-center tracking-tighter font-black italic">Generar Factura 💵</h2>
                 <input id="vDate" type="date" value="${new Date().toISOString().split('T')[0]}">
                 
-                <!-- 🔥 FIX DE ICONOS PARA CLIENTE Y WHATSAPP 🔥 -->
+                <!-- DATALIST PARA AUTOCOMPLETAR CLIENTES -->
+                <datalist id="lista-clientes">
+                    ${clientesUnicos.map(c => `<option value="${c}">`).join("")}
+                </datalist>
+
+                <!-- 🔥 FIX DE ICONOS Y AUTOCOMPLETADO PARA CLIENTE Y WHATSAPP 🔥 -->
                 <div class="grid grid-cols-2 gap-2 mt-2">
                     <div class="relative flex items-center">
                         <span class="absolute left-4 text-xl opacity-60">👤</span>
-                        <input id="cli" placeholder="CLIENTE" class="uppercase font-black pl-12 !m-0 w-full">
+                        <input id="cli" list="lista-clientes" onchange="autoCompletarCliente()" placeholder="CLIENTE" class="uppercase font-black pl-12 !m-0 w-full">
                     </div>
                     <div class="relative flex items-center">
                         <span class="absolute left-4 text-green-500 drop-shadow-[0_0_5px_rgba(34,197,94,0.5)]">
@@ -486,7 +494,7 @@
             </div>`;
     }
 
-    function renderMore(app) {
+    function renderMore(app, inv) {
         app.innerHTML = `
             <h2 class="text-xl font-black italic text-white mb-8 uppercase text-center tracking-tighter font-black italic leading-none">Ajustes del Sistema</h2>
             <div class="grid grid-cols-1 gap-4">
@@ -501,6 +509,24 @@
                      </div>
                      <p class="text-[10px] font-black text-purple-300 tracking-widest text-center font-black">${window.state.tasaBCV > 0 ? 'BCV Actual: Bs. ' + window.state.tasaBCV : 'Tasa no definida'}</p>
                 </div>
+                
+                <!-- 🔥 NUEVA TABLA DE PRECIOS RÁPIDOS 🔥 -->
+                <div class="card-pro border-green-500/20 bg-green-500/5 p-5">
+                    <h3 class="text-xs font-black text-green-400 uppercase mb-4 italic tracking-widest text-center">💲 Tabla de Precios</h3>
+                    <div class="space-y-2 max-h-64 overflow-y-auto pr-2">
+                        ${Object.keys(inv).length === 0 ? '<p class="opacity-40 text-[10px] text-center font-bold">No hay materiales registrados</p>' : ''}
+                        ${Object.entries(inv).map(([m, data]) => `
+                            <div class="bg-black/40 p-3 rounded-xl flex justify-between items-center border border-white/5">
+                                <b class="text-[10px] text-white uppercase truncate max-w-[50%] leading-none">${m}</b>
+                                <div class="text-right flex gap-4">
+                                    <div class="text-center"><p class="text-[8px] text-gray-500 uppercase font-black">Detal</p><p class="text-xs font-black text-green-400">$${(Number(data.precioDetal)||0).toFixed(2)}</p></div>
+                                    <div class="text-center"><p class="text-[8px] text-gray-500 uppercase font-black">Mayor</p><p class="text-xs font-black text-yellow-400">$${(Number(data.precioMayor)||0).toFixed(2)}</p></div>
+                                </div>
+                            </div>
+                        `).join("")}
+                    </div>
+                </div>
+
                 <div onclick="setView('gastos')" class="card-pro flex items-center gap-5 active:scale-95 transition-all cursor-pointer border-red-500/20 bg-red-500/5">
                     <div class="text-4xl">💸</div>
                     <div><b class="text-lg font-black italic uppercase italic leading-none">Egresos / Gastos</b><p class="text-[10px] opacity-40 uppercase font-bold tracking-widest italic">Salidas de caja</p></div>
@@ -589,6 +615,20 @@
     }
 
     // --- ACCIONES Y SINCRONIZACIÓN ---
+    
+    // 🔥 NUEVA FUNCIÓN PARA AUTOCOMPLETAR WHATSAPP DEL CLIENTE 🔥
+    window.autoCompletarCliente = () => {
+        const cliName = document.getElementById("cli")?.value.trim().toUpperCase();
+        if (!cliName) return;
+        const whaInput = document.getElementById("wha");
+        // Buscar la venta más reciente de ese cliente que tenga WhatsApp
+        const lastSale = window.state.ventas.slice().reverse().find(v => v.cliente === cliName && v.whatsapp);
+        // Rellenar solo si el campo de WhatsApp está vacío
+        if (lastSale && lastSale.whatsapp && !whaInput.value) {
+            whaInput.value = lastSale.whatsapp;
+        }
+    };
+
     window.cambiarTasa = async () => {
         const n = prompt("Tasa BCV Oficial (Bs.):", window.state.tasaBCV || "");
         if (n && !isNaN(n)) { window.state.tasaBCV = parseFloat(n); await window.sync(); }
@@ -631,7 +671,6 @@
         await window.sync();
     };
     
-    // 🔥 NUEVAS ACCIONES DE COMPRAS 🔥
     window.delCompra = async (idx) => { 
         if (confirm("¿Borrar esta compra y restar del stock?")) { 
             const c = window.state.compras[idx];
@@ -649,12 +688,9 @@
         let nCosto = parseFloat(prompt("Corregir Costo Total de la Compra ($):", c.costo));
         
         if (!isNaN(nC) && !isNaN(nCosto)) {
-            // Ajustar diferencia de stock
             let diff = nC - Number(c.c);
             if (window.state.inventario[c.m]) {
                 window.state.inventario[c.m].stock = (Number(window.state.inventario[c.m].stock) || 0) + diff;
-                
-                // Permitir editar precios de venta
                 let pD = parseFloat(prompt("Corregir Precio de Venta al DETAL ($):", window.state.inventario[c.m].precioDetal));
                 let pM = parseFloat(prompt("Corregir Precio de Venta al MAYOR ($):", window.state.inventario[c.m].precioMayor));
                 if (!isNaN(pD)) window.state.inventario[c.m].precioDetal = pD;
