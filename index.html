@@ -438,7 +438,10 @@
     window.showReceipt = (id) => {
         const v = window.state.ventas.find(x => x.id === id);
         document.getElementById("receiptContent").innerHTML = `
-            <div class="text-center mb-4"><h2 class="text-xl font-black italic text-purple-600">GHOST PRINT</h2></div>
+            <div class="text-center mb-4">
+                <span class="text-2xl">👻</span>
+                <h2 class="text-xl font-black italic text-purple-600">GHOST PRINT</h2>
+            </div>
             <div class="flex justify-between mb-2"><span>#${v.id.toString().slice(-6)}</span><span>${v.fecha}</span></div>
             <p class="font-black uppercase">${v.cliente}</p>
             <div class="border-y border-dashed border-black my-4 py-2">
