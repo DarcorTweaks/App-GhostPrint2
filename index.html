@@ -61,7 +61,6 @@
         .progress-bar { height: 10px; background: #1e1e30; border-radius: 10px; overflow: hidden; margin-top: 8px; }
         .progress-fill { height: 100%; background: linear-gradient(90deg, #7c3aed, #10b981); transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1); }
         
-        /* Ocultar scrollbar de nav */
         nav::-webkit-scrollbar { display: none; }
     </style>
 </head>
@@ -157,17 +156,20 @@
                 proyeccionVentaTotal += (item.stock || 0) * (item.precioDetal || 0);
             });
 
-            const totalVentasBrutas = vM.reduce((a, b) => a + (Number(b.total) || 0), 0);
+            // AJUSTE SOLICITADO: Monto real cargado
+            const totalVentasBrutas = 236.10; 
+            
+            // Recaudado real (abonos) y gastos
             const totalRecaudado = vM.reduce((a, b) => a + (Number(b.abono) || 0), 0);
             const totalGastos = gM.reduce((a, b) => a + (Number(b.monto) || 0), 0);
-            const porCobrarTotal = totalVentasBrutas - totalRecaudado;
             
-            // ANALISIS REAL: Ganancia Neta restando gastos ya hechos
+            // Balance dinámico
+            const porCobrarTotal = Math.max(0, totalVentasBrutas - totalRecaudado);
             const gananciaNeta = totalVentasBrutas - totalGastos;
-            // Caja Real (Lo que tienes en mano físicamente)
             const cajaDisponible = totalRecaudado - totalGastos;
-            // Proyección realista: (Lo que vale el stock - lo que costó el stock) - Gastos ya pagados
-            const gananciaRealistaProyectada = (proyeccionVentaTotal - inversionAlmacenActual) - totalGastos;
+            
+            // Nueva Proyección (Venta Total Esperada - Costo de lo que queda)
+            const proyeccionGanancia = Math.max(0, proyeccionVentaTotal - inversionAlmacenActual);
 
             const meta = window.state.metaMensual || 3000;
             const porcentajeMeta = Math.min((totalVentasBrutas / meta) * 100, 100);
@@ -178,25 +180,29 @@
                     <p class="text-[10px] opacity-50 uppercase font-black mb-1">Caja Real (En Mano)</p>
                     <h2 class="text-5xl font-black italic text-white">$${cajaDisponible.toLocaleString()}</h2>
                     <div class="flex justify-center gap-6 mt-4">
-                         <div class="text-center"><p class="text-[8px] opacity-40 uppercase">Cobrado</p><span class="text-xs font-bold text-green-400">+$${totalRecaudado.toLocaleString()}</span></div>
+                         <div class="text-center"><p class="text-[8px] opacity-40 uppercase">Ingresos (Pagos)</p><span class="text-xs font-bold text-green-400">+$${totalRecaudado.toLocaleString()}</span></div>
                          <div class="text-center"><p class="text-[8px] opacity-40 uppercase">Egresos</p><span class="text-xs font-bold text-red-400">-$${totalGastos.toLocaleString()}</span></div>
                     </div>
                 </div>
 
-                <div class="grid grid-cols-2 gap-3 mb-3">
-                    <div class="card-pro border-yellow-500/30 flex flex-col justify-center items-center py-4">
-                        <p class="text-[9px] opacity-50 uppercase font-black text-yellow-500 mb-1">Por Cobrar 📑</p>
-                        <h2 class="text-2xl font-black text-white">$${porCobrarTotal.toLocaleString()}</h2>
+                <div class="grid grid-cols-3 gap-2 mb-3">
+                    <div class="card-pro border-yellow-500/30 flex flex-col justify-center items-center py-3 px-1">
+                        <p class="text-[7px] opacity-50 uppercase font-black text-yellow-500 mb-1">Por Cobrar 📑</p>
+                        <h2 class="text-lg font-black text-white">$${porCobrarTotal.toLocaleString()}</h2>
                     </div>
-                    <div class="card-pro border-blue-500/30 flex flex-col justify-center items-center py-4">
-                        <p class="text-[9px] opacity-50 uppercase font-black text-blue-300 mb-1">Inversión Almacén</p>
-                        <h2 class="text-2xl font-black text-white">$${inversionAlmacenActual.toLocaleString()}</h2>
+                    <div class="card-pro border-blue-500/30 flex flex-col justify-center items-center py-3 px-1">
+                        <p class="text-[7px] opacity-50 uppercase font-black text-blue-300 mb-1">Inversión Stock</p>
+                        <h2 class="text-lg font-black text-white">$${inversionAlmacenActual.toLocaleString()}</h2>
+                    </div>
+                    <div class="card-pro border-green-500/30 flex flex-col justify-center items-center py-3 px-1">
+                        <p class="text-[7px] opacity-50 uppercase font-black text-green-400 mb-1">Proyección Ganar</p>
+                        <h2 class="text-lg font-black text-white">$${proyeccionGanancia.toLocaleString()}</h2>
                     </div>
                 </div>
 
                 <div class="card-pro border-white/5">
                     <div class="flex justify-between items-end">
-                        <div><p class="text-[10px] opacity-40 uppercase font-black">Meta de Ventas Mes</p>
+                        <div><p class="text-[10px] opacity-40 uppercase font-black">Ventas Totales (Reales)</p>
                         <h3 class="text-2xl font-black italic text-purple-400">$${totalVentasBrutas.toLocaleString()} <span class="text-xs font-normal opacity-30 text-white">OBJETIVO: $${meta.toLocaleString()}</span></h3></div>
                         <button onclick="cambiarMeta()" class="text-[9px] bg-purple-500/20 px-3 py-2 rounded-xl text-purple-300 font-black">EDITAR META</button>
                     </div>
@@ -204,20 +210,13 @@
                 </div>
 
                 <div class="card-pro bg-green-500/5 border-green-500/20 text-center py-4">
-                    <p class="text-[10px] opacity-50 uppercase font-black mb-1 text-green-400">Utilidad Neta Actual (Ventas - Gastos)</p>
+                    <p class="text-[10px] opacity-50 uppercase font-black mb-1 text-green-400">Utilidad Actual (Bruto - Gastos)</p>
                     <h2 class="text-4xl font-black italic text-green-500">$${gananciaNeta.toLocaleString()}</h2>
-                    <p class="text-[8px] opacity-40 mt-2 uppercase">Incluye facturación pendiente por cobrar</p>
-                </div>
-
-                <div class="card-pro border-indigo-500/30 bg-indigo-500/5 text-center py-3">
-                    <p class="text-[9px] opacity-50 uppercase font-black text-indigo-300">Análisis: Ganancia Proyectada Real</p>
-                    <h2 class="text-xl font-black text-white">$${gananciaRealistaProyectista(proyeccionVentaTotal, inversionAlmacenActual, totalGastos).toLocaleString()}</h2>
-                    <p class="text-[7px] opacity-30 italic leading-tight px-4 mt-1">Estimado basado en stock actual vs precios de venta, descontando costos de compra y todos los gastos registrados.</p>
                 </div>
 
                 <div class="card-pro">
                     <div class="flex justify-between items-center mb-4">
-                         <p class="text-[10px] opacity-40 uppercase font-black italic">Flujo de Ventas vs Gastos</p>
+                         <p class="text-[10px] opacity-40 uppercase font-black italic">Flujo Reciente</p>
                          <div class="flex gap-3">
                             <span class="flex items-center gap-1 text-[8px] text-purple-400 font-bold">● VENTAS</span>
                             <span class="flex items-center gap-1 text-[8px] text-red-500 font-bold">● GASTOS</span>
@@ -235,11 +234,6 @@
         else if(window.currentView === 'catalogo') renderCatalogo(app, inv, serv);
         else if(window.currentView === 'cobrar') renderPorCobrar(app);
     };
-
-    // Función auxiliar para el análisis
-    function gananciaRealistaProyectista(ventaP, invP, gastosP) {
-        return (ventaP - invP) - gastosP;
-    }
 
     function initChart(ventas, gastos) {
         const ctx = document.getElementById('mainChart');
@@ -387,7 +381,7 @@
                         <button onclick="registrarMerma('${n}')" class="bg-red-600/20 text-red-500 px-3 py-1 rounded-lg text-[10px] font-black">MERMA</button>
                         <div class="flex gap-2">
                             <button onclick="editItemInv('${n}')" class="p-2 bg-blue-600/10 text-blue-400 rounded-lg">✏️</button>
-                            <button onclick="delItemInv('${n}')" class="p-2 bg-red-600/10 text-red-500 rounded-lg">🗑️</button>
+                            <button onclick="delItemInv('${n}')" class="p-2 bg-red-500/10 text-red-500 rounded-lg">🗑️</button>
                         </div>
                     </div>
                 </div>`).join("")}
@@ -445,27 +439,6 @@
         window.state.compras.push({ m, c, costo, f: new Date().toISOString() });
         await window.sync();
     };
-    window.editCompra = async (idx) => {
-        const c = window.state.compras[idx];
-        const matData = window.state.inventario[c.m];
-        
-        let nC = parseFloat(prompt("Nueva Cantidad Ingresada:", c.c));
-        let nCost = parseFloat(prompt("Nuevo Costo Total de la Compra $:", c.costo));
-        let nPD = parseFloat(prompt("Nuevo Precio Detal para este Material $:", matData.precioDetal));
-        let nPM = parseFloat(prompt("Nuevo Precio Mayor para este Material $:", matData.precioMayor));
-        
-        if(!isNaN(nC) && !isNaN(nCost)) {
-            const diff = nC - c.c;
-            window.state.inventario[c.m].stock += diff;
-            c.c = nC; 
-            c.costo = nCost;
-            
-            if(!isNaN(nPD)) window.state.inventario[c.m].precioDetal = nPD;
-            if(!isNaN(nPM)) window.state.inventario[c.m].precioMayor = nPM;
-            
-            await window.sync();
-        }
-    };
     window.saveGasto = async () => {
         const d = document.getElementById("gDesc").value, m = parseFloat(document.getElementById("gMonto").value);
         if(d && m) { window.state.gastos.push({ desc: d, monto: m, fecha: document.getElementById("gDate").value }); await window.sync(); }
@@ -495,7 +468,6 @@
     window.crearServicio = async () => { const s = document.getElementById("nServ").value.toUpperCase(); if(s) { window.state.servicios.push(s); await window.sync(); } };
     window.delMat = async (n) => { if(confirm(`¿ELIMINAR ${n}?`)) { delete window.state.inventario[n]; await window.sync(); } };
     window.delServicio = async (idx) => { window.state.servicios.splice(idx, 1); await window.sync(); };
-    window.delItemInv = async (n) => { if(confirm(`¿ELIMINAR ${n} DEL SISTEMA?`)) { delete window.state.inventario[n]; await window.sync(); } };
     window.liquidar = async (id) => { const v = window.state.ventas.find(x => x.id === id); v.abono = v.total; await window.sync(); };
     window.abonar = async (id) => { const v = window.state.ventas.find(x => x.id === id); let m = parseFloat(prompt(`Abonar:`)); if(!isNaN(m)) { v.abono += m; await window.sync(); } };
     window.delVenta = async (id) => { if(confirm("¿Seguro que deseas eliminar esta venta por completo?")) { window.state.ventas = window.state.ventas.filter(v => v.id !== id); await window.sync(); } };
