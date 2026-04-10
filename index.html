@@ -385,12 +385,22 @@
     };
     window.editCompra = async (idx) => {
         const c = window.state.compras[idx];
-        let nC = parseFloat(prompt("Nueva Cantidad:", c.c));
-        let nCost = parseFloat(prompt("Nuevo Costo Total $:", c.costo));
+        const matData = window.state.inventario[c.m];
+        
+        let nC = parseFloat(prompt("Nueva Cantidad Ingresada:", c.c));
+        let nCost = parseFloat(prompt("Nuevo Costo Total de la Compra $:", c.costo));
+        let nPD = parseFloat(prompt("Nuevo Precio Detal para este Material $:", matData.precioDetal));
+        let nPM = parseFloat(prompt("Nuevo Precio Mayor para este Material $:", matData.precioMayor));
+        
         if(!isNaN(nC) && !isNaN(nCost)) {
             const diff = nC - c.c;
             window.state.inventario[c.m].stock += diff;
-            c.c = nC; c.costo = nCost;
+            c.c = nC; 
+            c.costo = nCost;
+            
+            if(!isNaN(nPD)) window.state.inventario[c.m].precioDetal = nPD;
+            if(!isNaN(nPM)) window.state.inventario[c.m].precioMayor = nPM;
+            
             await window.sync();
         }
     };
