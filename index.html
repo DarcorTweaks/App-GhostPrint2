@@ -12,7 +12,7 @@
         :root {
             --ghost-purple: #8b5cf6;
             --ghost-dark: #05050a;
-            --ghost-card: rgba(15, 15, 30, 0.7);
+            --ghost-card: rgba(15, 15, 30, 0.75);
             --safe-top: env(safe-area-inset-top);
             --safe-bottom: env(safe-area-inset-bottom);
         }
@@ -25,9 +25,11 @@
             padding: 0;
             overflow-x: hidden;
             -webkit-tap-highlight-color: transparent;
+            /* Fondo Topográfico Púrpura */
             background-image: 
-                radial-gradient(circle at 50% 0%, rgba(139, 92, 246, 0.15) 0%, transparent 50%),
-                radial-gradient(circle at 0% 100%, rgba(139, 92, 246, 0.05) 0%, transparent 40%);
+                radial-gradient(circle at 50% 0%, rgba(139, 92, 246, 0.2) 0%, transparent 50%),
+                url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300' viewBox='0 0 300 300'%3E%3Cpath d='M0 250c50-20 100 10 150 0s100-50 150-30M0 200c50-20 100 10 150 0s100-50 150-30M0 150c50-20 100 10 150 0s100-50 150-30M0 100c50-20 100 10 150 0s100-50 150-30M0 50c50-20 100 10 150 0s100-50 150-30' fill='none' stroke='%238b5cf6' stroke-opacity='0.08' stroke-width='1'/%3E%3C/svg%3E");
+            background-attachment: fixed;
         }
 
         /* App Header */
@@ -37,14 +39,14 @@
             left: 0;
             right: 0;
             height: 70px;
-            background: rgba(5, 5, 10, 0.8);
-            backdrop-filter: blur(20px);
+            background: rgba(5, 5, 10, 0.85);
+            backdrop-filter: blur(25px);
             z-index: 1000;
             display: flex;
             align-items: center;
             justify-content: space-between;
             padding: 0 20px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            border-bottom: 1px solid rgba(139, 92, 246, 0.15);
         }
 
         /* Bottom Navigation */
@@ -54,15 +56,15 @@
             left: 0;
             right: 0;
             height: 75px;
-            background: rgba(10, 10, 20, 0.95);
+            background: rgba(10, 10, 20, 0.98);
             backdrop-filter: blur(20px);
             display: flex;
             justify-content: space-around;
             align-items: center;
             padding-bottom: var(--safe-bottom);
-            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            border-top: 1px solid rgba(139, 92, 246, 0.2);
             z-index: 1000;
-            box-shadow: 0 -10px 30px rgba(0,0,0,0.5);
+            box-shadow: 0 -15px 35px rgba(0,0,0,0.6);
         }
 
         .nav-item {
@@ -73,7 +75,7 @@
             text-decoration: none;
             font-size: 10px;
             font-weight: 700;
-            transition: all 0.3s;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             flex: 1;
         }
 
@@ -88,64 +90,70 @@
         }
 
         .nav-item.active span:first-child {
-            transform: translateY(-4px);
-            filter: drop-shadow(0 0 8px var(--ghost-purple));
+            transform: translateY(-6px) scale(1.1);
+            filter: drop-shadow(0 0 12px var(--ghost-purple));
         }
 
         /* Main Content area */
         #app {
             padding-top: 85px;
-            padding-bottom: 100px;
+            padding-bottom: 110px;
             min-height: 100vh;
         }
 
         /* Enhanced Cards */
         .card-pro { 
             background: var(--ghost-card); 
-            border: 1px solid rgba(255, 255, 255, 0.05); 
-            border-radius: 24px; 
-            padding: 20px; 
-            margin-bottom: 16px; 
-            backdrop-filter: blur(10px);
-            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+            border: 1px solid rgba(139, 92, 246, 0.1); 
+            border-radius: 28px; 
+            padding: 22px; 
+            margin-bottom: 18px; 
+            backdrop-filter: blur(12px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            transition: transform 0.2s;
         }
 
-        .ghost-glow { filter: drop-shadow(0 0 12px var(--ghost-purple)); }
+        .ghost-glow { filter: drop-shadow(0 0 15px var(--ghost-purple)); }
         
-        .progress-bar { height: 12px; background: rgba(255,255,255,0.05); border-radius: 12px; overflow: hidden; margin-top: 12px; }
-        .progress-fill { height: 100%; background: linear-gradient(90deg, #8b5cf6, #d946ef); transition: width 1s ease; }
+        .progress-bar { height: 14px; background: rgba(255,255,255,0.03); border-radius: 14px; overflow: hidden; margin-top: 12px; border: 1px solid rgba(255,255,255,0.05); }
+        .progress-fill { height: 100%; background: linear-gradient(90deg, #8b5cf6, #d946ef, #8b5cf6); background-size: 200% 100%; animation: shimmer 3s infinite linear; transition: width 1s ease; }
+
+        @keyframes shimmer {
+            0% { background-position: 100% 0; }
+            100% { background-position: -100% 0; }
+        }
 
         input, select, textarea { 
-            background: rgba(255,255,255,0.03); 
-            border: 1px solid rgba(255,255,255,0.1); 
+            background: rgba(255,255,255,0.04); 
+            border: 1px solid rgba(139, 92, 246, 0.15); 
             color: white; 
             padding: 16px; 
-            border-radius: 16px; 
+            border-radius: 18px; 
             width: 100%; 
             margin: 8px 0; 
             font-size: 16px; 
             font-weight: 600; 
             outline: none; 
-            transition: border 0.3s;
+            transition: all 0.3s;
         }
-        input:focus { border-color: var(--ghost-purple); }
+        input:focus { border-color: var(--ghost-purple); background: rgba(139, 92, 246, 0.05); }
 
         .btn-main { 
             background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%); 
             color: white; 
             padding: 18px; 
-            border-radius: 20px; 
+            border-radius: 22px; 
             width: 100%; 
-            font-weight: 800; 
+            font-weight: 900; 
             text-transform: uppercase; 
             cursor: pointer; 
             border: none; 
             font-size: 14px; 
-            letter-spacing: 1px;
-            box-shadow: 0 10px 20px rgba(139, 92, 246, 0.2);
+            letter-spacing: 1.5px;
+            box-shadow: 0 12px 25px rgba(139, 92, 246, 0.3);
+            active: scale(0.96);
         }
         
-        /* Ocultar barra de desplazamiento */
         ::-webkit-scrollbar { display: none; }
     </style>
 </head>
@@ -156,10 +164,10 @@
         <span class="text-3xl ghost-glow">👻</span>
         <div>
             <h1 class="text-lg font-black italic tracking-tighter text-white leading-none">GHOST PRINT</h1>
-            <p class="text-[8px] font-bold opacity-40 uppercase tracking-[0.2em] text-purple-400">Business Control</p>
+            <p class="text-[8px] font-bold opacity-50 uppercase tracking-[0.3em] text-purple-400">Business Dashboard</p>
         </div>
     </div>
-    <div id="status-dot" class="w-2 h-2 rounded-full bg-green-500 animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.8)]"></div>
+    <div id="status-dot" class="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_12px_rgba(34,197,94,1)] animate-pulse"></div>
 </header>
 
 <div id="app" class="px-4 max-w-2xl mx-auto"></div>
@@ -188,12 +196,12 @@
 </nav>
 
 <!-- Modal Recibo -->
-<div id="receiptModal" class="fixed inset-0 bg-black/90 z-[2000] hidden flex items-center justify-center p-4">
-    <div class="bg-white text-black p-6 rounded-3xl w-full max-w-sm shadow-2xl relative">
+<div id="receiptModal" class="fixed inset-0 bg-black/95 z-[2000] hidden flex items-center justify-center p-4 backdrop-blur-md">
+    <div class="bg-white text-black p-8 rounded-[32px] w-full max-w-sm shadow-2xl relative border-4 border-purple-500/20">
         <div id="receiptContent" class="text-[11px] font-mono border-black pt-4"></div>
-        <div class="mt-6 flex gap-2">
-            <button onclick="closeReceipt()" class="flex-1 bg-gray-200 p-3 rounded-xl font-bold">Cerrar</button>
-            <button onclick="shareReceipt()" class="flex-1 bg-purple-600 text-white p-3 rounded-xl font-bold">WhatsApp</button>
+        <div class="mt-8 flex gap-3">
+            <button onclick="closeReceipt()" class="flex-1 bg-gray-100 p-4 rounded-2xl font-black text-xs">CERRAR</button>
+            <button onclick="shareReceipt()" class="flex-1 bg-purple-600 text-white p-4 rounded-2xl font-black text-xs shadow-lg">WHATSAPP</button>
         </div>
     </div>
 </div>
@@ -219,7 +227,7 @@
     };
     window.currentView = 'inicio';
     window.cart = [];
-    window.myChart = null; // Variable global para el gráfico
+    window.myChart = null;
 
     window.sync = async function() { await docRef.set(window.state); render(); };
     docRef.onSnapshot(doc => { if(doc.exists) { window.state = doc.data(); render(); } });
@@ -257,7 +265,6 @@
                 proyeccionVentaTotal += (item.stock || 0) * (item.precioDetal || 0);
             });
 
-            // AJUSTE SOLICITADO: Monto real cargado
             const totalVentasBrutas = 236.10; 
             const totalRecaudado = vM.reduce((a, b) => a + (Number(b.abono) || 0), 0);
             const totalGastos = gM.reduce((a, b) => a + (Number(b.monto) || 0), 0);
@@ -270,54 +277,55 @@
             const porcentajeMeta = Math.min((totalVentasBrutas / meta) * 100, 100);
 
             app.innerHTML = `
-                <div class="card-pro bg-gradient-to-br from-purple-900/40 to-black/40 border-purple-500/20 text-center py-6 relative overflow-hidden">
-                    <p class="text-[11px] opacity-60 uppercase font-black tracking-widest mb-2">Caja en Mano 💵</p>
-                    <h2 class="text-6xl font-black italic text-white">$${cajaDisponible.toLocaleString()}</h2>
-                    <div class="flex justify-center gap-8 mt-6">
-                         <div class="text-center"><p class="text-[9px] opacity-40 uppercase font-bold">Cobrado</p><span class="text-sm font-black text-green-400">+$${totalRecaudado.toLocaleString()}</span></div>
-                         <div class="text-center"><p class="text-[9px] opacity-40 uppercase font-bold">Gastos</p><span class="text-sm font-black text-red-400">-$${totalGastos.toLocaleString()}</span></div>
+                <div class="card-pro bg-gradient-to-br from-purple-800/40 via-black/40 to-black/60 border-purple-500/30 text-center py-8 relative overflow-hidden">
+                    <div class="absolute -top-10 -right-10 w-32 h-32 bg-purple-600/10 blur-[50px]"></div>
+                    <p class="text-[11px] opacity-60 uppercase font-black tracking-[0.3em] mb-2 text-purple-300">Balance Real 💸</p>
+                    <h2 class="text-6xl font-black italic text-white tracking-tighter">$${cajaDisponible.toLocaleString()}</h2>
+                    <div class="flex justify-center gap-10 mt-8">
+                         <div class="text-center"><p class="text-[9px] opacity-40 uppercase font-black mb-1">Entradas</p><span class="text-sm font-black text-green-400">+$${totalRecaudado.toLocaleString()}</span></div>
+                         <div class="text-center"><p class="text-[9px] opacity-40 uppercase font-black mb-1">Gastos</p><span class="text-sm font-black text-red-400">-$${totalGastos.toLocaleString()}</span></div>
                     </div>
                 </div>
 
                 <div class="grid grid-cols-3 gap-3 mb-4">
-                    <div class="card-pro !mb-0 !p-3 border-yellow-500/20 text-center">
+                    <div class="card-pro !mb-0 !p-3 border-yellow-500/20 text-center bg-yellow-500/5">
                         <p class="text-[8px] opacity-50 uppercase font-black text-yellow-500">Deudas</p>
                         <h2 class="text-lg font-black text-white">$${porCobrarTotal.toLocaleString()}</h2>
                     </div>
-                    <div class="card-pro !mb-0 !p-3 border-blue-500/20 text-center">
-                        <p class="text-[8px] opacity-50 uppercase font-black text-blue-400">Inversión</p>
+                    <div class="card-pro !mb-0 !p-3 border-blue-500/20 text-center bg-blue-500/5">
+                        <p class="text-[8px] opacity-50 uppercase font-black text-blue-400">Stock</p>
                         <h2 class="text-lg font-black text-white">$${inversionAlmacenActual.toLocaleString()}</h2>
                     </div>
-                    <div class="card-pro !mb-0 !p-3 border-green-500/20 text-center">
-                        <p class="text-[8px] opacity-50 uppercase font-black text-green-400">Ganancia</p>
+                    <div class="card-pro !mb-0 !p-3 border-green-500/20 text-center bg-green-500/5">
+                        <p class="text-[8px] opacity-50 uppercase font-black text-green-400">Futuro</p>
                         <h2 class="text-lg font-black text-white">$${proyeccionGanancia.toLocaleString()}</h2>
                     </div>
                 </div>
 
-                <div class="card-pro">
-                    <div class="flex justify-between items-end mb-2">
+                <div class="card-pro border-l-4 border-l-purple-600">
+                    <div class="flex justify-between items-end mb-3">
                         <div>
-                            <p class="text-[10px] opacity-50 uppercase font-black italic">Ventas Actuales</p>
+                            <p class="text-[10px] opacity-50 uppercase font-black italic mb-1">Meta Mensual</p>
                             <h3 class="text-3xl font-black italic text-purple-400">$${totalVentasBrutas.toLocaleString()}</h3>
                         </div>
                         <div class="text-right">
-                            <p class="text-[10px] opacity-30 font-bold">META $${meta.toLocaleString()}</p>
-                            <button onclick="cambiarMeta()" class="text-[10px] text-purple-400 font-bold">AJUSTAR</button>
+                            <p class="text-[10px] opacity-40 font-bold">OBJETIVO $${meta.toLocaleString()}</p>
+                            <button onclick="cambiarMeta()" class="text-[10px] text-purple-400 font-black hover:underline">CAMBIAR</button>
                         </div>
                     </div>
                     <div class="progress-bar"><div class="progress-fill" style="width: ${porcentajeMeta}%"></div></div>
                 </div>
 
-                <div class="card-pro bg-green-500/5 border-green-500/20 flex justify-between items-center">
+                <div class="card-pro bg-green-500/5 border-green-500/20 flex justify-between items-center py-5">
                     <div>
-                        <p class="text-[10px] opacity-60 uppercase font-black text-green-400">Utilidad (Venta - Gasto)</p>
+                        <p class="text-[10px] opacity-60 uppercase font-black text-green-400 mb-1 italic">Utilidad Real (Bruto - Gastos)</p>
                         <h2 class="text-3xl font-black italic text-green-500">$${gananciaNeta.toLocaleString()}</h2>
                     </div>
-                    <div class="text-4xl opacity-20">📈</div>
+                    <div class="text-4xl opacity-30 animate-bounce">💎</div>
                 </div>
 
                 <div class="card-pro">
-                    <p class="text-[10px] opacity-40 uppercase font-black italic mb-4">Historial 7 Días</p>
+                    <p class="text-[10px] opacity-40 uppercase font-black italic mb-6 tracking-widest text-center">Analítica de Flujo</p>
                     <div class="h-48"><canvas id="mainChart"></canvas></div>
                 </div>
             `;
@@ -334,22 +342,22 @@
 
     function renderMore(app) {
         app.innerHTML = `
-            <h2 class="text-xl font-black italic text-white mb-6 uppercase text-center">Configuración y Gastos</h2>
+            <h2 class="text-xl font-black italic text-white mb-8 uppercase text-center tracking-tighter">Centro de Gestión</h2>
             <div class="grid grid-cols-1 gap-4">
-                <div onclick="setView('gastos')" class="card-pro flex items-center gap-4 active:scale-95 transition-transform cursor-pointer">
-                    <div class="text-3xl">💸</div>
-                    <div><b class="text-lg">GASTOS</b><p class="text-xs opacity-40">Registrar egresos y costos fijos</p></div>
+                <div onclick="setView('gastos')" class="card-pro flex items-center gap-5 active:scale-95 transition-all cursor-pointer border-red-500/20 bg-red-500/5">
+                    <div class="text-4xl">💸</div>
+                    <div><b class="text-xl font-black italic">REGISTRAR GASTOS</b><p class="text-[10px] opacity-50 font-bold uppercase tracking-widest">Egresos y fijos</p></div>
                 </div>
-                <div onclick="setView('compras')" class="card-pro flex items-center gap-4 active:scale-95 transition-transform cursor-pointer">
-                    <div class="text-3xl">🛒</div>
-                    <div><b class="text-lg">COMPRAS</b><p class="text-xs opacity-40">Entrada de material al stock</p></div>
+                <div onclick="setView('compras')" class="card-pro flex items-center gap-5 active:scale-95 transition-all cursor-pointer border-blue-500/20 bg-blue-500/5">
+                    <div class="text-4xl">🛒</div>
+                    <div><b class="text-xl font-black italic">INGRESAR COMPRAS</b><p class="text-[10px] opacity-50 font-bold uppercase tracking-widest">Carga de material</p></div>
                 </div>
-                <div onclick="setView('catalogo')" class="card-pro flex items-center gap-4 active:scale-95 transition-transform cursor-pointer">
-                    <div class="text-3xl">⚙️</div>
-                    <div><b class="text-lg">CATÁLOGO</b><p class="text-xs opacity-40">Gestionar materiales y servicios</p></div>
+                <div onclick="setView('catalogo')" class="card-pro flex items-center gap-5 active:scale-95 transition-all cursor-pointer border-purple-500/20">
+                    <div class="text-4xl">⚙️</div>
+                    <div><b class="text-xl font-black italic">CATÁLOGO</b><p class="text-[10px] opacity-50 font-bold uppercase tracking-widest">Ajustes de sistema</p></div>
                 </div>
-                <div class="card-pro opacity-30">
-                    <p class="text-center text-[10px] font-bold">GhostPrint App v31.0 - 2026</p>
+                <div class="card-pro opacity-20 py-10">
+                    <p class="text-center text-[9px] font-black uppercase tracking-[0.5em]">GhostPrint MASTER v31.0 • 2026</p>
                 </div>
             </div>
         `;
@@ -374,36 +382,36 @@
             data: {
                 labels: labels,
                 datasets: [
-                    { label: 'Ventas', data: vData, borderColor: '#8b5cf6', backgroundColor: 'rgba(139, 92, 246, 0.2)', fill: true, tension: 0.4, borderWidth: 3, pointRadius: 4, pointBackgroundColor: '#8b5cf6' },
+                    { label: 'Ventas', data: vData, borderColor: '#8b5cf6', backgroundColor: 'rgba(139, 92, 246, 0.2)', fill: true, tension: 0.4, borderWidth: 4, pointRadius: 5, pointBackgroundColor: '#8b5cf6' },
                     { label: 'Gastos', data: gData, borderColor: '#ef4444', fill: false, tension: 0.4, borderWidth: 2, borderDash: [5, 5], pointRadius: 0 }
                 ]
             },
-            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.03)' }, ticks: { color: '#64748b', font: { size: 9 } } }, x: { grid: { display: false }, ticks: { color: '#64748b', font: { size: 9 } } } } }
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.03)' }, ticks: { color: '#64748b', font: { size: 9, weight: 'bold' } } }, x: { grid: { display: false }, ticks: { color: '#64748b', font: { size: 9, weight: 'bold' } } } } }
         });
     }
 
     function renderVentas(app, inv, serv, today) {
         app.innerHTML = `
             <div class="card-pro">
-                <h2 class="text-xl font-black italic text-purple-400 mb-4 uppercase text-center">Nueva Venta 💵</h2>
+                <h2 class="text-xl font-black italic text-purple-400 mb-6 uppercase text-center tracking-tighter">Nueva Venta 💵</h2>
                 <input id="vDate" type="date" value="${today}">
                 <div class="grid grid-cols-2 gap-2"><input id="cli" placeholder="CLIENTE" class="uppercase font-bold"><input id="wha" type="tel" placeholder="WHATSAPP"></div>
-                <div class="bg-white/5 p-4 rounded-2xl border border-white/10 mt-2">
-                    <input id="vConcepto" placeholder="CONCEPTO DEL TRABAJO" class="uppercase !bg-purple-900/10 !border-purple-500/30 text-xs">
-                    <div class="grid grid-cols-2 gap-2 mt-2">
+                <div class="bg-purple-900/5 p-5 rounded-[24px] border border-purple-500/20 mt-3">
+                    <input id="vConcepto" placeholder="CONCEPTO DEL TRABAJO" class="uppercase !bg-black/20 !border-purple-500/20 text-xs py-4">
+                    <div class="grid grid-cols-2 gap-2 mt-3">
                         <select id="vMat" onchange="updateVentaUI()"><option value="">-- MATERIAL --</option>${Object.keys(inv).map(m=>`<option value="${m}">${m}</option>`).join("")}</select>
                         <select id="vServ" onchange="updateVentaUI()"><option value="">-- SERVICIO --</option>${serv.map(s=>`<option value="${s}">${s}</option>`).join("")}</select>
                     </div>
                     <div class="flex gap-2"><select id="vTipo" onchange="updateVentaUI()" class="w-1/2"><option value="DETAL">DETAL</option><option value="MAYOR">MAYOR</option><option value="LIBRE">LIBRE</option></select><input id="vCant" type="number" placeholder="CANT" oninput="updateVentaUI()" class="w-1/2"></div>
-                    <input id="vPrec" type="number" placeholder="PRECIO TOTAL $" class="text-4xl text-purple-400 font-black text-center bg-transparent border-none">
-                    <button onclick="addItem()" class="btn-main !bg-purple-600/20 !text-purple-300 !py-4 mt-2 shadow-none">+ AÑADIR TRABAJO</button>
+                    <input id="vPrec" type="number" placeholder="PRECIO TOTAL $" class="text-5xl text-purple-400 font-black text-center bg-transparent border-none py-6">
+                    <button onclick="addItem()" class="btn-main !bg-purple-600/10 !text-purple-300 !py-4 shadow-none border border-purple-500/20">+ AÑADIR A LISTA</button>
                 </div>
-                <div id="vLista" class="mt-4 space-y-2">
-                    ${window.cart.map((item, idx) => `<div class="flex justify-between items-center bg-white/5 p-4 rounded-2xl border-l-4 border-purple-500 text-xs"><div><div class="text-purple-300 font-black uppercase text-[10px] mb-1">${item.concepto || 'GENERAL'}</div><b>${item.m}</b><br><span class="opacity-40">${item.c} und - ${item.t}</span></div><div class="flex items-center gap-4"><b>$${item.p.toFixed(2)}</b><button onclick="removeItem(${idx})" class="text-red-500 text-lg">✕</button></div></div>`).join("")}
+                <div id="vLista" class="mt-6 space-y-2">
+                    ${window.cart.map((item, idx) => `<div class="flex justify-between items-center bg-white/5 p-5 rounded-[22px] border-l-4 border-purple-500 text-xs"><div><div class="text-purple-300 font-black uppercase text-[10px] mb-1">${item.concepto || 'GENERAL'}</div><b>${item.m}</b><br><span class="opacity-40 font-bold">${item.c} und - ${item.t}</span></div><div class="flex items-center gap-5"><b>$${item.p.toFixed(2)}</b><button onclick="removeItem(${idx})" class="text-red-500 text-xl font-black">✕</button></div></div>`).join("")}
                 </div>
-                <div class="text-5xl font-black text-center my-6 text-white italic">$${window.cart.reduce((a,b)=>a+b.p, 0).toFixed(2)}</div>
-                <input id="vAbono" type="number" placeholder="PAGO / ABONO ACTUAL $" class="text-2xl text-green-500 font-black text-center border-green-500/30">
-                <button onclick="saveVenta()" class="btn-main mt-4 py-5 shadow-lg">FINALIZAR VENTA</button>
+                <div class="text-5xl font-black text-center my-8 text-white italic tracking-tighter">$${window.cart.reduce((a,b)=>a+b.p, 0).toFixed(2)}</div>
+                <input id="vAbono" type="number" placeholder="ABONO INICIAL $" class="text-2xl text-green-500 font-black text-center border-green-500/20 py-5">
+                <button onclick="saveVenta()" class="btn-main mt-5 py-5 shadow-2xl">FINALIZAR Y GUARDAR</button>
             </div>`;
     }
 
@@ -418,27 +426,27 @@
         }, {});
         const clientesDeudores = Object.values(resumenPorCliente);
         app.innerHTML = `
-            <h2 class="text-xl font-black italic text-red-500 mb-6 uppercase text-center">Deudas Pendientes 📑</h2>
+            <h2 class="text-xl font-black italic text-red-500 mb-8 uppercase text-center tracking-tighter">Deudas Activas 📑</h2>
             <div class="space-y-6">
-                ${clientesDeudores.length === 0 ? '<div class="card-pro text-center py-20 opacity-30">NO HAY DEUDAS</div>' : ''}
+                ${clientesDeudores.length === 0 ? '<div class="card-pro text-center py-24 opacity-30 font-black">TODO ESTÁ PAGADO</div>' : ''}
                 ${clientesDeudores.map(c => `
-                    <div class="card-pro !p-0 overflow-hidden border-red-500/20">
-                        <div class="bg-red-500/10 p-5 flex justify-between items-center border-b border-white/5">
-                            <h3 class="text-lg font-black text-white uppercase italic">${c.nombre}</h3>
-                            <p class="text-2xl font-black text-red-500">$${c.deudaTotal.toFixed(2)}</p>
+                    <div class="card-pro !p-0 overflow-hidden border-red-500/20 shadow-red-500/5 shadow-xl">
+                        <div class="bg-red-500/10 p-6 flex justify-between items-center border-b border-white/5">
+                            <h3 class="text-lg font-black text-white uppercase italic tracking-tighter">${c.nombre}</h3>
+                            <p class="text-3xl font-black text-red-500 italic">$${c.deudaTotal.toFixed(2)}</p>
                         </div>
-                        <div class="p-4 space-y-3">
+                        <div class="p-4 space-y-4">
                             ${c.ventas.slice().reverse().map(v => `
-                                <div class="bg-black/30 p-4 rounded-2xl border border-white/5">
-                                    <div class="flex justify-between items-start mb-3"><span class="text-[10px] opacity-40 font-bold">${v.fecha}</span><b class="text-red-400">$${(v.total - v.abono).toFixed(2)}</b></div>
-                                    <div class="grid grid-cols-2 gap-2 mb-2">
-                                        <button onclick="abonar(${v.id})" class="bg-green-600/10 text-green-500 py-3 rounded-xl text-xs font-black">Abonar</button>
-                                        <button onclick="liquidar(${v.id})" class="bg-green-600 text-white py-3 rounded-xl text-xs font-black">Liquidar</button>
-                                        <button onclick="showReceipt(${v.id})" class="bg-purple-600/20 text-purple-400 py-3 rounded-xl col-span-2 text-xs font-black">📄 VER RECIBO</button>
+                                <div class="bg-black/40 p-5 rounded-[24px] border border-white/5">
+                                    <div class="flex justify-between items-start mb-4"><span class="text-[10px] opacity-40 font-black uppercase tracking-widest">${v.fecha}</span><b class="text-red-400 text-lg font-black">$${(v.total - v.abono).toFixed(2)}</b></div>
+                                    <div class="grid grid-cols-2 gap-3 mb-3">
+                                        <button onclick="abonar(${v.id})" class="bg-green-600/10 text-green-500 py-4 rounded-2xl text-xs font-black">ABONAR</button>
+                                        <button onclick="liquidar(${v.id})" class="bg-green-600 text-white py-4 rounded-2xl text-xs font-black shadow-lg shadow-green-900/40">LIQUIDAR</button>
+                                        <button onclick="showReceipt(${v.id})" class="bg-purple-600/20 text-purple-400 py-4 rounded-2xl col-span-2 text-xs font-black tracking-widest">📄 VER RECIBO</button>
                                     </div>
-                                    <div class="flex gap-2 border-t border-white/5 pt-2 mt-2">
-                                        <button onclick="editVenta(${v.id})" class="flex-1 bg-white/5 text-gray-400 py-2 rounded-lg text-[10px] font-bold">EDITAR</button>
-                                        <button onclick="delVenta(${v.id})" class="flex-1 bg-red-900/20 text-red-500 py-2 rounded-lg text-[10px] font-bold">BORRAR</button>
+                                    <div class="flex gap-3 border-t border-white/5 pt-3 mt-3">
+                                        <button onclick="editVenta(${v.id})" class="flex-1 bg-white/5 text-gray-500 py-3 rounded-xl text-[10px] font-black uppercase">EDITAR</button>
+                                        <button onclick="delVenta(${v.id})" class="flex-1 bg-red-900/10 text-red-500 py-3 rounded-xl text-[10px] font-black uppercase">BORRAR</button>
                                     </div>
                                 </div>`).join("")}
                         </div>
@@ -448,20 +456,20 @@
 
     function renderInventario(app, inv) {
         app.innerHTML = `
-            <h2 class="text-xl font-black italic text-blue-400 mb-6 uppercase text-center">Control de Stock 📦</h2>
-            <div class="space-y-3">
+            <h2 class="text-xl font-black italic text-blue-400 mb-8 uppercase text-center tracking-tighter">Estado de Inventario 📦</h2>
+            <div class="space-y-4">
             ${Object.entries(inv).map(([n, i]) => `
-                <div class="card-pro flex justify-between items-center border-l-8 ${i.stock < 5 ? 'border-red-600' : 'border-blue-600'}">
+                <div class="card-pro flex justify-between items-center border-l-8 ${i.stock < 5 ? 'border-red-600 bg-red-500/5' : 'border-blue-600 bg-blue-500/5'} py-6">
                     <div class="flex-1">
-                        <b class="uppercase text-purple-400 text-[11px] font-black">${n}</b><br>
-                        <span class="text-4xl font-black italic text-white">${(i.stock || 0).toFixed(2)}</span>
-                        <p class="text-[9px] opacity-40 font-bold">UNIDADES DISPONIBLES</p>
+                        <b class="uppercase text-purple-400 text-[11px] font-black tracking-widest mb-1 block">${n}</b>
+                        <span class="text-5xl font-black italic text-white tracking-tighter">${(i.stock || 0).toFixed(2)}</span>
+                        <p class="text-[9px] opacity-40 font-black uppercase tracking-tighter">UNIDADES EN STOCK</p>
                     </div>
-                    <div class="flex flex-col gap-2">
-                        <button onclick="registrarMerma('${n}')" class="bg-red-600/20 text-red-500 px-4 py-2 rounded-xl text-[10px] font-black">MERMA</button>
+                    <div class="flex flex-col gap-3">
+                        <button onclick="registrarMerma('${n}')" class="bg-red-600/20 text-red-500 px-5 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest">MERMA</button>
                         <div class="flex gap-2">
-                            <button onclick="editItemInv('${n}')" class="p-3 bg-blue-600/10 text-blue-400 rounded-xl">✏️</button>
-                            <button onclick="delItemInv('${n}')" class="p-3 bg-red-600/10 text-red-500 rounded-xl">🗑️</button>
+                            <button onclick="editItemInv('${n}')" class="p-4 bg-blue-600/10 text-blue-400 rounded-2xl">✏️</button>
+                            <button onclick="delItemInv('${n}')" class="p-4 bg-red-600/10 text-red-500 rounded-2xl">🗑️</button>
                         </div>
                     </div>
                 </div>`).join("")}
@@ -472,24 +480,24 @@
         const compras = window.state.compras || [];
         app.innerHTML = `
             <div class="card-pro">
-                <h2 class="text-xl font-black italic text-blue-400 mb-4 uppercase text-center">Entrada de Stock 🛒</h2>
+                <h2 class="text-xl font-black italic text-blue-400 mb-6 uppercase text-center tracking-tighter">Carga de Material 🛒</h2>
                 <select id="cMat"><option value="">-- SELECCIONAR MATERIAL --</option>${Object.keys(inv).map(m=>`<option value="${m}">${m}</option>`).join("")}</select>
                 <div class="grid grid-cols-2 gap-2"><input id="cCant" type="number" placeholder="CANTIDAD"><input id="cCosto" type="number" placeholder="COSTO TOTAL $"></div>
                 <div class="grid grid-cols-2 gap-2 mt-2"><input id="cVentaD" type="number" placeholder="P. DETAL $"><input id="cVentaM" type="number" placeholder="P. MAYOR $"></div>
-                <button onclick="saveCompra()" class="btn-main !bg-blue-600 mt-4">REGISTRAR ENTRADA</button>
+                <button onclick="saveCompra()" class="btn-main !bg-blue-600 mt-5 py-5 shadow-blue-900/40">REGISTRAR ENTRADA</button>
             </div>
-            <h3 class="text-xs font-black opacity-40 uppercase mb-2 px-2 italic">Historial de Compras</h3>
-            <div class="space-y-2">
+            <h3 class="text-xs font-black opacity-40 uppercase mb-4 px-3 italic tracking-[0.2em]">Registro Histórico</h3>
+            <div class="space-y-3">
                 ${compras.slice().reverse().map((c, idx) => {
                     const originalIdx = compras.length - 1 - idx;
                     return `
-                    <div class="bg-white/5 p-4 rounded-2xl flex justify-between items-center text-xs">
-                        <div><div class="font-black text-blue-400 uppercase">${c.m}</div><div class="opacity-40">${c.f ? c.f.split('T')[0] : 'S/F'}</div></div>
-                        <div class="flex items-center gap-3">
-                            <div class="text-right"><b>${c.c} und</b><br><span class="text-green-500 font-bold">$${(c.costo || 0).toFixed(2)}</span></div>
+                    <div class="bg-white/5 p-5 rounded-[24px] flex justify-between items-center text-xs border border-white/5">
+                        <div><div class="font-black text-blue-400 uppercase italic mb-1">${c.m}</div><div class="opacity-40 font-bold">${c.f ? c.f.split('T')[0] : 'S/F'}</div></div>
+                        <div class="flex items-center gap-4">
+                            <div class="text-right"><b>${c.c} und</b><br><span class="text-green-500 font-black text-sm">$${(c.costo || 0).toFixed(2)}</span></div>
                             <div class="flex flex-col gap-1">
-                                <button onclick="editCompra(${originalIdx})" class="p-2 bg-blue-600/20 text-blue-400 rounded-lg">✏️</button>
-                                <button onclick="delCompra(${originalIdx})" class="p-2 bg-red-500/20 text-red-500 rounded-lg">🗑️</button>
+                                <button onclick="editCompra(${originalIdx})" class="p-3 bg-blue-600/20 text-blue-400 rounded-xl">✏️</button>
+                                <button onclick="delCompra(${originalIdx})" class="p-3 bg-red-500/20 text-red-500 rounded-xl">🗑️</button>
                             </div>
                         </div>
                     </div>`}).join("")}
@@ -500,18 +508,18 @@
         const gastos = window.state.gastos || [];
         app.innerHTML = `
             <div class="card-pro">
-                <h2 class="text-xl font-black italic text-red-500 mb-4 uppercase text-center">Nuevo Gasto 💸</h2>
+                <h2 class="text-xl font-black italic text-red-500 mb-6 uppercase text-center tracking-tighter">Nuevo Egreso 💸</h2>
                 <input id="gDate" type="date" value="${today}"><input id="gDesc" placeholder="CONCEPTO DEL GASTO"><input id="gMonto" type="number" placeholder="MONTO $">
-                <button onclick="saveGasto()" class="btn-main mt-2 !bg-red-600">REGISTRAR EGRESO</button>
+                <button onclick="saveGasto()" class="btn-main mt-3 !bg-red-600 shadow-red-900/40">REGISTRAR GASTO</button>
             </div>
-            <h3 class="text-xs font-black opacity-40 uppercase mb-2 px-2 italic">Historial de Egresos</h3>
-            <div class="space-y-2">
+            <h3 class="text-xs font-black opacity-40 uppercase mb-4 px-3 italic tracking-[0.2em]">Historial de Salidas</h3>
+            <div class="space-y-3">
                 ${gastos.slice().reverse().map((g, idx) => {
                     const originalIdx = gastos.length - 1 - idx;
                     return `
-                    <div class="bg-white/5 p-4 rounded-2xl flex justify-between items-center text-xs">
-                        <div><div class="font-black text-white uppercase">${g.desc}</div><div class="opacity-40">${g.fecha}</div></div>
-                        <div class="flex items-center gap-4"><b class="text-red-500">$${Number(g.monto).toFixed(2)}</b><button onclick="delGasto(${originalIdx})" class="text-red-500 text-lg">✕</button></div>
+                    <div class="bg-white/5 p-5 rounded-[24px] flex justify-between items-center text-xs border border-white/5">
+                        <div><div class="font-black text-white uppercase italic mb-1">${g.desc}</div><div class="opacity-40 font-bold">${g.fecha}</div></div>
+                        <div class="flex items-center gap-5"><b class="text-red-500 text-lg font-black">$${Number(g.monto).toFixed(2)}</b><button onclick="delGasto(${originalIdx})" class="text-red-500 text-2xl font-black">✕</button></div>
                     </div>`}).join("")}
             </div>`;
     }
@@ -573,7 +581,6 @@
         let nMay = parseFloat(prompt("Editar Precio Mayor Actual $:", window.state.inventario[m].precioMayor));
         
         if(!isNaN(nCant) && !isNaN(nCosto)) {
-            // Reajuste de stock
             window.state.inventario[m].stock = (window.state.inventario[m].stock - comp.c) + nCant;
             comp.c = nCant;
             comp.costo = nCosto;
@@ -602,14 +609,14 @@
     window.renderCatalogo = function(app, inv, serv) {
         app.innerHTML = `
             <div class="card-pro">
-                <h3 class="text-xs font-black text-blue-400 uppercase mb-4 italic">Materiales Stock</h3>
-                <input id="nMat" placeholder="NOMBRE MATERIAL"><button onclick="crearMat()" class="btn-main !py-3 !bg-blue-600/20 shadow-none">AÑADIR MATERIAL</button>
-                <div class="mt-4 space-y-1">${Object.keys(inv).map(m => `<div class="bg-black/40 p-3 rounded-xl flex justify-between text-xs"><span>${m}</span><button onclick="delMat('${m}')" class="text-red-500 font-bold">✕</button></div>`).join("")}</div>
+                <h3 class="text-xs font-black text-blue-400 uppercase mb-6 italic tracking-widest">Base de Materiales</h3>
+                <input id="nMat" placeholder="NOMBRE MATERIAL"><button onclick="crearMat()" class="btn-main !py-3 !bg-blue-600/20 shadow-none border border-blue-500/20">AÑADIR MATERIAL</button>
+                <div class="mt-4 space-y-1">${Object.keys(inv).map(m => `<div class="bg-black/40 p-4 rounded-xl flex justify-between text-xs border border-white/5"><span>${m}</span><button onclick="delMat('${m}')" class="text-red-500 font-black">✕</button></div>`).join("")}</div>
             </div>
             <div class="card-pro mt-4">
-                <h3 class="text-xs font-black text-purple-400 uppercase mb-4 italic">Servicios Mano de Obra</h3>
-                <input id="nServ" placeholder="Nombre"><button onclick="crearServicio()" class="btn-main !py-3 !bg-purple-600/20 shadow-none">AÑADIR SERVICIO</button>
-                <div class="grid grid-cols-2 gap-2 mt-4">${serv.map((s, idx) => `<div class="bg-black/40 p-3 rounded-xl flex justify-between text-[10px]"><span>${s}</span><button onclick="delServicio(${idx})" class="text-red-500 font-bold">✕</button></div>`).join("")}</div>
+                <h3 class="text-xs font-black text-purple-400 uppercase mb-6 italic tracking-widest">Servicios Mano de Obra</h3>
+                <input id="nServ" placeholder="Nombre"><button onclick="crearServicio()" class="btn-main !py-3 !bg-purple-600/20 shadow-none border border-purple-500/20">AÑADIR SERVICIO</button>
+                <div class="grid grid-cols-2 gap-2 mt-4">${serv.map((s, idx) => `<div class="bg-black/40 p-4 rounded-xl flex justify-between text-[10px] border border-white/5"><span>${s}</span><button onclick="delServicio(${idx})" class="text-red-500 font-black">✕</button></div>`).join("")}</div>
             </div>`;
     };
 
@@ -623,19 +630,19 @@
         const v = window.state.ventas.find(x => x.id === id);
         document.getElementById("receiptContent").innerHTML = `
             <div class="text-center mb-6">
-                <span class="text-3xl">👻</span>
-                <h2 class="text-2xl font-black italic text-purple-600">GHOST PRINT</h2>
-                <p class="text-[9px] text-gray-400 uppercase font-bold">Publicidad & Diseño</p>
+                <span class="text-4xl">👻</span>
+                <h2 class="text-2xl font-black italic text-purple-600 tracking-tighter">GHOST PRINT</h2>
+                <p class="text-[9px] text-gray-400 uppercase font-black tracking-widest">Publicidad & Diseño</p>
             </div>
-            <div class="flex justify-between mb-2 text-gray-500"><span>RECIBO #${v.id.toString().slice(-6)}</span><span>${v.fecha}</span></div>
-            <p class="font-black uppercase text-sm border-b pb-2 mb-4">${v.cliente}</p>
-            <div class="border-b border-dashed border-gray-300 mb-4 py-2">
-                ${v.items.map(i => `<div class="mb-3"><div class="text-[10px] text-gray-500 font-bold">${i.concepto}</div><div class="flex justify-between font-bold"><span>${i.c}x ${i.m}</span><span>$${i.p.toFixed(2)}</span></div></div>`).join("")}
+            <div class="flex justify-between mb-2 text-gray-500 font-bold"><span>COMPROBANTE #${v.id.toString().slice(-6)}</span><span>${v.fecha}</span></div>
+            <p class="font-black uppercase text-sm border-b-2 border-black pb-3 mb-5 tracking-tighter">${v.cliente}</p>
+            <div class="border-b-2 border-dashed border-gray-300 mb-5 py-2">
+                ${v.items.map(i => `<div class="mb-4"><div class="text-[10px] text-gray-500 font-black uppercase italic tracking-tighter">${i.concepto}</div><div class="flex justify-between font-black text-xs"><span>${i.c}x ${i.m}</span><span>$${i.p.toFixed(2)}</span></div></div>`).join("")}
             </div>
-            <div class="space-y-1">
-                <div class="flex justify-between font-black text-lg"><span>TOTAL:</span><span>$${v.total.toFixed(2)}</span></div>
-                <div class="flex justify-between text-green-700 font-bold"><span>PAGADO:</span><span>$${v.abono.toFixed(2)}</span></div>
-                <div class="flex justify-between text-red-600 font-black border-t-2 border-black pt-1"><span>DEUDA:</span><span>$${(v.total - v.abono).toFixed(2)}</span></div>
+            <div class="space-y-2">
+                <div class="flex justify-between font-black text-xl italic tracking-tighter"><span>TOTAL:</span><span>$${v.total.toFixed(2)}</span></div>
+                <div class="flex justify-between text-green-700 font-black text-sm"><span>PAGADO:</span><span>$${v.abono.toFixed(2)}</span></div>
+                <div class="flex justify-between text-red-600 font-black text-lg border-t-4 border-black pt-2 italic tracking-tighter"><span>DEUDA:</span><span>$${((v.total - v.abono) < 0.01 ? 0 : v.total - v.abono).toFixed(2)}</span></div>
             </div>`;
         window.currentReceiptId = id; document.getElementById("receiptModal").classList.remove("hidden");
     };
