@@ -40,7 +40,7 @@
             background: rgba(5, 5, 10, 0.85);
             backdrop-filter: blur(25px);
             z-index: 1000;
-            display: flex;
+            display: none; 
             align-items: center;
             justify-content: space-between;
             padding: 0 20px;
@@ -55,7 +55,7 @@
             height: 75px;
             background: rgba(10, 10, 20, 0.98);
             backdrop-filter: blur(20px);
-            display: flex;
+            display: none; 
             justify-content: space-around;
             align-items: center;
             padding-bottom: var(--safe-bottom);
@@ -112,12 +112,6 @@
         }
         input:focus { border-color: var(--ghost-purple); background: rgba(139, 92, 246, 0.05); }
 
-        select option {
-            background-color: #0f0f1e;
-            color: #ffffff;
-            font-weight: 700;
-        }
-
         .btn-main { 
             background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%); 
             color: white; 
@@ -140,12 +134,42 @@
             letter-spacing: 0.05em;
         }
 
+        .pin-dot {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            border: 2px solid var(--ghost-purple);
+            transition: all 0.2s;
+        }
+        .pin-dot.filled {
+            background-color: var(--ghost-purple);
+            box-shadow: 0 0 10px var(--ghost-purple);
+        }
+        .key-btn {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(139, 92, 246, 0.1);
+            color: white;
+            font-size: 24px;
+            font-weight: 800;
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.1s;
+        }
+        .key-btn:active {
+            background: var(--ghost-purple);
+            transform: scale(0.9);
+        }
+
         ::-webkit-scrollbar { display: none; }
     </style>
 </head>
 <body>
 
-<header class="app-header">
+<header class="app-header" id="mainHeader">
     <div class="flex items-center gap-3">
         <span class="text-3xl ghost-glow">👻</span>
         <div>
@@ -158,7 +182,7 @@
 
 <div id="app" class="px-4 max-w-2xl mx-auto"></div>
 
-<nav class="bottom-nav">
+<nav class="bottom-nav" id="mainNav">
     <div onclick="setView('inicio')" class="nav-item active" id="n-inicio"><span>📊</span><span>CONTROL</span></div>
     <div onclick="setView('ventas')" class="nav-item" id="n-ventas"><span>💵</span><span>VENTAS</span></div>
     <div onclick="setView('cobrar')" class="nav-item" id="n-cobrar"><span>📑</span><span>DEUDAS</span></div>
@@ -166,7 +190,6 @@
     <div onclick="setView('more')" class="nav-item" id="n-more"><span>➕</span><span>MÁS</span></div>
 </nav>
 
-<!-- Modal Recibo -->
 <div id="receiptModal" class="fixed inset-0 bg-black/95 z-[2000] hidden flex items-center justify-center p-4 backdrop-blur-md">
     <div class="bg-white text-black p-8 rounded-[32px] w-full max-w-sm shadow-2xl relative border-4 border-purple-500/20">
         <div id="receiptContent" class="text-[11px] font-mono border-black pt-4"></div>
@@ -186,14 +209,20 @@
     const db = firebase.firestore();
     const docRef = db.collection("sistema").doc("datos_principales");
 
-    window.state = { ventas: [], inventario: {}, compras: [], gastos: [], servicios: ["DISEÑO", "IMPRESIÓN", "CORTE", "INSTALACIÓN", "LAMINADO", "ACABADO"], metaMensual: 3000, tasaBCV: 0 };
+    // CONFIGURACIÓN INICIAL
+    const MASTER_PIN = "2210"; 
+    window.isUnlocked = false;
+    window.currentPinInput = "";
+
+    window.state = { ventas: [], inventario: {}, compras: [], gastos: [], comprasUSDT: [], servicios: ["DISEÑO", "IMPRESIÓN", "CORTE", "INSTALACIÓN", "LAMINADO", "ACABADO"], metaMensual: 3000, tasaBCV: 0 };
     window.currentView = 'inicio';
     window.cart = [];
-    window.dashboardFilter = 'all'; // Default a "Todo"
+    window.dashboardFilter = 'all';
 
     const formatVE = (usd) => {
         const tasa = window.state.tasaBCV || 0;
-        return (usd * tasa).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        const val = parseFloat(usd) || 0;
+        return (val * tasa).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     };
 
     window.sincronizarBCV = async function() {
@@ -226,29 +255,92 @@
     docRef.onSnapshot(doc => { if(doc.exists) { window.state = doc.data(); render(); } });
 
     window.setView = function(v) { 
+        if(!window.isUnlocked) return;
         window.currentView = v; 
         document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active')); 
         document.getElementById('n-'+v)?.classList.add('active'); 
         render(); 
     };
 
+    window.pressKey = (n) => {
+        if(window.currentPinInput.length < 4) {
+            window.currentPinInput += n;
+            updatePinDots();
+            if(window.currentPinInput.length === 4) {
+                setTimeout(checkPin, 200);
+            }
+        }
+    };
+
+    window.deleteKey = () => {
+        window.currentPinInput = window.currentPinInput.slice(0, -1);
+        updatePinDots();
+    };
+
+    function updatePinDots() {
+        const dots = document.querySelectorAll('.pin-dot');
+        dots.forEach((dot, i) => {
+            if(i < window.currentPinInput.length) dot.classList.add('filled');
+            else dot.classList.remove('filled');
+        });
+    }
+
+    function checkPin() {
+        if(window.currentPinInput === MASTER_PIN) {
+            window.isUnlocked = true;
+            document.getElementById('mainHeader').style.display = 'flex';
+            document.getElementById('mainNav').style.display = 'flex';
+            render();
+        } else {
+            window.currentPinInput = "";
+            updatePinDots();
+            const container = document.getElementById('pin-container');
+            container.classList.add('animate-shake');
+            showToast("❌ PIN INCORRECTO");
+            setTimeout(() => container.classList.remove('animate-shake'), 400);
+        }
+    }
+
     window.render = function() {
         const app = document.getElementById("app");
+        if(!window.isUnlocked) {
+            app.innerHTML = `
+                <div class="min-h-[80vh] flex flex-col items-center justify-center pt-10">
+                    <div class="text-center mb-10">
+                        <span class="text-7xl ghost-glow block mb-4">👻</span>
+                        <h1 class="text-3xl font-black italic tracking-tighter text-white uppercase leading-none">BIENVENIDO</h1>
+                        <p class="text-[10px] font-bold opacity-40 uppercase tracking-[0.4em] text-purple-400 mt-2">Acceso Seguro GhostPrint</p>
+                    </div>
+                    <div id="pin-container" class="flex flex-col items-center">
+                        <div class="flex gap-4 mb-12">
+                            <div class="pin-dot"></div><div class="pin-dot"></div><div class="pin-dot"></div><div class="pin-dot"></div>
+                        </div>
+                        <div class="grid grid-cols-3 gap-6">
+                            ${[1,2,3,4,5,6,7,8,9].map(n => `<button onclick="pressKey('${n}')" class="key-btn">${n}</button>`).join("")}
+                            <button class="key-btn opacity-0 pointer-events-none"></button>
+                            <button onclick="pressKey('0')" class="key-btn">0</button>
+                            <button onclick="deleteKey()" class="key-btn text-red-500">⌫</button>
+                        </div>
+                    </div>
+                </div>`;
+            return;
+        }
+
         const inv = window.state.inventario || {};
         const tasa = window.state.tasaBCV || 0;
         const vM_all = window.state.ventas || [];
         const gM_all = window.state.gastos || [];
         const cM_all = window.state.compras || [];
+        const uM_all = window.state.comprasUSDT || [];
 
-        // Filtro de Tiempo
         const now = new Date();
-        const currentMonth = now.toISOString().slice(0, 7); // YYYY-MM
+        const currentMonth = now.toISOString().slice(0, 7);
         const lastMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
         const lastMonthStr = lastMonthDate.toISOString().slice(0, 7);
 
         const isDateInFilter = (dateStr) => {
             if (window.dashboardFilter === 'all') return true;
-            if (!dateStr) return true; // Para registros muy viejos sin fecha
+            if (!dateStr) return true;
             if (window.dashboardFilter === 'this_month') return dateStr.startsWith(currentMonth);
             if (window.dashboardFilter === 'last_month') return dateStr.startsWith(lastMonthStr);
             return true;
@@ -258,7 +350,6 @@
         const gM = gM_all.filter(g => isDateInFilter(g.fecha || (g.f ? g.f.split('T')[0] : '')));
 
         if(window.currentView === 'inicio') {
-            // Inventario es Absoluto siempre (No se filtra por mes)
             let invCostTotal = 0;
             let invSaleTotal = 0;
             Object.keys(inv).forEach(m => {
@@ -269,7 +360,6 @@
                 invSaleTotal += (parseFloat(item.stock) || 0) * (parseFloat(item.precioDetal) || 0);
             });
 
-            // Caja y Deudas Absolutas (Todo el tiempo) con Filtro Seguro Antibasura
             const totalRecaudadoGlobal = vM_all.reduce((acc, v) => acc + (parseFloat(v.abono) || 0), 0);
             const totalGastosGlobal = gM_all.reduce((acc, g) => acc + (parseFloat(g.monto) || 0), 0);
             const porCobrarGlobal = vM_all.reduce((acc, v) => {
@@ -278,26 +368,26 @@
             }, 0);
             const cajaReal = totalRecaudadoGlobal - totalGastosGlobal;
 
-            // Rendimiento según el Filtro
             const totalVentasBrutasFiltrado = vM.reduce((acc, v) => acc + (parseFloat(v.total) || 0), 0);
             const totalGastosFiltrado = gM.reduce((acc, g) => acc + (parseFloat(g.monto) || 0), 0);
+
+            const tUSDT_Global = uM_all.reduce((acc, c) => acc + (parseFloat(c.usdt) || 0), 0);
             
             const meta = window.state.metaMensual || 3000;
             const porc = Math.min((totalVentasBrutasFiltrado / meta) * 100, 100);
 
             app.innerHTML = `
-                <!-- Selector de Filtro de Tiempo -->
                 <div class="mb-4">
                     <select onchange="window.dashboardFilter = this.value; render();" class="!py-3 !bg-black/60 !border-purple-500/30 text-xs text-center font-black italic shadow-lg rounded-2xl">
-                        <option value="all" ${window.dashboardFilter === 'all' ? 'selected' : ''}>⏳ MOSTRAR TODO EL HISTORIAL</option>
-                        <option value="this_month" ${window.dashboardFilter === 'this_month' ? 'selected' : ''}>📅 MOSTRAR SÓLO ESTE MES</option>
-                        <option value="last_month" ${window.dashboardFilter === 'last_month' ? 'selected' : ''}>⏮️ MOSTRAR MES PASADO</option>
+                        <option value="all" ${window.dashboardFilter === 'all' ? 'selected' : ''}>⏳ TODO EL HISTORIAL</option>
+                        <option value="this_month" ${window.dashboardFilter === 'this_month' ? 'selected' : ''}>📅 ESTE MES</option>
+                        <option value="last_month" ${window.dashboardFilter === 'last_month' ? 'selected' : ''}>⏮️ MES PASADO</option>
                     </select>
                 </div>
 
                 <div class="card-pro bg-gradient-to-br from-purple-800/40 via-black/40 to-black/60 border-purple-500/30 text-center py-8 relative overflow-hidden">
-                    <p class="text-[11px] opacity-60 uppercase font-black tracking-[0.3em] mb-2 text-purple-300 italic font-black">Disponible en Caja Real 💸</p>
-                    <h2 class="text-6xl font-black italic text-white tracking-tighter leading-none">$${cajaReal.toLocaleString(undefined, {minimumFractionDigits: 2})}</h2>
+                    <p class="text-[11px] opacity-60 uppercase font-black tracking-[0.3em] mb-2 text-purple-300 italic font-black leading-none">Disponible en Caja Real 💸</p>
+                    <h2 class="text-6xl font-black italic text-white tracking-tighter leading-none mt-1">$${cajaReal.toLocaleString(undefined, {minimumFractionDigits: 2})}</h2>
                     <p class="bs-label mt-1">Bs. ${formatVE(cajaReal)}</p>
                     <div class="mt-6 flex flex-col items-center gap-3">
                         <div class="bg-white/5 px-5 py-2 rounded-2xl border border-white/10 flex items-center gap-3 active:scale-95 transition-transform">
@@ -310,28 +400,34 @@
                     </div>
                 </div>
 
-                <div class="grid grid-cols-3 gap-3 mb-4">
+                <div class="grid grid-cols-2 gap-3 mb-4">
                     <div class="card-pro !mb-0 !p-3 border-yellow-500/20 text-center bg-yellow-500/5">
-                        <p class="text-[8px] opacity-50 uppercase font-black text-yellow-500 mb-1">Por Cobrar</p>
-                        <h2 class="text-lg font-black text-white leading-none">$${porCobrarGlobal.toLocaleString(undefined, {minimumFractionDigits: 2})}</h2>
-                        <span class="text-[7px] text-yellow-500 font-bold uppercase">Bs. ${formatVE(porCobrarGlobal)}</span>
+                        <p class="text-[8px] opacity-50 uppercase font-black text-yellow-500 mb-1 leading-none">Deudas Clientes</p>
+                        <h2 class="text-xl font-black text-white leading-none mt-1">$${porCobrarGlobal.toLocaleString(undefined, {minimumFractionDigits: 2})}</h2>
+                        <span class="text-[7px] text-yellow-500 font-bold uppercase leading-none">Bs. ${formatVE(porCobrarGlobal)}</span>
+                    </div>
+                    <!-- TARJETA USDT AMARILLA -->
+                    <div class="card-pro !mb-0 !p-3 border-amber-500/30 text-center bg-amber-500/10 flex flex-col justify-between items-center relative overflow-hidden">
+                        <div>
+                            <p class="text-[8px] font-black text-amber-500 uppercase tracking-widest mb-1 italic leading-none">Billetera USDT 🔶</p>
+                            <h2 class="text-xl font-black text-white leading-none mt-1">${tUSDT_Global.toFixed(2)}</h2>
+                        </div>
+                        <button onclick="abrirCompraUSDT()" class="mt-2 bg-amber-500 text-black px-3 py-1 rounded-lg font-black text-[8px] uppercase active:scale-90 transition-transform shadow-[0_0_8px_rgba(245,158,11,0.4)]">COMPRAR</button>
                     </div>
                     <div class="card-pro !mb-0 !p-3 border-blue-500/20 text-center bg-blue-500/5">
-                        <p class="text-[8px] opacity-50 uppercase font-black text-blue-400 mb-1">Costo Stock</p>
-                        <h2 class="text-lg font-black text-white leading-none">$${invCostTotal.toLocaleString(undefined, {minimumFractionDigits: 2})}</h2>
-                        <span class="text-[7px] text-blue-400 font-bold uppercase">Bs. ${formatVE(invCostTotal)}</span>
+                        <p class="text-[8px] opacity-50 uppercase font-black text-blue-400 mb-1 leading-none">Costo Stock</p>
+                        <h2 class="text-xl font-black text-white leading-none mt-1">$${invCostTotal.toLocaleString(undefined, {minimumFractionDigits: 2})}</h2>
                     </div>
                     <div class="card-pro !mb-0 !p-3 border-green-500/20 text-center bg-green-500/5">
-                        <p class="text-[8px] opacity-50 uppercase font-black text-green-400 mb-1">Ganancia Stock</p>
-                        <h2 class="text-lg font-black text-white leading-none">$${(invSaleTotal - invCostTotal).toLocaleString(undefined, {minimumFractionDigits: 2})}</h2>
-                        <span class="text-[7px] text-green-400 font-bold uppercase">Bs. ${formatVE(invSaleTotal - invCostTotal)}</span>
+                        <p class="text-[8px] opacity-50 uppercase font-black text-green-400 mb-1 leading-none">Ganancia Stock</p>
+                        <h2 class="text-xl font-black text-white leading-none mt-1">$${(invSaleTotal - invCostTotal).toLocaleString(undefined, {minimumFractionDigits: 2})}</h2>
                     </div>
                 </div>
 
                 <div class="card-pro">
                     <div class="flex justify-between items-end mb-3">
                         <div>
-                            <p class="text-[10px] opacity-50 uppercase font-black italic mb-1 font-black leading-none">Ventas ${window.dashboardFilter !== 'all' ? 'del Periodo' : 'Totales Brutas'}</p>
+                            <p class="text-[10px] opacity-50 uppercase font-black italic mb-1 font-black leading-none">Ventas Período</p>
                             <h3 class="text-3xl font-black italic text-purple-400 leading-none font-black mt-2">$${totalVentasBrutasFiltrado.toLocaleString(undefined, {minimumFractionDigits: 2})}</h3>
                             <p class="bs-label text-left text-[9px] mt-1 text-purple-400/60 font-black italic">Bs. ${formatVE(totalVentasBrutasFiltrado)}</p>
                         </div>
@@ -352,8 +448,7 @@
                 <div class="card-pro">
                     <p class="text-[10px] opacity-40 uppercase font-black italic mb-6 tracking-widest text-center font-black uppercase">Analítica de Rendimiento</p>
                     <div class="h-48"><canvas id="mainChart"></canvas></div>
-                </div>
-            `;
+                </div>`;
             setTimeout(() => initChart(vM, gM), 200);
         }
         else if(window.currentView === 'ventas') renderVentas(app, inv, tasa);
@@ -365,20 +460,61 @@
         else if(window.currentView === 'more') renderMore(app, inv);
     };
 
+    function renderInventario(app, inv, tasa) {
+        app.innerHTML = `
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-black italic text-blue-400 uppercase tracking-tighter leading-none">LISTA DE PRECIOS 📦</h2>
+                <div class="bg-blue-600 text-white px-3 py-1 rounded-full text-[10px] font-black italic tracking-widest uppercase">Stock Activo</div>
+            </div>
+            
+            <div class="space-y-4">
+                ${Object.entries(inv).map(([n, i]) => `
+                    <div class="card-pro border-l-8 ${Number(i.stock) < 5 ? 'border-red-600' : 'border-blue-600'} py-6 relative overflow-hidden">
+                        <div class="flex justify-between items-start mb-4 border-b border-white/10 pb-4">
+                            <div class="flex-1">
+                                <b class="uppercase text-white text-[15px] font-black block leading-none mb-3 italic tracking-tight">${n}</b>
+                                <div class="grid grid-cols-1 gap-2">
+                                    <div class="bg-purple-600/10 p-2 rounded-xl border border-purple-500/20">
+                                        <p class="text-[8px] font-black text-purple-400 uppercase leading-none mb-1">Precio Detal</p>
+                                        <div class="flex justify-between items-end">
+                                            <span class="text-lg font-black text-white leading-none">$${(parseFloat(i.precioDetal)||0).toFixed(2)}</span>
+                                            <span class="text-[9px] font-black text-purple-400/60 italic leading-none">Bs. ${formatVE(i.precioDetal)}</span>
+                                        </div>
+                                    </div>
+                                    <div class="bg-green-600/10 p-2 rounded-xl border border-green-500/20">
+                                        <p class="text-[8px] font-black text-green-400 uppercase leading-none mb-1">Precio Mayor</p>
+                                        <div class="flex justify-between items-end">
+                                            <span class="text-lg font-black text-white leading-none">$${(parseFloat(i.precioMayor)||0).toFixed(2)}</span>
+                                            <span class="text-[9px] font-black text-green-400/60 italic leading-none">Bs. ${formatVE(i.precioMayor)}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="text-right ml-4">
+                                <p class="text-[9px] opacity-40 font-black uppercase leading-none mb-1">Stock</p>
+                                <span class="text-5xl font-black italic text-white tracking-tighter leading-none">${(parseFloat(i.stock) || 0).toFixed(2)}</span>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-3 gap-2">
+                            <button onclick="registrarMerma('${n}')" class="bg-red-600/10 text-red-500 py-3 rounded-xl text-[10px] font-black italic uppercase active:scale-95">Merma</button>
+                            <button onclick="editItemInv('${n}')" class="bg-blue-600/10 text-blue-400 py-3 rounded-xl text-[10px] font-black italic uppercase active:scale-95">Editar</button>
+                            <button onclick="delMat('${n}')" class="bg-red-900/40 text-red-400 py-3 rounded-xl text-[10px] font-black italic uppercase active:scale-95">Borrar</button>
+                        </div>
+                    </div>`).join("")}
+            </div>
+            
+            ${Object.keys(inv).length === 0 ? '<div class="card-pro text-center opacity-40 py-10">SIN MATERIALES REGISTRADOS</div>' : ''}
+        `;
+    }
+
     function renderVentas(app, inv, tasa) {
         const totalUSD = window.cart.reduce((acc, item) => acc + (parseFloat(item.p) || 0), 0);
-        
         const clientesUnicos = [...new Set((window.state.ventas || []).map(v => v.cliente).filter(Boolean))];
-        
         app.innerHTML = `
             <div class="card-pro">
                 <h2 class="text-xl font-black italic text-purple-400 mb-6 uppercase text-center tracking-tighter font-black italic">Generar Factura 💵</h2>
                 <input id="vDate" type="date" value="${new Date().toISOString().split('T')[0]}">
-                
-                <datalist id="lista-clientes">
-                    ${clientesUnicos.map(c => `<option value="${c}">`).join("")}
-                </datalist>
-
+                <datalist id="lista-clientes">${clientesUnicos.map(c => `<option value="${c}">`).join("")}</datalist>
                 <div class="grid grid-cols-2 gap-2 mt-2">
                     <div class="relative flex items-center">
                         <span class="absolute left-4 text-xl opacity-60">👤</span>
@@ -386,12 +522,11 @@
                     </div>
                     <div class="relative flex items-center">
                         <span class="absolute left-4 text-green-500 drop-shadow-[0_0_5px_rgba(34,197,94,0.5)]">
-                            <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.012c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/></svg>
+                            <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.012c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/></svg>
                         </span>
                         <input id="wha" type="tel" placeholder="WHATSAPP" class="pl-12 !m-0 w-full text-green-400 font-black">
                     </div>
                 </div>
-
                 <div class="bg-purple-900/5 p-5 rounded-[24px] border border-purple-500/20 mt-3">
                     <input id="vConcepto" placeholder="DESCRIPCIÓN DEL TRABAJO" class="uppercase !bg-black/20 !border-purple-500/20 text-xs py-4 font-black">
                     <div class="grid grid-cols-2 gap-2 mt-3">
@@ -412,8 +547,6 @@
                     <div class="text-5xl font-black text-white italic tracking-tighter leading-none font-black">$${totalUSD.toFixed(2)}</div>
                     <div class="text-sm font-black text-purple-400 mt-1 uppercase tracking-widest italic font-black">Bs. ${formatVE(totalUSD)}</div>
                 </div>
-                
-                <!-- 🔥 NUEVO: SELECCIÓN DE MÉTODO DE PAGO 🔥 -->
                 <div class="flex gap-2 mb-2 mt-5">
                     <input id="vAbono" type="number" placeholder="ABONO $" class="w-1/2 text-2xl text-green-500 font-black text-center border-green-500/20 py-5 !m-0">
                     <select id="vMetodo" class="w-1/2 text-[10px] text-center !m-0">
@@ -423,50 +556,16 @@
                         <option value="BINANCE">🔶 BINANCE</option>
                     </select>
                 </div>
-
                 <button onclick="saveVenta()" class="btn-main mt-5 py-5 shadow-2xl font-black italic tracking-widest">REGISTRAR VENTA</button>
             </div>
-            
             <div class="mt-10 border-t border-white/10 pt-6">
-                <h3 class="text-xs font-black text-purple-400 uppercase mb-4 italic tracking-widest text-center">Historial Completo de Ventas</h3>
-                <p class="text-[9px] text-center opacity-40 mb-4 uppercase">Borra aquí las ventas de prueba o canceladas</p>
-                <div class="space-y-3">
-                    ${(window.state.ventas || []).slice().reverse().map(v => {
-                        const t = parseFloat(v.total) || 0;
-                        const a = parseFloat(v.abono) || 0;
-                        const d = t - a;
-                        return `
-                        <div class="bg-white/5 p-4 rounded-[22px] border border-white/5 relative">
-                            <button onclick="delVenta(${v.id})" class="absolute top-4 right-4 text-red-500 font-black text-xl bg-red-500/10 w-8 h-8 rounded-full flex items-center justify-center">✕</button>
-                            <div class="pr-10">
-                                <h4 class="font-black text-white uppercase italic text-sm leading-none">${v.cliente}</h4>
-                                <span class="text-[9px] opacity-40 font-bold uppercase">${v.fecha} ${v.metodoPago ? '• '+v.metodoPago : ''}</span>
-                            </div>
-                            <div class="flex justify-between items-end mt-3 pt-3 border-t border-white/10">
-                                <div>
-                                    <p class="text-[9px] text-gray-500 uppercase font-black">Facturado</p>
-                                    <p class="text-lg font-black text-purple-400 leading-none">$${t.toFixed(2)}</p>
-                                </div>
-                                <div class="text-right">
-                                    <p class="text-[10px] font-black ${d > 0.01 ? 'text-yellow-500' : 'text-green-500'}">
-                                        ${d > 0.01 ? 'DEUDA ACTIVA' : 'PAGADO'}
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                        `
-                    }).join("")}
-                    ${(window.state.ventas || []).length === 0 ? '<p class="text-center opacity-30 text-[10px] font-black uppercase">No hay registros</p>' : ''}
-                </div>
+                <div class="space-y-3">${(window.state.ventas || []).slice().reverse().map(v => `<div class="bg-white/5 p-4 rounded-[22px] border border-white/5 relative"><button onclick="delVenta(${v.id})" class="absolute top-4 right-4 text-red-500 font-black text-xl bg-red-500/10 w-8 h-8 rounded-full flex items-center justify-center">✕</button><div class="pr-10"><h4 class="font-black text-white uppercase italic text-sm leading-none">${v.cliente}</h4><span class="text-[9px] opacity-40 font-bold uppercase">${v.fecha}</span></div><div class="flex justify-between items-end mt-3 pt-3 border-t border-white/10"><div><p class="text-lg font-black text-purple-400">$${(parseFloat(v.total)||0).toFixed(2)}</p></div></div></div>`).join("")}</div>
             </div>`;
     }
 
     function renderPorCobrar(app, tasa) {
         const ventas = window.state.ventas || [];
-        
-        // Filtro matemático indestructible
         const deudas = ventas.filter(v => ((parseFloat(v.total) || 0) - (parseFloat(v.abono) || 0)) > 0.01);
-        
         const clientesDeuda = {};
         deudas.forEach(v => {
             const nombre = v.cliente ? v.cliente.trim().toUpperCase() : 'DESCONOCIDO';
@@ -474,363 +573,150 @@
             clientesDeuda[nombre].totalDeuda += ((parseFloat(v.total) || 0) - (parseFloat(v.abono) || 0));
             clientesDeuda[nombre].tickets.push(v);
         });
-
         app.innerHTML = `
-            <h2 class="text-xl font-black italic text-red-500 mb-8 uppercase text-center tracking-tighter font-black italic">Cuentas por Cobrar 📑</h2>
+            <h2 class="text-xl font-black italic text-red-500 mb-8 uppercase text-center tracking-tighter">Cuentas por Cobrar 📑</h2>
             <div class="space-y-6">
-                ${Object.keys(clientesDeuda).length === 0 ? '<div class="card-pro text-center py-20 opacity-30 font-black uppercase tracking-widest font-black">No hay deudas activas</div>' : ''}
                 ${Object.entries(clientesDeuda).map(([clienteName, data]) => `
                     <div class="card-pro !p-0 overflow-hidden border-red-500/30 shadow-2xl bg-black/60">
                         <div class="bg-red-900/20 p-5 flex justify-between items-center border-b border-red-500/20">
-                            <div>
-                                <p class="text-[10px] text-red-400 font-black uppercase tracking-widest mb-1">Cliente</p>
-                                <h3 class="text-xl font-black text-white uppercase italic tracking-tighter leading-none">${clienteName}</h3>
-                            </div>
-                            <div class="text-right">
-                                <p class="text-[10px] text-red-400 font-black uppercase tracking-widest mb-1">Deuda Total</p>
-                                <p class="text-3xl font-black text-red-500 italic leading-none">$${data.totalDeuda.toFixed(2)}</p>
-                                <p class="text-[10px] font-black text-red-500/60 uppercase mt-1">Bs. ${formatVE(data.totalDeuda)}</p>
-                            </div>
+                            <div><h3 class="text-xl font-black text-white uppercase italic tracking-tighter leading-none">${clienteName}</h3></div>
+                            <div class="text-right"><p class="text-3xl font-black text-red-500 italic leading-none">$${data.totalDeuda.toFixed(2)}</p></div>
                         </div>
                         <div class="p-4 bg-black/40 space-y-3">
                             ${data.tickets.map(v => `
                                 <div class="border border-white/5 rounded-2xl p-4 bg-white/5">
                                     <div class="flex justify-between items-center mb-3">
-                                        <span class="text-[10px] opacity-50 font-bold uppercase">${v.fecha} | TICKET #${v.id.toString().slice(-6)}</span>
+                                        <span class="text-[10px] opacity-50 font-bold uppercase">${v.fecha}</span>
                                         <span class="text-sm font-black text-red-400">$${((parseFloat(v.total)||0) - (parseFloat(v.abono)||0)).toFixed(2)}</span>
                                     </div>
                                     <div class="grid grid-cols-2 gap-2">
-                                        <button onclick="abonar(${v.id})" class="bg-green-600/10 text-green-500 py-2 rounded-xl text-[10px] font-black uppercase italic">Abonar</button>
+                                        <button onclick="abonar(${v.id})" class="bg-green-600/10 text-green-500 py-2 rounded-xl text-[10px] font-black italic">Abonar</button>
                                         <button onclick="liquidar(${v.id})" class="bg-green-600 text-white py-2 rounded-xl text-[10px] font-black italic">Liquidar</button>
                                         <button onclick="editVenta(${v.id})" class="bg-blue-600/20 text-blue-400 py-2 rounded-xl text-[10px] font-black uppercase italic">Editar</button>
                                         <button onclick="delVenta(${v.id})" class="bg-red-900/40 text-red-400 py-2 rounded-xl text-[10px] font-black uppercase italic">Borrar</button>
-                                        <button onclick="showReceipt(${v.id})" class="bg-purple-600/20 text-purple-400 py-2 rounded-xl col-span-2 text-[10px] font-black uppercase tracking-widest italic">Ver Factura</button>
+                                        <button onclick="showReceipt(${v.id})" class="bg-purple-600/20 text-purple-400 py-2 rounded-xl col-span-2 text-[10px] font-black italic uppercase tracking-widest">Ver Factura</button>
                                     </div>
-                                </div>
-                            `).join("")}
-                        </div>
-                    </div>`).join("")}
-            </div>`;
-    }
-
-    function renderInventario(app, inv, tasa) {
-        app.innerHTML = `
-            <h2 class="text-xl font-black italic text-blue-400 mb-8 uppercase text-center tracking-tighter font-black italic">Control de Stock 📦</h2>
-            <div class="space-y-4">
-                ${Object.entries(inv).map(([n, i]) => `
-                    <div class="card-pro border-l-8 ${Number(i.stock) < 5 ? 'border-red-600 bg-red-500/5' : 'border-blue-600 bg-blue-500/5'} py-6">
-                        <div class="flex justify-between items-start mb-4 border-b border-white/10 pb-4">
-                            <div class="flex-1">
-                                <b class="uppercase text-purple-400 text-[13px] font-black tracking-widest mb-1 block leading-none font-black">${n}</b>
-                                <div class="mt-2 text-[11px] font-bold text-white/50 italic tracking-tighter font-black">Precio Venta: $${(parseFloat(i.precioDetal) || 0).toFixed(2)} <span class="text-purple-400">/ Bs. ${formatVE(parseFloat(i.precioDetal) || 0)}</span></div>
-                            </div>
-                            <div class="text-right">
-                                <span class="text-5xl font-black italic text-white tracking-tighter leading-none font-black">${(parseFloat(i.stock) || 0).toFixed(2)}</span>
-                                <p class="text-[9px] opacity-50 font-black uppercase italic font-black mt-1">Stock Actual</p>
-                            </div>
-                        </div>
-                        
-                        <div class="grid grid-cols-3 gap-2">
-                            <button onclick="registrarMerma('${n}')" class="bg-red-600/20 text-red-500 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest italic">Merma</button>
-                            <button onclick="editItemInv('${n}')" class="bg-blue-600/20 text-blue-400 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest italic">Editar</button>
-                            <button onclick="delMat('${n}')" class="bg-red-900/40 text-red-400 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest italic">Eliminar</button>
+                                </div>`).join("")}
                         </div>
                     </div>`).join("")}
             </div>`;
     }
 
     function renderMore(app, inv) {
-        const rankMap = {};
-        (window.state.ventas || []).forEach(v => {
-            if(!v.cliente) return;
-            const c = v.cliente.trim().toUpperCase();
-            rankMap[c] = (rankMap[c] || 0) + (parseFloat(v.total) || 0);
-        });
-        const topClientes = Object.entries(rankMap).sort((a,b) => b[1] - a[1]).slice(0, 5);
-
         app.innerHTML = `
-            <h2 class="text-xl font-black italic text-white mb-8 uppercase text-center tracking-tighter font-black italic leading-none">Ajustes del Sistema</h2>
+            <h2 class="text-xl font-black italic text-white mb-8 uppercase text-center tracking-tighter leading-none">Ajustes</h2>
             <div class="grid grid-cols-1 gap-4">
-                
-                <div class="card-pro border-yellow-500/20 bg-yellow-500/5 p-5">
-                    <h3 class="text-xs font-black text-yellow-500 uppercase mb-4 italic tracking-widest text-center">🏆 Ranking Mejores Clientes</h3>
-                    <div class="space-y-2">
-                        ${topClientes.length === 0 ? '<p class="opacity-40 text-[10px] text-center font-bold">Sin datos aún</p>' : ''}
-                        ${topClientes.map((c, i) => `
-                            <div class="flex justify-between items-center text-xs font-black italic border-b border-white/5 pb-2">
-                                <span class="text-white">${i+1}. ${c[0]}</span>
-                                <span class="text-yellow-400">$${c[1].toFixed(2)}</span>
-                            </div>
-                        `).join("")}
-                    </div>
+                <div onclick="setView('inventario')" class="card-pro flex items-center gap-5 border-blue-500/20 bg-blue-500/5 cursor-pointer">
+                    <div class="text-4xl">📋</div>
+                    <div><b class="text-lg font-black italic uppercase leading-none">Ver Lista de Precios</b><p class="text-[10px] opacity-40 uppercase font-bold tracking-widest">Detal, Mayor y Stock</p></div>
                 </div>
-
                 <div class="card-pro border-purple-500/20 bg-purple-500/5 p-5">
-                     <p class="text-[10px] opacity-50 uppercase font-black mb-2 tracking-widest text-purple-300 font-black">Cambio Monetario 🇻🇪</p>
-                     <div class="flex items-center justify-between mb-3">
-                         <span class="text-sm font-black uppercase tracking-tighter italic font-black">Tasa BCV del día:</span>
+                     <p class="text-[10px] opacity-50 uppercase font-black mb-2 tracking-widest text-purple-300">Moneda Local 🇻🇪</p>
+                     <div class="flex items-center justify-between">
+                         <span class="text-sm font-black italic">Tasa BCV: Bs. ${window.state.tasaBCV.toFixed(2)}</span>
                          <div class="flex gap-2">
-                            <button onclick="cambiarTasa()" class="bg-white/5 px-4 py-2 rounded-xl text-[10px] font-black border border-white/10 uppercase italic">Manual</button>
-                            <button onclick="sincronizarBCV()" class="bg-purple-600 px-4 py-2 rounded-xl text-[10px] font-black shadow-lg uppercase italic font-black">Auto 🔄</button>
+                             <button onclick="cambiarTasa()" class="bg-white/5 px-4 py-2 rounded-xl text-[10px] font-black border border-white/10 italic">CAMBIAR</button>
+                             <button onclick="sincronizarBCV()" class="bg-purple-600 px-4 py-2 rounded-xl text-[10px] font-black shadow-lg italic">AUTO 🔄</button>
                          </div>
                      </div>
-                     <p class="text-[10px] font-black text-purple-300 tracking-widest text-center font-black">${window.state.tasaBCV > 0 ? 'BCV Actual: Bs. ' + window.state.tasaBCV : 'Tasa no definida'}</p>
                 </div>
-                
-                <div class="card-pro border-green-500/20 bg-green-500/5 p-5">
-                    <h3 class="text-xs font-black text-green-400 uppercase mb-4 italic tracking-widest text-center">💲 Tabla de Precios</h3>
-                    <div class="space-y-2 max-h-64 overflow-y-auto pr-2">
-                        ${Object.keys(inv).length === 0 ? '<p class="opacity-40 text-[10px] text-center font-bold">No hay materiales registrados</p>' : ''}
-                        ${Object.entries(inv).map(([m, data]) => `
-                            <div class="bg-black/40 p-3 rounded-xl flex justify-between items-center border border-white/5">
-                                <b class="text-[10px] text-white uppercase truncate max-w-[50%] leading-none">${m}</b>
-                                <div class="text-right flex gap-4">
-                                    <div class="text-center"><p class="text-[8px] text-gray-500 uppercase font-black">Detal</p><p class="text-xs font-black text-green-400">$${(parseFloat(data.precioDetal)||0).toFixed(2)}</p></div>
-                                    <div class="text-center"><p class="text-[8px] text-gray-500 uppercase font-black">Mayor</p><p class="text-xs font-black text-yellow-400">$${(parseFloat(data.precioMayor)||0).toFixed(2)}</p></div>
-                                </div>
-                            </div>
-                        `).join("")}
-                    </div>
-                </div>
-
-                <div onclick="setView('gastos')" class="card-pro flex items-center gap-5 active:scale-95 transition-all cursor-pointer border-red-500/20 bg-red-500/5">
+                <div onclick="setView('gastos')" class="card-pro flex items-center gap-5 border-red-500/20 bg-red-500/5 cursor-pointer">
                     <div class="text-4xl">💸</div>
-                    <div><b class="text-lg font-black italic uppercase italic leading-none">Egresos / Gastos</b><p class="text-[10px] opacity-40 uppercase font-bold tracking-widest italic">Salidas de caja</p></div>
+                    <div><b class="text-lg font-black italic uppercase leading-none">Egresos / Gastos</b></div>
                 </div>
-                <div onclick="setView('compras')" class="card-pro flex items-center gap-5 active:scale-95 transition-all cursor-pointer border-blue-500/20 bg-blue-500/5">
+                <div onclick="setView('compras')" class="card-pro flex items-center gap-5 border-blue-500/20 bg-blue-500/5 cursor-pointer">
                     <div class="text-4xl">🛒</div>
-                    <div><b class="text-lg font-black italic uppercase italic leading-none">Carga de Stock</b><p class="text-[10px] opacity-40 uppercase font-bold tracking-widest italic">Compras de material</p></div>
+                    <div><b class="text-lg font-black italic uppercase leading-none">Carga de Stock</b></div>
                 </div>
-                <div onclick="setView('catalogo')" class="card-pro flex items-center gap-5 active:scale-95 transition-all cursor-pointer border-purple-500/20">
+                <div onclick="setView('catalogo')" class="card-pro flex items-center gap-5 border-purple-500/20 cursor-pointer">
                     <div class="text-4xl">⚙️</div>
-                    <div><b class="text-lg font-black italic uppercase italic leading-none">Catálogo</b><p class="text-[10px] opacity-40 uppercase font-bold tracking-widest italic">Servicios y bases</p></div>
+                    <div><b class="text-lg font-black italic uppercase leading-none">Catálogo y Servicios</b></div>
                 </div>
-
-                <!-- 🔥 NUEVO: BOTONES DE EXPORTACIÓN CSV 🔥 -->
-                <div class="card-pro border-blue-500/20 bg-blue-500/5 p-5 text-center">
-                    <h3 class="text-xs font-black text-blue-400 uppercase mb-4 italic tracking-widest">📄 Exportar Reportes</h3>
-                    <div class="flex gap-2">
-                        <button onclick="exportarCSV('ventas')" class="flex-1 bg-blue-600/20 text-blue-400 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest italic">📥 VENTAS (.csv)</button>
-                        <button onclick="exportarCSV('gastos')" class="flex-1 bg-red-600/20 text-red-400 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest italic">📥 GASTOS (.csv)</button>
-                    </div>
-                </div>
-
+                <button onclick="window.isUnlocked = false; window.currentPinInput = ''; updatePinDots(); render();" class="btn-main mt-10 !bg-red-600 font-black italic">SALIR Y BLOQUEAR</button>
             </div>`;
     }
 
     function renderCompras(app, inv) {
         app.innerHTML = `
             <div class="card-pro">
-                <h2 class="text-xl font-black italic text-blue-400 mb-6 uppercase text-center tracking-tighter font-black italic leading-none">Nueva Compra de Material 🛒</h2>
-                <select id="cMat"><option value="">-- SELECCIONAR MATERIAL --</option>${Object.keys(inv).map(m=>`<option value="${m}">${m}</option>`).join("")}</select>
-                <div class="grid grid-cols-2 gap-2"><input id="cCant" type="number" placeholder="CANTIDAD"><input id="cCosto" type="number" placeholder="COSTO TOTAL $"></div>
-                <div class="grid grid-cols-2 gap-2 mt-2"><input id="cVentaD" type="number" placeholder="P. DETAL $"><input id="cVentaM" type="number" placeholder="P. MAYOR $"></div>
-                <button onclick="saveCompra()" class="btn-main !bg-blue-600 mt-5 py-5 shadow-lg font-black italic tracking-widest">INGRESAR STOCK</button>
+                <h2 class="text-xl font-black italic text-blue-400 mb-6 uppercase text-center leading-none">Nueva Compra de Material 🛒</h2>
+                <select id="cMat"><option value="">-- MATERIAL --</option>${Object.keys(inv).map(m=>`<option value="${m}">${m}</option>`).join("")}</select>
+                <div class="grid grid-cols-2 gap-2"><input id="cCant" type="number" placeholder="CANTIDAD"><input id="cCosto" type="number" placeholder="COSTO $"></div>
+                <div class="grid grid-cols-2 gap-2 mt-2">
+                    <input id="cVentaD" type="number" placeholder="P. DETAL $">
+                    <input id="cVentaM" type="number" placeholder="P. MAYOR $">
+                </div>
+                <button onclick="saveCompra()" class="btn-main !bg-blue-600 mt-5 py-5 shadow-lg font-black italic">INGRESAR STOCK</button>
             </div>
             <div class="space-y-3">
+                <h3 class="text-xs font-black text-blue-400 uppercase italic mb-4 font-black">Historial de Compras</h3>
                 ${(window.state.compras || []).slice().reverse().map((c, i) => {
                     const realIdx = window.state.compras.length - 1 - i;
                     return `
                     <div class="bg-white/5 p-4 rounded-[22px] flex flex-col gap-2 text-xs border border-white/5">
                         <div class="flex justify-between items-center">
-                            <div><div class="font-black text-blue-400 uppercase italic mb-1 leading-none italic font-black">${c.m}</div><div class="opacity-30 font-bold uppercase text-[9px] font-black">${c.f ? c.f.split('T')[0] : ''}</div></div>
-                            <div class="text-right"><b>${c.c} und</b><br><span class="text-green-500 font-black text-sm italic font-black">$${(parseFloat(c.costo) || 0).toFixed(2)}</span></div>
+                            <div><div class="font-black text-blue-400 uppercase italic mb-1">${c.m}</div><div class="opacity-30 uppercase text-[9px]">${c.f ? c.f.split('T')[0] : ''}</div></div>
+                            <div class="text-right"><b>${c.c} und</b><br><span class="text-green-500 font-black text-sm italic">$${(parseFloat(c.costo) || 0).toFixed(2)}</span></div>
                         </div>
                         <div class="flex gap-2 justify-end mt-2 pt-2 border-t border-white/10">
-                            <button onclick="editCompra(${realIdx})" class="bg-blue-600/20 text-blue-400 py-2 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest italic">Editar</button>
-                            <button onclick="delCompra(${realIdx})" class="bg-red-900/40 text-red-400 py-2 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest italic">Eliminar</button>
+                            <button onclick="editCompra(${realIdx})" class="bg-blue-600/20 text-blue-400 py-2 px-4 rounded-xl text-[10px] font-black uppercase italic">Editar</button>
+                            <button onclick="delCompra(${realIdx})" class="bg-red-900/40 text-red-400 py-2 px-4 rounded-xl text-[10px] font-black uppercase italic">Borrar</button>
                         </div>
-                    </div>`;
-                }).join("")}
+                    </div>`}).join("")}
             </div>`;
     }
 
     function renderGastos(app) {
         const totalGastos = (window.state.gastos || []).reduce((acc, g) => acc + (parseFloat(g.monto) || 0), 0);
-        
         app.innerHTML = `
             <div class="card-pro">
-                <h2 class="text-xl font-black italic text-red-500 mb-6 uppercase text-center tracking-tighter font-black italic leading-none">Registrar Gasto 💸</h2>
-                
-                <select id="gCat" class="mb-2">
-                    <option value="INSUMOS">📦 INSUMOS / MATERIAL</option>
-                    <option value="OPERATIVO">🏢 OPERATIVO (Alquiler, Luz)</option>
-                    <option value="SUELDOS">👥 SUELDOS / PERSONAL</option>
-                    <option value="PUBLICIDAD">📣 PUBLICIDAD</option>
-                    <option value="OTROS">⚙️ OTROS</option>
-                </select>
-
-                <div class="flex gap-2">
-                    <input id="gDate" type="date" value="${new Date().toISOString().split('T')[0]}" class="w-1/3 !m-0">
-                    <input id="gMonto" type="number" placeholder="MONTO $" class="w-2/3 !m-0">
-                </div>
-                <input id="gDesc" placeholder="CONCEPTO DEL GASTO (Opcional)">
-                
-                <button onclick="saveGasto()" class="btn-main mt-3 !bg-red-600 shadow-lg font-black italic tracking-widest">GUARDAR EGRESO</button>
+                <h2 class="text-xl font-black italic text-red-500 mb-6 uppercase text-center leading-none">Registrar Gasto 💸</h2>
+                <select id="gCat"><option value="INSUMOS">📦 INSUMOS</option><option value="OPERATIVO">🏢 OPERATIVO</option><option value="SUELDOS">👥 SUELDOS</option><option value="OTROS">⚙️ OTROS</option></select>
+                <div class="flex gap-2"><input id="gDate" type="date" value="${new Date().toISOString().split('T')[0]}" class="w-1/3 !m-0"><input id="gMonto" type="number" placeholder="MONTO $" class="w-2/3 !m-0"></div>
+                <input id="gDesc" placeholder="CONCEPTO DEL GASTO">
+                <button onclick="saveGasto()" class="btn-main mt-3 !bg-red-600 shadow-lg font-black">GUARDAR EGRESO</button>
             </div>
-            
-            <div class="mt-8 mb-4 flex justify-between items-end border-b border-white/10 pb-4">
-                <div>
-                    <h3 class="text-xs font-black text-red-400 uppercase tracking-widest">Historial de Gastos</h3>
-                    <p class="text-[9px] opacity-50 uppercase font-black">Todos los egresos</p>
-                </div>
-                <div class="text-right">
-                    <p class="text-[10px] text-red-500 font-black uppercase mb-1">Gasto Total</p>
-                    <p class="text-2xl font-black text-red-500 italic leading-none">$${totalGastos.toFixed(2)}</p>
-                </div>
+            <div class="mt-8 mb-4 flex justify-between items-center border-b border-white/10 pb-4">
+                <h3 class="text-xs font-black text-red-400 uppercase italic">Historial de Gastos</h3>
+                <div class="text-right font-black text-red-500 italic">$${totalGastos.toFixed(2)}</div>
             </div>
-
-            <div class="space-y-3">
-                ${(window.state.gastos || []).slice().reverse().map((g, idx) => `
-                    <div class="bg-white/5 p-4 rounded-[22px] flex justify-between items-center text-xs border border-white/5 font-black italic">
-                        <div>
-                            <div class="text-[8px] text-red-400 mb-1 tracking-widest uppercase">${g.cat || 'OTROS'}</div>
-                            <div class="font-black text-white uppercase italic mb-1 font-black leading-none">${g.desc || 'GASTO REGISTRADO'}</div>
-                            <div class="opacity-30 font-bold uppercase text-[9px] font-black">${g.fecha}</div>
-                        </div>
-                        <div class="flex items-center gap-5">
-                            <b class="text-red-500 text-lg font-black italic font-black">$${(parseFloat(g.monto) || 0).toFixed(2)}</b>
-                            <button onclick="delGasto(${(window.state.gastos.length - 1 - idx)})" class="text-red-500 text-2xl font-black">✕</button>
-                        </div>
-                    </div>`).join("")}
-            </div>`;
+            <div class="space-y-3">${(window.state.gastos || []).slice().reverse().map((g, idx) => `<div class="bg-white/5 p-4 rounded-[22px] flex justify-between items-center text-xs border border-white/5 font-black italic"><div><div class="text-red-400 mb-1 uppercase text-[8px]">${g.cat || 'OTROS'}</div><div class="text-white uppercase font-black">${g.desc || 'GASTO'}</div></div><div class="flex items-center gap-5"><b class="text-red-500 text-lg">$${(parseFloat(g.monto) || 0).toFixed(2)}</b><button onclick="delGasto(${(window.state.gastos.length - 1 - idx)})" class="text-red-500 text-2xl font-black">✕</button></div></div>`).join("")}</div>`;
     }
 
     function renderCatalogo(app, inv) {
         app.innerHTML = `
             <div class="card-pro">
-                <h3 class="text-xs font-black text-blue-400 uppercase mb-4 italic tracking-widest font-black italic uppercase">Bases / Materiales</h3>
-                <input id="nMat" placeholder="NOMBRE MATERIAL"><button onclick="crearMat()" class="btn-main !py-3 !bg-blue-600/20 shadow-none border border-blue-500/20 font-black italic uppercase font-black">Crear Base</button>
-                <div class="mt-4 space-y-1">${Object.keys(inv).map(m => `<div class="bg-black/40 p-4 rounded-xl flex justify-between text-xs border border-white/5 uppercase italic font-black leading-none font-black"><span>${m}</span><button onclick="delMat('${m}')" class="text-red-500 font-black">✕</button></div>`).join("")}</div>
+                <h3 class="text-xs font-black text-blue-400 uppercase mb-4 italic tracking-widest">Bases / Materiales</h3>
+                <input id="nMat" placeholder="NOMBRE MATERIAL"><button onclick="crearMat()" class="btn-main !py-3 !bg-blue-600/20 shadow-none border border-blue-500/20 font-black italic">Crear Base</button>
+                <div class="mt-4 space-y-1">${Object.keys(inv).map(m => `<div class="bg-black/40 p-4 rounded-xl flex justify-between text-xs border border-white/5 italic uppercase"><span>${m}</span><button onclick="delMat('${m}')" class="text-red-500 font-black">✕</button></div>`).join("")}</div>
             </div>
             <div class="card-pro mt-4">
-                <h3 class="text-xs font-black text-purple-400 uppercase mb-4 italic tracking-widest font-black italic uppercase">Mano de Obra / Servicios</h3>
-                <input id="nServ" placeholder="Nombre de Servicio"><button onclick="crearServicio()" class="btn-main !py-3 !bg-purple-600/20 shadow-none border border-purple-500/20 font-black italic uppercase font-black">Crear Servicio</button>
-                <div class="grid grid-cols-2 gap-2 mt-4">${window.state.servicios.map((s, idx) => `<div class="bg-black/40 p-4 rounded-xl flex justify-between text-[10px] border border-white/5 uppercase italic font-black leading-none font-black"><span>${s}</span><button onclick="delServicio(${idx})" class="text-red-500 font-black">✕</button></div>`).join("")}</div>
+                <h3 class="text-xs font-black text-purple-400 uppercase mb-4 italic tracking-widest">Mano de Obra / Servicios</h3>
+                <input id="nServ" placeholder="Nombre de Servicio"><button onclick="crearServicio()" class="btn-main !py-3 !bg-purple-600/20 shadow-none border border-purple-500/20 font-black italic">Crear Servicio</button>
+                <div class="grid grid-cols-2 gap-2 mt-4">${window.state.servicios.map((s, idx) => `<div class="bg-black/40 p-4 rounded-xl flex justify-between text-[10px] border border-white/5 uppercase italic font-black"><span>${s}</span><button onclick="delServicio(${idx})" class="text-red-500 font-black">✕</button></div>`).join("")}</div>
             </div>`;
     }
 
-    window.exportarCSV = (tipo) => {
-        let csv = "";
-        if (tipo === 'ventas') {
-            csv = "ID,FECHA,CLIENTE,METODO_PAGO,TOTAL_USD,ABONO_USD,DEUDA_USD\n";
-            (window.state.ventas || []).forEach(v => {
-                csv += `${v.id},${v.fecha},${v.cliente.replace(/,/g, '')},${v.metodoPago || 'NO ESPECIFICADO'},${parseFloat(v.total)||0},${parseFloat(v.abono)||0},${(parseFloat(v.total)||0)-(parseFloat(v.abono)||0)}\n`;
-            });
-        } else if (tipo === 'gastos') {
-            csv = "FECHA,CATEGORIA,DESCRIPCION,MONTO_USD\n";
-            (window.state.gastos || []).forEach(g => {
-                csv += `${g.fecha},${g.cat || 'OTROS'},${(g.desc || '').replace(/,/g, '')},${parseFloat(g.monto)||0}\n`;
-            });
-        }
-        
-        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.setAttribute("href", url);
-        link.setAttribute("download", `Reporte_${tipo}_GhostPrint.csv`);
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    };
-
-    window.autoCompletarCliente = () => {
-        const cliName = document.getElementById("cli")?.value.trim().toUpperCase();
-        if (!cliName) return;
-        const whaInput = document.getElementById("wha");
-        const lastSale = window.state.ventas.slice().reverse().find(v => v.cliente === cliName && v.whatsapp);
-        if (lastSale && lastSale.whatsapp) {
-            whaInput.value = lastSale.whatsapp;
-        }
-    };
-
-    window.cambiarTasa = async () => {
-        const n = prompt("Tasa BCV Oficial (Bs.):", window.state.tasaBCV || "");
-        if (n && !isNaN(n)) { window.state.tasaBCV = parseFloat(n); await window.sync(); }
-    };
-    window.cambiarMeta = async () => {
-        const n = prompt("Meta de Ventas Mensual ($):", window.state.metaMensual || 3000);
-        if (n && !isNaN(n)) { window.state.metaMensual = parseFloat(n); await window.sync(); }
-    };
-    window.updateVentaUI = () => {
-        const m = document.getElementById("vMat")?.value, t = document.getElementById("vTipo")?.value, c = parseFloat(document.getElementById("vCant")?.value) || 1;
-        const pInput = document.getElementById("vPrec");
-        if (t !== "LIBRE" && m && window.state.inventario[m]) {
-            const info = window.state.inventario[m];
-            pInput.value = (c * (t === "MAYOR" ? parseFloat(info.precioMayor) : parseFloat(info.precioDetal))).toFixed(2);
-        }
-        if (pInput) document.getElementById("bsPreview").innerText = "Bs. " + formatVE(parseFloat(pInput.value) || 0);
+    // --- FUNCIONES CORE ---
+    window.saveVenta = async () => {
+        let cli = document.getElementById("cli")?.value.trim().toUpperCase() || "CLIENTE GENERAL"; 
+        if (!window.cart.length) { showToast("CARRITO VACÍO"); return; }
+        let abono = parseFloat(document.getElementById("vAbono").value) || 0;
+        let total = window.cart.reduce((acc, item) => acc + (parseFloat(item.p) || 0), 0);
+        window.cart.forEach(i => { if (i.mat_key && window.state.inventario[i.mat_key]) window.state.inventario[i.mat_key].stock -= parseFloat(i.c); });
+        window.state.ventas.push({ id: Date.now(), cliente: cli, whatsapp: document.getElementById("wha").value, items: [...window.cart], total, abono, fecha: document.getElementById("vDate").value, metodoPago: document.getElementById("vMetodo").value });
+        window.cart = []; 
+        await window.sync();
+        showToast("✅ VENTA REGISTRADA");
     };
 
     window.addItem = () => {
         const m = document.getElementById("vMat").value, s = document.getElementById("vServ").value, c = document.getElementById("vConcepto").value.trim().toUpperCase();
         const p = parseFloat(document.getElementById("vPrec").value) || 0, cant = parseFloat(document.getElementById("vCant").value) || 1;
-        
-        const d_cli = document.getElementById("cli")?.value || "";
-        const d_wha = document.getElementById("wha")?.value || "";
-        const d_abono = document.getElementById("vAbono")?.value || "";
-        const d_metodo = document.getElementById("vMetodo")?.value || "EFECTIVO";
-        const d_fecha = document.getElementById("vDate")?.value || "";
-
         if ((m || s) && p) {
             window.cart.push({ m: (m && s ? `${m} + ${s}` : m || s), p, c: cant, t: document.getElementById("vTipo").value, mat_key: m, concepto: c || "GENERAL" });
-            
             render(); 
-            
-            if(document.getElementById("cli")) document.getElementById("cli").value = d_cli;
-            if(document.getElementById("wha")) document.getElementById("wha").value = d_wha;
-            if(document.getElementById("vAbono")) document.getElementById("vAbono").value = d_abono;
-            if(document.getElementById("vMetodo")) document.getElementById("vMetodo").value = d_metodo;
-            if(document.getElementById("vDate") && d_fecha) document.getElementById("vDate").value = d_fecha;
         }
-    };
-
-    window.removeItem = (idx) => { 
-        const d_cli = document.getElementById("cli")?.value || "";
-        const d_wha = document.getElementById("wha")?.value || "";
-        const d_abono = document.getElementById("vAbono")?.value || "";
-        const d_metodo = document.getElementById("vMetodo")?.value || "EFECTIVO";
-        const d_fecha = document.getElementById("vDate")?.value || "";
-
-        window.cart.splice(idx, 1); 
-        
-        render(); 
-
-        if(document.getElementById("cli")) document.getElementById("cli").value = d_cli;
-        if(document.getElementById("wha")) document.getElementById("wha").value = d_wha;
-        if(document.getElementById("vAbono")) document.getElementById("vAbono").value = d_abono;
-        if(document.getElementById("vMetodo")) document.getElementById("vMetodo").value = d_metodo;
-        if(document.getElementById("vDate") && d_fecha) document.getElementById("vDate").value = d_fecha;
-    };
-
-    window.saveVenta = async () => {
-        let cli = document.getElementById("cli")?.value.trim().toUpperCase() || ""; 
-        if (!cli) cli = "CLIENTE GENERAL"; 
-
-        if (!window.cart.length) {
-            showToast("EL CARRITO ESTÁ VACÍO");
-            return;
-        }
-        
-        let valAbono = document.getElementById("vAbono").value.replace(',', '.');
-        let abono = parseFloat(valAbono);
-        if(isNaN(abono) || abono < 0) abono = 0;
-        
-        let total = window.cart.reduce((acc, item) => acc + (parseFloat(item.p) || 0), 0);
-        
-        // Redondeo seguro para evitar decimales infinitos
-        abono = Math.round(abono * 100) / 100;
-        total = Math.round(total * 100) / 100;
-
-        const metodoPago = document.getElementById("vMetodo").value; 
-        
-        window.cart.forEach(i => { if (i.mat_key && window.state.inventario[i.mat_key]) window.state.inventario[i.mat_key].stock = (parseFloat(window.state.inventario[i.mat_key].stock) || 0) - (parseFloat(i.c) || 0); });
-        window.state.ventas.push({ id: Date.now(), cliente: cli, whatsapp: document.getElementById("wha").value, items: [...window.cart], total, abono, fecha: document.getElementById("vDate").value, metodoPago });
-        window.cart = []; 
-        await window.sync();
-        
-        // Mensaje de éxito!
-        showToast("✅ VENTA REGISTRADA");
     };
 
     window.saveCompra = async () => {
@@ -843,146 +729,74 @@
         await window.sync();
         showToast("✅ STOCK ACTUALIZADO");
     };
-    
-    window.delCompra = async (idx) => { 
-        if (confirm("¿Borrar esta compra y restar del stock?")) { 
-            const c = window.state.compras[idx];
-            if (window.state.inventario[c.m]) {
-                window.state.inventario[c.m].stock = (parseFloat(window.state.inventario[c.m].stock) || 0) - (parseFloat(c.c) || 0);
-            }
-            window.state.compras.splice(idx, 1); 
-            await window.sync(); 
-        } 
+
+    window.abrirCompraUSDT = async function() {
+        const bsStr = prompt("Monto en Bolívares (Bs.):");
+        if (!bsStr || isNaN(bsStr)) return;
+        const tasaStr = prompt("Tasa Binance:");
+        if (!tasaStr || isNaN(tasaStr)) return;
+        const bs = parseFloat(bsStr); const tasa = parseFloat(tasaStr); const usdt = bs / tasa;
+        if (!window.state.comprasUSDT) window.state.comprasUSDT = [];
+        window.state.comprasUSDT.push({ id: Date.now(), fecha: new Date().toLocaleDateString(), bs, tasa, usdt });
+        window.state.gastos.push({ desc: `COMPRA USDT BINANCE`, monto: 0, montoBs: bs, fecha: new Date().toISOString().split('T')[0], cat: 'OTROS' });
+        await window.sync();
+        showToast("✅ USDT REGISTRADO");
     };
 
-    window.editCompra = async (idx) => {
-        const c = window.state.compras[idx];
-        let nC = parseFloat(prompt("Corregir Cantidad de Material:", c.c));
-        let nCosto = parseFloat(prompt("Corregir Costo Total de la Compra ($):", c.costo));
-        
-        if (!isNaN(nC) && !isNaN(nCosto)) {
-            let diff = nC - (parseFloat(c.c) || 0);
-            if (window.state.inventario[c.m]) {
-                window.state.inventario[c.m].stock = (parseFloat(window.state.inventario[c.m].stock) || 0) + diff;
-                let pD = parseFloat(prompt("Corregir Precio de Venta al DETAL ($):", window.state.inventario[c.m].precioDetal));
-                let pM = parseFloat(prompt("Corregir Precio de Venta al MAYOR ($):", window.state.inventario[c.m].precioMayor));
-                if (!isNaN(pD)) window.state.inventario[c.m].precioDetal = pD;
-                if (!isNaN(pM)) window.state.inventario[c.m].precioMayor = pM;
-            }
-            c.c = nC;
-            c.costo = nCosto;
-            await window.sync();
-        }
-    };
-    
-    window.saveGasto = async () => {
-        const d = document.getElementById("gDesc").value, m = parseFloat(document.getElementById("gMonto").value), cat = document.getElementById("gCat").value;
-        if (m) { window.state.gastos.push({ desc: d, monto: m, fecha: document.getElementById("gDate").value, cat }); await window.sync(); showToast("✅ GASTO REGISTRADO"); }
-    };
-    window.delGasto = async (idx) => { if (confirm("¿Eliminar gasto?")) { window.state.gastos.splice(idx, 1); await window.sync(); } };
-    window.liquidar = async (id) => { const v = window.state.ventas.find(x => x.id === id); if(v){ v.abono = parseFloat(v.total) || 0; await window.sync(); showToast("✅ DEUDA LIQUIDADA"); } };
-    window.abonar = async (id) => { 
-        const v = window.state.ventas.find(x => x.id === id); 
-        let val = prompt(`Monto Abono ($):`); 
-        if (val) {
-            let m = parseFloat(val.replace(',', '.'));
-            if (!isNaN(m) && m > 0) { 
-                v.abono = (parseFloat(v.abono) || 0) + m; 
-                await window.sync(); 
-                showToast("✅ ABONO REGISTRADO");
-            } 
-        }
-    };
-    window.delVenta = async (id) => { if (confirm("¿Borrar venta permanentemente de la base de datos?")) { window.state.ventas = window.state.ventas.filter(v => v.id !== id); await window.sync(); } };
-    window.editVenta = async (id) => { 
-        const v = window.state.ventas.find(x => x.id === id);
-        if(!v) return;
-        let nT = parseFloat(prompt("Corregir Total ($):", v.total)?.replace(',', '.'));
-        let nA = parseFloat(prompt("Corregir Abono ($):", v.abono)?.replace(',', '.'));
-        let nWha = prompt("Corregir WhatsApp (Opcional):", v.whatsapp || "");
-        
-        let changed = false;
-        if (!isNaN(nT) && !isNaN(nA)) { v.total = nT; v.abono = nA; changed = true; }
-        if (nWha !== null) { v.whatsapp = nWha; changed = true; }
-        
-        if(changed) { await window.sync(); showToast("✅ VENTA EDITADA"); }
-    };
-    window.crearMat = async () => { const n = document.getElementById("nMat").value.toUpperCase(); if (n) { window.state.inventario[n] = { stock: 0, precioDetal: 0, precioMayor: 0 }; await window.sync(); } };
+    window.delVenta = async (id) => { if (confirm("¿Borrar venta?")) { window.state.ventas = window.state.ventas.filter(v => v.id !== id); await window.sync(); } };
+    window.liquidar = async (id) => { const v = window.state.ventas.find(x => x.id === id); if(v){ v.abono = v.total; await window.sync(); showToast("✅ LIQUIDADO"); } };
+    window.abonar = async (id) => { const v = window.state.ventas.find(x => x.id === id); let val = prompt(`Monto Abono ($):`); if (val) { v.abono = (parseFloat(v.abono) || 0) + parseFloat(val.replace(',', '.')); await window.sync(); } };
+    window.delGasto = async (idx) => { if (confirm("¿Borrar?")) { window.state.gastos.splice(idx, 1); await window.sync(); } };
+    window.delCompra = async (idx) => { if (confirm("¿Borrar compra y restar stock?")) { const c = window.state.compras[idx]; if (window.state.inventario[c.m]) window.state.inventario[c.m].stock -= parseFloat(c.c); window.state.compras.splice(idx, 1); await window.sync(); } };
+    window.editCompra = async (idx) => { const c = window.state.compras[idx]; let nC = parseFloat(prompt("Nueva Cantidad:", c.c)); if (!isNaN(nC)) { let diff = nC - c.c; if (window.state.inventario[c.m]) window.state.inventario[c.m].stock += diff; c.c = nC; await window.sync(); } };
     window.delMat = async (n) => { if (confirm(`¿ELIMINAR ${n}?`)) { delete window.state.inventario[n]; await window.sync(); } };
-    window.crearServicio = async () => { const s = document.getElementById("nServ").value.toUpperCase(); if (s) { window.state.servicios.push(s); await window.sync(); } };
+    window.crearMat = async () => { const n = document.getElementById("nMat").value.trim().toUpperCase(); if(n){ window.state.inventario[n] = { stock: 0, precioDetal: 0, precioMayor: 0 }; await window.sync(); } };
+    window.crearServicio = async () => { const n = document.getElementById("nServ").value.trim().toUpperCase(); if(n){ window.state.servicios.push(n); await window.sync(); } };
     window.delServicio = async (idx) => { window.state.servicios.splice(idx, 1); await window.sync(); };
-    
-    window.editItemInv = async (n) => {
-        const i = window.state.inventario[n];
-        let nS = parseFloat(prompt("Stock:", i.stock)), pD = parseFloat(prompt("Precio Detal $:", i.precioDetal)), pM = parseFloat(prompt("Precio Mayor $:", i.precioMayor));
-        if (!isNaN(nS)) window.state.inventario[n].stock = nS;
-        if (!isNaN(pD)) window.state.inventario[n].precioDetal = pD;
-        if (!isNaN(pM)) window.state.inventario[n].precioMayor = pM;
-        await window.sync();
+    window.editItemInv = async (n) => { const i = window.state.inventario[n]; let nS = parseFloat(prompt("Nuevo Stock:", i.stock)), pD = parseFloat(prompt("Nuevo Precio Detal:", i.precioDetal)), pM = parseFloat(prompt("Nuevo Precio Mayor:", i.precioMayor)); if(!isNaN(nS)) i.stock = nS; if(!isNaN(pD)) i.precioDetal = pD; if(!isNaN(pM)) i.precioMayor = pM; await window.sync(); };
+    window.registrarMerma = async (n) => { let m = parseFloat(prompt(`Merma para ${n}:`)); if(!isNaN(m)) { window.state.inventario[n].stock -= m; await window.sync(); } };
+    window.editVenta = async (id) => { const v = window.state.ventas.find(x => x.id === id); let val = prompt(`Nuevo Total ($):`, v.total); if (val) { v.total = parseFloat(val); await window.sync(); } };
+
+    window.removeItem = (idx) => { window.cart.splice(idx, 1); render(); };
+    window.closeReceipt = () => document.getElementById("receiptModal").classList.add("hidden");
+    window.cambiarTasa = async () => { const n = prompt("Tasa BCV:", window.state.tasaBCV); if (n) { window.state.tasaBCV = parseFloat(n); await window.sync(); } };
+    window.cambiarMeta = async () => { const n = prompt("Meta Mensual:", window.state.metaMensual); if (n) { window.state.metaMensual = parseFloat(n); await window.sync(); } };
+    window.updateVentaUI = () => {
+        const m = document.getElementById("vMat")?.value, t = document.getElementById("vTipo")?.value, c = parseFloat(document.getElementById("vCant")?.value) || 1;
+        if (t !== "LIBRE" && m && window.state.inventario[m]) {
+            const info = window.state.inventario[m];
+            document.getElementById("vPrec").value = (c * (t === "MAYOR" ? parseFloat(info.precioMayor) : parseFloat(info.precioDetal))).toFixed(2);
+        }
     };
+    window.autoCompletarCliente = () => { const cli = document.getElementById("cli")?.value.trim().toUpperCase(); const last = window.state.ventas.slice().reverse().find(v => v.cliente === cli && v.whatsapp); if (last) document.getElementById("wha").value = last.whatsapp; };
 
     window.showReceipt = (id) => {
-        const v = window.state.ventas.find(x => x.id === id), tasa = window.state.tasaBCV || 0;
-        const t = parseFloat(v.total) || 0;
-        const a = parseFloat(v.abono) || 0;
-        const dUSD = Math.max(0, t - a);
-
-        document.getElementById("receiptContent").innerHTML = `
-            <div class="text-center mb-6"><span class="text-4xl">👻</span><h2 class="text-2xl font-black italic text-purple-600 leading-none font-black tracking-tighter">GHOST PRINT</h2><p class="text-[9px] text-gray-400 font-black uppercase tracking-widest italic">Ticket de Cobro</p></div>
-            <div class="flex justify-between mb-2 text-gray-500 font-black uppercase tracking-tighter text-[9px]"><span>ID: #${v.id.toString().slice(-6)}</span><span>${v.fecha}</span></div>
-            <p class="font-black uppercase text-sm border-b-2 border-black pb-3 mb-5 text-purple-600 tracking-tighter font-black">${v.cliente}</p>
-            <div class="border-b-2 border-dashed border-gray-300 mb-5 py-2 font-black italic uppercase">
-                ${v.items.map(i => `<div class="mb-4"><div class="text-[10px] text-gray-500 font-black italic uppercase leading-none font-black tracking-tighter">${i.concepto}</div><div class="flex justify-between font-black text-xs uppercase italic font-black"><span>${i.c}x ${i.m}</span><span>$${(parseFloat(i.p) || 0).toFixed(2)}</span></div></div>`).join("")}
-            </div>
-            <div class="space-y-2">
-                <div class="flex justify-between font-black text-xl italic tracking-tighter leading-none font-black"><span>TOTAL:</span><span>$${t.toFixed(2)}</span></div>
-                ${tasa > 0 ? `<div class="flex justify-between text-[11px] font-black italic text-purple-600 border-y border-purple-500/20 py-1 uppercase tracking-tighter leading-none font-black"><span>Equivalente Bs. (BCV):</span><span>Bs. ${formatVE(t)}</span></div>` : ''}
-                <div class="flex justify-between text-green-700 font-black text-[10px] uppercase tracking-tighter italic font-black"><span>PAGADO ($):</span><span>$${a.toFixed(2)}</span></div>
-                <div class="flex justify-between text-red-600 font-black text-lg border-t-2 border-black pt-2 italic tracking-tighter leading-none font-black"><span>DEUDA ($):</span><span>$${dUSD.toFixed(2)}</span></div>
-                ${tasa > 0 && dUSD > 0.01 ? `<div class="text-right text-[11px] font-black text-red-600 uppercase italic tracking-tighter font-black leading-none mt-1">Saldo Bs: Bs. ${formatVE(dUSD)}</div>` : ''}
-            </div>`;
-        window.currentReceiptId = id; document.getElementById("receiptModal").classList.remove("hidden");
-    };
-    window.closeReceipt = () => document.getElementById("receiptModal").classList.add("hidden");
-    
-    window.shareReceipt = () => { 
-        const v = window.state.ventas.find(x => x.id === window.currentReceiptId); if (!v) return;
-        const t = parseFloat(v.total) || 0;
-        const a = parseFloat(v.abono) || 0;
-        const dUSD = Math.max(0, t - a);
-        
-        // --- LIMPIEZA Y CORRECCIÓN DE NÚMERO (VENEZUELA) ---
-        let phone = v.whatsapp ? v.whatsapp.replace(/\D/g, '') : '';
-        if (phone.startsWith('0') && phone.length === 11) {
-            phone = '58' + phone.substring(1); // Cambia el 0 por 58
-        } else if (phone.length === 10) {
-            phone = '58' + phone; // Si lo pusieron sin 0 y sin 58, agrega 58
-        }
-
-        let bsMsg = window.state.tasaBCV > 0 ? `\n💰 *Monto en Bolívares (BCV)*\n📈 Tasa: ${window.state.tasaBCV.toFixed(2)}\n💵 Total: Bs. ${formatVE(t)}${dUSD > 0.01 ? `\n🔺 Pendiente: Bs. ${formatVE(dUSD)}` : ''}\n` : '';
-        const msg = encodeURIComponent(`👻 *GHOST PRINT* 👻\n_Recibo:_ #${v.id.toString().slice(-6)}\n*Cliente:* ${v.cliente}\n*Total:* $${t.toFixed(2)}\n*Abono:* $${a.toFixed(2)}\n*Deuda:* $${dUSD.toFixed(2)}${bsMsg}\n_¡Gracias por elegirnos!_`);
-        
-        window.open(`https://wa.me/${phone}?text=${msg}`, '_blank'); 
+        const v = window.state.ventas.find(x => x.id === id);
+        const t = parseFloat(v.total) || 0, a = parseFloat(v.abono) || 0, d = Math.max(0, t - a);
+        document.getElementById("receiptContent").innerHTML = `<div class="text-center mb-6"><h2 class="text-2xl font-black italic text-purple-600">GHOST PRINT</h2></div><p class="font-black uppercase text-sm border-b-2 border-black pb-3 mb-5">${v.cliente}</p><div class="space-y-2"><div class="flex justify-between font-black"><span>TOTAL:</span><span>$${t.toFixed(2)}</span></div><div class="flex justify-between text-green-700"><span>PAGADO:</span><span>$${a.toFixed(2)}</span></div><div class="flex justify-between text-red-600 border-t pt-2"><span>DEUDA:</span><span>$${d.toFixed(2)}</span></div></div>`;
+        document.getElementById("receiptModal").classList.remove("hidden");
     };
 
     function initChart(ventas, gastos) {
         const ctx = document.getElementById('mainChart'); if (!ctx) return;
         if (window.myChart) window.myChart.destroy();
         const map = {};
-        [...ventas, ...gastos].forEach(i => { const f = i.fecha || (i.f ? i.f.split('T')[0] : 'S/F'); if(!map[f]) map[f]={v:0,g:0}; if(i.total) map[f].v+=parseFloat(i.total)||0; if(i.monto) map[f].g+=parseFloat(i.monto)||0; });
+        [...ventas, ...gastos].forEach(i => { const f = i.fecha || 'HOY'; if(!map[f]) map[f]={v:0,g:0}; if(i.total) map[f].v+=parseFloat(i.total); if(i.monto) map[f].g+=parseFloat(i.monto); });
         const labels = Object.keys(map).sort().slice(-7);
-        window.myChart = new Chart(ctx, {
-            type: 'line', data: { labels, datasets: [{ label: 'Ventas', data: labels.map(l=>map[l].v), borderColor: '#8b5cf6', backgroundColor: 'rgba(139, 92, 246, 0.2)', fill: true, tension: 0.4, borderWidth: 4, pointRadius: 5 }, { label: 'Gastos', data: labels.map(l=>map[l].g), borderColor: '#ef4444', fill: false, tension: 0.4, borderWidth: 2, borderDash: [5,5], pointRadius: 0 }] },
-            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.03)' }, ticks: { color: '#64748b', font: { size: 9, weight: 'bold' } } }, x: { grid: { display: false }, ticks: { color: '#64748b', font: { size: 9, weight: 'bold' } } } } }
-        });
+        window.myChart = new Chart(ctx, { type: 'line', data: { labels, datasets: [{ label: 'Ventas', data: labels.map(l=>map[l].v), borderColor: '#8b5cf6', fill: true, tension: 0.4 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } } });
     }
-
-    window.registrarMerma = async (n) => {
-        let m = parseFloat(prompt(`Cantidad Merma para ${n}:`));
-        if(!isNaN(m)) { window.state.inventario[n].stock = (parseFloat(window.state.inventario[n].stock) || 0) - m; window.state.gastos.push({ desc: `MERMA: ${n}`, monto: 0, fecha: new Date().toISOString().split('T')[0], cat: 'OTROS' }); await window.sync(); }
-    };
 
     render();
 </script>
+
+<style>
+    @keyframes shake {
+        0%, 100% { transform: translateX(0); }
+        25% { transform: translateX(-8px); }
+        75% { transform: translateX(8px); }
+    }
+    .animate-shake { animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both; }
+</style>
+
 </body>
 </html>
