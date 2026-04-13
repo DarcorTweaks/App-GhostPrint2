@@ -829,6 +829,32 @@
         showToast("✅ CAJA ACTUALIZADA EXACTAMENTE");
     };
 
+    // AQUI AGREGAMOS LA FUNCIÓN DE GUARDAR GASTOS QUE FALTABA
+    window.saveGasto = async () => {
+        const cat = document.getElementById("gCat").value;
+        const fecha = document.getElementById("gDate").value;
+        const monto = parseFloat(document.getElementById("gMonto").value);
+        const desc = document.getElementById("gDesc").value.trim().toUpperCase() || "GASTO GENERAL";
+
+        if (isNaN(monto) || monto <= 0) {
+            showToast("⚠️ INGRESA UN MONTO VÁLIDO");
+            return;
+        }
+
+        if (!window.state.gastos) window.state.gastos = [];
+        
+        window.state.gastos.push({
+            id: Date.now(),
+            cat: cat,
+            fecha: fecha,
+            monto: monto,
+            desc: desc
+        });
+
+        await window.sync();
+        showToast("✅ GASTO REGISTRADO");
+    };
+
     window.delUSDT = async (idx) => { 
         if (confirm("¿Borrar este registro? Tu Caja Física regresará a la normalidad.")) { 
             window.state.comprasUSDT.splice(idx, 1); 
