@@ -219,6 +219,7 @@
     window.currentView = 'inicio';
     window.cart = [];
     window.dashboardFilter = 'all';
+window.clienteActual = "";
 
     const formatVE = (usd) => {
         const tasa = window.state.tasaBCV || 0;
@@ -561,7 +562,7 @@
                 <div class="grid grid-cols-2 gap-2 mt-2">
                     <div class="relative flex items-center">
                         <span class="absolute left-4 text-xl opacity-60">👤</span>
-                        <input id="cli" list="lista-clientes" oninput="autoCompletarCliente()" placeholder="CLIENTE" class="uppercase font-black pl-12 !m-0 w-full">
+<input id="cli" list="lista-clientes" oninput="guardarCliente(); autoCompletarCliente()" placeholder="CLIENTE" class="uppercase font-black pl-12 !m-0 w-full">
                     </div>
                     <div class="relative flex items-center">
                         <span class="absolute left-4 text-green-500 drop-shadow-[0_0_5px_rgba(34,197,94,0.5)]">
@@ -779,7 +780,13 @@
 
     // --- FUNCIONES CORE ---
     window.saveVenta = async () => {
-        let cli = document.getElementById("cli")?.value.trim().toUpperCase() || "CLIENTE GENERAL"; 
+        let cliInput = document.getElementById("cli");
+let cli = cliInput && cliInput.value ? cliInput.value.trim().toUpperCase() : "";
+
+if(!cli){
+    showToast("⚠️ INGRESA EL NOMBRE DEL CLIENTE");
+    return;
+} 
         if (!window.cart.length) { showToast("CARRITO VACÍO"); return; }
         let abono = parseFloat(document.getElementById("vAbono").value) || 0;
         let total = window.cart.reduce((acc, item) => acc + (parseFloat(item.p) || 0), 0);
@@ -902,23 +909,64 @@
         }
     };
     window.autoCompletarCliente = () => { const cli = document.getElementById("cli")?.value.trim().toUpperCase(); const last = window.state.ventas.slice().reverse().find(v => v.cliente === cli && v.whatsapp); if (last) document.getElementById("wha").value = last.whatsapp; };
-
-    window.showReceipt = (id) => {
-        const v = window.state.ventas.find(x => x.id === id);
-        const t = parseFloat(v.total) || 0, a = parseFloat(v.abono) || 0, d = Math.max(0, t - a);
-        document.getElementById("receiptContent").innerHTML = `<div class="text-center mb-6"><h2 class="text-2xl font-black italic text-purple-600">GHOST PRINT</h2></div><p class="font-black uppercase text-sm border-b-2 border-black pb-3 mb-5">${v.cliente}</p><div class="space-y-2"><div class="flex justify-between font-black"><span>TOTAL:</span><span>$${t.toFixed(2)}</span></div><div class="flex justify-between text-green-700"><span>PAGADO:</span><span>$${a.toFixed(2)}</span></div><div class="flex justify-between text-red-600 border-t pt-2"><span>DEUDA:</span><span>$${d.toFixed(2)}</span></div></div>`;
-        document.getElementById("receiptModal").classList.remove("hidden");
-    };
-
-    function initChart(ventas, gastos) {
-        const ctx = document.getElementById('mainChart'); if (!ctx) return;
-        if (window.myChart) window.myChart.destroy();
-        const map = {};
-        [...ventas, ...gastos].forEach(i => { const f = i.fecha || 'HOY'; if(!map[f]) map[f]={v:0,g:0}; if(i.total) map[f].v+=parseFloat(i.total); if(i.monto) map[f].g+=parseFloat(i.monto); });
-        const labels = Object.keys(map).sort().slice(-7);
-        window.myChart = new Chart(ctx, { type: 'line', data: { labels, datasets: [{ label: 'Ventas', data: labels.map(l=>map[l].v), borderColor: '#8b5cf6', fill: true, tension: 0.4 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } } });
+// 1. Modifica la función guardarCliente para que capture el valor correctamente
+window.guardarCliente = () => {
+    const input = document.getElementById("cli");
+    const whaInput = document.getElementById("wha");
+    if (input) {
+        window.clienteActual = input.value.trim().toUpperCase();
     }
+    if (whaInput) {
+        window.whatsappActual = whaInput.value; // También guardamos el WhatsApp
+    }
+};
 
+// 2. Modifica la función saveVenta para usar la variable global si el input falla
+window.saveVenta = async () => {
+    let cliInput = document.getElementById("cli");
+    // Priorizamos el input, pero si el re-render lo borró, usamos la variable global
+    let cli = (cliInput && cliInput.value) ? cliInput.value.trim().toUpperCase() : window.clienteActual;
+
+    if(!cli){
+        showToast("⚠️ INGRESA EL NOMBRE DEL CLIENTE");
+        return;
+    } 
+    
+    if (!window.cart.length) { showToast("CARRITO VACÍO"); return; }
+    
+    let abono = parseFloat(document.getElementById("vAbono").value) || 0;
+    let total = window.cart.reduce((acc, item) => acc + (parseFloat(item.p) || 0), 0);
+    
+    // Descontar stock
+    window.cart.forEach(i => { 
+        if (i.mat_key && window.state.inventario[i.mat_key]) {
+            window.state.inventario[i.mat_key].stock -= parseFloat(i.c); 
+        }
+    });
+
+    window.state.ventas.push({ 
+        id: Date.now(), 
+        cliente: cli, 
+        whatsapp: document.getElementById("wha").value || window.whatsappActual || "", 
+        items: [...window.cart], 
+        total, 
+        abono, 
+        fecha: document.getElementById("vDate").value, 
+        metodoPago: document.getElementById("vMetodo").value 
+    });
+
+    // Limpiamos todo después de vender
+    window.cart = []; 
+    window.clienteActual = "";
+    window.whatsappActual = "";
+    
+    await window.sync();
+    showToast("✅ VENTA REGISTRADA");
+};
+
+// 3. ACTUALIZA EL renderVentas para que mantenga los valores al escribir
+// Busca la línea del input de cliente dentro de renderVentas y asegúrate que tenga el oninput:
+// <input id="cli" list="lista-clientes" oninput="guardarCliente(); autoCompletarCliente()" value="${window.clienteActual || ''}" ...>
     render();
 </script>
 
