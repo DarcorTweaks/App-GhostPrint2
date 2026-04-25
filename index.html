@@ -842,6 +842,24 @@ window.trabajadores = [
     };
 
     window.abonar = async (id) => { 
+window.editVenta = async (id) => {
+    const v = window.state.ventas.find(x => x.id === id);
+    if (!v) return;
+
+    let nuevoTotal = prompt("Nuevo TOTAL $:", v.total);
+    if (nuevoTotal === null) return;
+
+    nuevoTotal = parseFloat(nuevoTotal);
+    if (isNaN(nuevoTotal)) {
+        showToast("❌ Valor inválido");
+        return;
+    }
+
+    v.total = nuevoTotal;
+
+    await window.sync();
+    showToast("✅ TOTAL ACTUALIZADO");
+};
         const v = window.state.ventas.find(x => x.id === id); let val = prompt("Monto $:"); if (!val) return;
         const monto = parseFloat(val.replace(',', '.')); if(!v.historialAbonos) v.historialAbonos = [];
         v.historialAbonos.push({ fecha: new Date().toISOString().split('T')[0], monto, nota: "ABONO MANUAL" });
@@ -982,6 +1000,9 @@ window.trabajadores = [
     }
 
     render();
+
+
+
 </script>
 </body>
 </html>
