@@ -841,7 +841,7 @@ window.trabajadores = [
         v.abono = v.total; await window.sync(); showToast("✅ LIQUIDADO");
     };
 
-    window.abonar = async (id) => { 
+   // EDITAR VENTA
 window.editVenta = async (id) => {
     const v = window.state.ventas.find(x => x.id === id);
     if (!v) return;
@@ -860,12 +860,25 @@ window.editVenta = async (id) => {
     await window.sync();
     showToast("✅ TOTAL ACTUALIZADO");
 };
-        const v = window.state.ventas.find(x => x.id === id); let val = prompt("Monto $:"); if (!val) return;
-        const monto = parseFloat(val.replace(',', '.')); if(!v.historialAbonos) v.historialAbonos = [];
-        v.historialAbonos.push({ fecha: new Date().toISOString().split('T')[0], monto, nota: "ABONO MANUAL" });
-        v.abono = (parseFloat(v.abono) || 0) + monto; await window.sync(); showToast("✅ ABONO");
-    };
 
+// ABONAR
+window.abonar = async (id) => { 
+ 
+
+    const monto = parseFloat(val.replace(',', '.'));
+    if (!v.historialAbonos) v.historialAbonos = [];
+
+    v.historialAbonos.push({
+        fecha: new Date().toISOString().split('T')[0],
+        monto,
+        nota: "ABONO MANUAL"
+    });
+
+    v.abono = (parseFloat(v.abono) || 0) + monto;
+
+    await window.sync();
+    showToast("✅ ABONO");
+};
     window.saveCompra = async () => {
         const m = document.getElementById("cMat").value, c = parseFloat(document.getElementById("cCant").value), costo = parseFloat(document.getElementById("cCosto").value);
         if(!m || isNaN(c)) return; window.state.inventario[m].stock += c;
