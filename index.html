@@ -841,7 +841,7 @@ window.trabajadores = [
         v.abono = v.total; await window.sync(); showToast("✅ LIQUIDADO");
     };
 
-   // EDITAR VENTA
+    window.abonar = async (id) => { 
 window.editVenta = async (id) => {
     const v = window.state.ventas.find(x => x.id === id);
     if (!v) return;
@@ -860,25 +860,12 @@ window.editVenta = async (id) => {
     await window.sync();
     showToast("✅ TOTAL ACTUALIZADO");
 };
+        const v = window.state.ventas.find(x => x.id === id); let val = prompt("Monto $:"); if (!val) return;
+        const monto = parseFloat(val.replace(',', '.')); if(!v.historialAbonos) v.historialAbonos = [];
+        v.historialAbonos.push({ fecha: new Date().toISOString().split('T')[0], monto, nota: "ABONO MANUAL" });
+        v.abono = (parseFloat(v.abono) || 0) + monto; await window.sync(); showToast("✅ ABONO");
+    };
 
-// ABONAR
-window.abonar = async (id) => { 
- 
-
-    const monto = parseFloat(val.replace(',', '.'));
-    if (!v.historialAbonos) v.historialAbonos = [];
-
-    v.historialAbonos.push({
-        fecha: new Date().toISOString().split('T')[0],
-        monto,
-        nota: "ABONO MANUAL"
-    });
-
-    v.abono = (parseFloat(v.abono) || 0) + monto;
-
-    await window.sync();
-    showToast("✅ ABONO");
-};
     window.saveCompra = async () => {
         const m = document.getElementById("cMat").value, c = parseFloat(document.getElementById("cCant").value), costo = parseFloat(document.getElementById("cCosto").value);
         if(!m || isNaN(c)) return; window.state.inventario[m].stock += c;
@@ -887,6 +874,17 @@ window.abonar = async (id) => {
         window.state.compras.push({ m, c, costo, f: new Date().toISOString() });
         await window.sync(); showToast("✅ STOCK CARGADO");
     };
+window.registrarMerma = async (materialNombre) => {
+    const cant = prompt(`¿Cuánto vas a descontar de ${materialNombre}?`);
+    if (!cant) return;
+
+    // Restamos la cantidad al stock que ya tienes en el inventario
+    window.state.inventario[materialNombre].stock -= parseFloat(cant);
+
+    // Guardamos el cambio en la base de datos para que no se borre
+    await window.sync();
+    showToast("📉 Stock actualizado por merma");
+};
 
     window.saveGasto = async () => {
         const monto = parseFloat(document.getElementById("gMonto").value), desc = document.getElementById("gDesc").value.toUpperCase();
