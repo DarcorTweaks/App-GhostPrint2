@@ -31,6 +31,45 @@
             background-attachment: fixed;
         }
 
+        body::before {
+            content: "";
+            position: fixed;
+            inset: -20%;
+            z-index: -2;
+            pointer-events: none;
+            background:
+                radial-gradient(circle at 20% 25%, rgba(34,197,94,.12), transparent 26%),
+                radial-gradient(circle at 80% 10%, rgba(14,165,233,.14), transparent 24%),
+                radial-gradient(circle at 72% 72%, rgba(245,158,11,.10), transparent 26%),
+                radial-gradient(circle at 36% 82%, rgba(139,92,246,.16), transparent 28%);
+            filter: blur(10px);
+            animation: bgFloat 18s ease-in-out infinite alternate;
+        }
+
+        body::after {
+            content: "";
+            position: fixed;
+            inset: 0;
+            z-index: -1;
+            pointer-events: none;
+            background-image:
+                linear-gradient(rgba(255,255,255,.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px);
+            background-size: 34px 34px;
+            mask-image: linear-gradient(to bottom, rgba(0,0,0,.75), transparent 82%);
+            animation: gridDrift 22s linear infinite;
+        }
+
+        @keyframes bgFloat {
+            0% { transform: translate3d(-2%, -1%, 0) scale(1); }
+            100% { transform: translate3d(2%, 2%, 0) scale(1.05); }
+        }
+
+        @keyframes gridDrift {
+            from { background-position: 0 0; }
+            to { background-position: 68px 34px; }
+        }
+
         .app-header {
             position: fixed;
             top: 0;
@@ -85,11 +124,72 @@
         .card-pro { 
             background: var(--ghost-card); 
             border: 1px solid rgba(139, 92, 246, 0.1); 
-            border-radius: 28px; 
+            border-radius: 20px; 
             padding: 22px; 
             margin-bottom: 18px; 
             backdrop-filter: blur(12px);
             box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        .action-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+        .metric-card { border-radius: 18px; padding: 16px; background: rgba(255,255,255,0.055); border: 1px solid rgba(255,255,255,0.08); }
+        .soft-panel { border-radius: 18px; background: rgba(255,255,255,0.045); border: 1px solid rgba(255,255,255,0.07); }
+        .quick-card {
+            border-radius: 18px;
+            padding: 16px;
+            background: linear-gradient(145deg, rgba(255,255,255,.075), rgba(255,255,255,.025));
+            border: 1px solid rgba(255,255,255,.08);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,.04);
+        }
+        .screen-title { display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; margin-bottom: 18px; }
+        .screen-title h2 { font-size: 22px; line-height: 1; font-weight: 900; font-style: italic; text-transform: uppercase; letter-spacing: -0.02em; }
+        .screen-title p { font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: .22em; color: rgba(255,255,255,.38); }
+        .empty-state {
+            border: 1px dashed rgba(255,255,255,.14);
+            border-radius: 20px;
+            padding: 28px 18px;
+            text-align: center;
+            color: rgba(255,255,255,.55);
+            font-size: 11px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: .08em;
+            background: rgba(255,255,255,.03);
+        }
+        .btn-soft {
+            border-radius: 14px;
+            padding: 12px 14px;
+            font-size: 10px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: .04em;
+            transition: transform .15s ease, opacity .15s ease;
+        }
+        .btn-soft:active { transform: scale(.97); opacity: .85; }
+        .sale-paid {
+            border-color: rgba(34,197,94,.35) !important;
+            background: linear-gradient(145deg, rgba(34,197,94,.16), rgba(255,255,255,.045)) !important;
+            box-shadow: 0 0 22px rgba(34,197,94,.10), inset 0 1px 0 rgba(255,255,255,.06);
+        }
+        .sale-debt {
+            border-color: rgba(239,68,68,.35) !important;
+            background: linear-gradient(145deg, rgba(239,68,68,.16), rgba(255,255,255,.045)) !important;
+            box-shadow: 0 0 22px rgba(239,68,68,.10), inset 0 1px 0 rgba(255,255,255,.06);
+        }
+        .status-pill { border-radius: 999px; padding: 6px 10px; font-size: 9px; font-weight: 900; text-transform: uppercase; }
+        .slide-up { animation: slideUp .28s ease both; }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+
+        @media (max-width: 420px) {
+            .app-header { height: 64px; padding: 0 14px; }
+            #app { padding-top: 76px; padding-left: 12px; padding-right: 12px; }
+            .bottom-nav { height: 68px; }
+            .nav-item { font-size: 8px; }
+            .nav-item span:first-child { font-size: 19px; }
+            .card-pro { border-radius: 18px; padding: 16px; margin-bottom: 12px; }
+            .action-grid { grid-template-columns: 1fr; }
+            input, select { border-radius: 14px; padding: 14px; }
+            .btn-main { border-radius: 16px; padding: 15px; }
         }
 
         .ghost-glow { filter: drop-shadow(0 0 15px var(--ghost-purple)); }
@@ -195,9 +295,10 @@
 <div id="receiptModal" class="fixed inset-0 bg-black/95 z-[2000] hidden flex items-center justify-center p-4 backdrop-blur-md">
     <div class="bg-white text-black p-8 rounded-[32px] w-full max-w-sm shadow-2xl relative border-4 border-purple-500/20">
         <div id="receiptContent" class="text-[11px] font-mono border-black pt-4"></div>
-        <div class="mt-8 flex gap-3">
-            <button onclick="closeReceipt()" class="flex-1 bg-gray-100 p-4 rounded-2xl font-black text-xs">CERRAR</button>
-            <button onclick="shareReceipt()" class="flex-1 bg-purple-600 text-white p-4 rounded-2xl font-black text-xs shadow-lg">WHATSAPP</button>
+        <div class="mt-8 grid grid-cols-3 gap-3">
+            <button onclick="closeReceipt()" class="bg-gray-100 p-4 rounded-2xl font-black text-xs">CERRAR</button>
+            <button onclick="shareReceipt()" class="bg-purple-600 text-white p-4 rounded-2xl font-black text-xs shadow-lg">TEXTO</button>
+            <button onclick="shareReceiptImage()" class="bg-black text-white p-4 rounded-2xl font-black text-xs shadow-lg">IMAGEN</button>
         </div>
     </div>
 </div>
@@ -225,7 +326,11 @@ window.trabajadores = [
     window.currentView = 'inicio';
     window.cart = [];
     window.dashboardFilter = 'all';
+    window.histSearch = "";
+    window.debtSearch = "";
+    window.invSearch = "";
     window.clienteActual = "";
+    window.currentReceiptId = null;
 
     const formatVE = (usd) => {
         const tasa = window.state.tasaBCV || 0;
@@ -259,14 +364,75 @@ window.trabajadores = [
         setTimeout(() => t.remove(), 2500);
     }
 
+    const money = (value) => (parseFloat(value) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const num = (value) => parseFloat(value) || 0;
+    const safeText = (value) => String(value ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+    const saleBalance = (v) => num(v.total) - num(v.abono);
+    const saleMaterials = (v) => (v.items || []).filter(i => i.mat_key).map(i => ({ name: i.mat_key || i.m, qty: num(i.c), total: num(i.p), concepto: i.concepto || 'GENERAL' }));
+    const saleServices = (v) => (v.items || []).filter(i => !i.mat_key).map(i => ({ name: i.m || 'SERVICIO', qty: num(i.c), total: num(i.p), concepto: i.concepto || 'GENERAL' }));
+
+    function buildMaterialUsage() {
+        const usage = {};
+        (window.state.ventas || []).forEach(v => {
+            saleMaterials(v).forEach(i => {
+                if(!usage[i.name]) usage[i.name] = { sold: 0, revenue: 0, tickets: 0 };
+                usage[i.name].sold += i.qty;
+                usage[i.name].revenue += i.total;
+                usage[i.name].tickets += 1;
+            });
+        });
+        return usage;
+    }
+
+    function summarizeSalesDetails() {
+        const materials = {};
+        const services = {};
+        (window.state.ventas || []).forEach(v => {
+            saleMaterials(v).forEach(i => {
+                if(!materials[i.name]) materials[i.name] = { qty: 0, total: 0, tickets: 0 };
+                materials[i.name].qty += i.qty;
+                materials[i.name].total += i.total;
+                materials[i.name].tickets += 1;
+            });
+            saleServices(v).forEach(i => {
+                if(!services[i.name]) services[i.name] = { qty: 0, total: 0, tickets: 0 };
+                services[i.name].qty += i.qty;
+                services[i.name].total += i.total;
+                services[i.name].tickets += 1;
+            });
+        });
+        return { materials, services };
+    }
+
+    function restoreStockFromSale(v) {
+        saleMaterials(v).forEach(i => {
+            if(window.state.inventario && window.state.inventario[i.name]) {
+                window.state.inventario[i.name].stock = num(window.state.inventario[i.name].stock) + i.qty;
+            }
+        });
+    }
+
+    function normalizeState(data) {
+        return {
+            ventas: data?.ventas || [],
+            inventario: data?.inventario || {},
+            compras: data?.compras || [],
+            gastos: data?.gastos || [],
+            comprasUSDT: data?.comprasUSDT || [],
+            servicios: data?.servicios || ["DISEÑO", "IMPRESIÓN", "CORTE", "INSTALACIÓN", "LAMINADO", "ACABADO"],
+            metaMensual: data?.metaMensual || 3000,
+            tasaBCV: data?.tasaBCV || 0
+        };
+    }
+
     window.sync = async function() { await docRef.set(window.state); render(); };
-    docRef.onSnapshot(doc => { if(doc.exists) { window.state = doc.data(); render(); } });
+    docRef.onSnapshot(doc => { if(doc.exists) { window.state = normalizeState(doc.data()); render(); } });
 
     window.setView = function(v) { 
         if(!window.isUnlocked) return;
         window.currentView = v; 
         document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active')); 
-        document.getElementById('n-'+v)?.classList.add('active'); 
+        (document.getElementById('n-'+v) || document.getElementById('n-more'))?.classList.add('active'); 
         render(); 
     };
 
@@ -441,6 +607,13 @@ window.trabajadores = [
                     </select>
                 </div>
 
+                <div class="grid grid-cols-4 gap-2 mb-4">
+                    <button onclick="setView('ventas')" class="quick-card active:scale-95"><p class="text-[8px] opacity-40 uppercase font-black">Accion</p><b class="text-sm text-white">Vender</b></button>
+                    <button onclick="setView('cobrar')" class="quick-card active:scale-95"><p class="text-[8px] opacity-40 uppercase font-black">Control</p><b class="text-sm text-red-300">Deudas</b></button>
+                    <button onclick="setView('cuadre')" class="quick-card active:scale-95"><p class="text-[8px] opacity-40 uppercase font-black">Stock</p><b class="text-sm text-emerald-300">Cuadre</b></button>
+                    <button onclick="setView('reportes')" class="quick-card active:scale-95"><p class="text-[8px] opacity-40 uppercase font-black">Datos</p><b class="text-sm text-blue-300">Reporte</b></button>
+                </div>
+
                 <div class="card-pro bg-gradient-to-br from-purple-800/40 via-black/40 to-black/60 border-purple-500/30 text-center py-8 relative overflow-hidden">
                     <p class="text-[11px] opacity-60 uppercase font-black tracking-[0.3em] mb-2 text-purple-300 italic font-black leading-none">Efectivo / Bancos 💸</p>
                     <h2 class="text-6xl font-black italic text-white tracking-tighter leading-none mt-1">$${cajaFisica.toLocaleString(undefined, {minimumFractionDigits: 2})}</h2>
@@ -528,17 +701,32 @@ window.trabajadores = [
         else if(window.currentView === 'compras') renderCompras(app, inv);
         else if(window.currentView === 'gastos') renderGastos(app);
         else if(window.currentView === 'catalogo') renderCatalogo(app, inv);
+        else if(window.currentView === 'cuadre') renderCuadreStock(app, inv);
+        else if(window.currentView === 'reportes') renderReportes(app);
         else if(window.currentView === 'usdt') renderUSDT(app);
         else if(window.currentView === 'more') renderMore(app, inv);
     };
 
     function renderInventario(app, inv, tasa) {
+        const q = (window.invSearch || "").trim().toUpperCase();
+        const materiales = Object.entries(inv).filter(([n]) => !q || n.toUpperCase().includes(q));
         app.innerHTML = `
             <div class="flex justify-between items-center mb-6">
                 <h2 class="text-xl font-black italic text-blue-400 uppercase tracking-tighter leading-none">LISTA DE PRECIOS 📦</h2>
             </div>
+            <button onclick="setView('compras')" class="btn-soft bg-blue-500/15 text-blue-300 border border-blue-500/20 w-full mb-3">Cargar Stock</button>
+            <div class="card-pro bg-blue-500/5 border-blue-500/20 slide-up">
+                <div class="flex justify-between items-center gap-3">
+                    <div>
+                        <p class="text-[9px] opacity-50 uppercase font-black tracking-widest">Control operativo</p>
+                        <h3 class="text-lg font-black italic text-white leading-none mt-1">Stock disponible y precios</h3>
+                    </div>
+                    <button onclick="setView('cuadre')" class="btn-soft bg-emerald-500/15 text-emerald-300 border border-emerald-500/20">Cuadre</button>
+                </div>
+            </div>
+            <input value="${safeText(window.invSearch)}" oninput="window.invSearch=this.value; render();" placeholder="BUSCAR MATERIAL" class="!mb-4 !bg-black/50">
             <div class="space-y-4 pb-24">
-                ${Object.entries(inv).map(([n, i]) => `
+                ${materiales.map(([n, i]) => `
                     <div class="card-pro border-l-8 ${parseFloat(i.stock) <= 5 ? 'border-red-600' : 'border-blue-600'} py-6 relative overflow-hidden">
                         <div class="flex justify-between items-start mb-4 border-b border-white/10 pb-4">
                             <div class="flex-1">
@@ -572,7 +760,61 @@ window.trabajadores = [
                             <button onclick="editItemInv('${n}')" class="bg-blue-600/10 text-blue-400 py-3 rounded-xl text-[10px] font-black italic uppercase active:scale-95">Editar</button>
                             <button onclick="delMat('${n}')" class="bg-red-900/40 text-red-400 py-3 rounded-xl text-[10px] font-black italic uppercase active:scale-95">Borrar</button>
                         </div>
-                    </div>`).join("")}
+                    </div>`).join("") || `<div class="empty-state">No hay materiales con ese nombre</div>`}
+            </div>`;
+    }
+
+    function renderCuadreStock(app, inv) {
+        const usage = buildMaterialUsage();
+        const compras = window.state.compras || [];
+        const rows = Object.entries(inv).map(([name, item]) => {
+            const bought = compras.filter(c => c.m === name).reduce((acc, c) => acc + num(c.c), 0);
+            const sold = usage[name]?.sold || 0;
+            const stock = num(item.stock);
+            const expected = bought - sold;
+            const diff = expected - stock;
+            return { name, bought, sold, stock, expected, diff, revenue: usage[name]?.revenue || 0 };
+        }).sort((a, b) => Math.abs(b.diff) - Math.abs(a.diff));
+        const totalVentas = (window.state.ventas || []).reduce((acc, v) => acc + num(v.total), 0);
+        const totalCobrado = (window.state.ventas || []).reduce((acc, v) => acc + num(v.abono), 0);
+        const totalDeuda = (window.state.ventas || []).reduce((acc, v) => acc + Math.max(saleBalance(v), 0), 0);
+        const alertas = rows.filter(r => Math.abs(r.diff) > 0.01).length;
+
+        app.innerHTML = `
+            <div class="flex items-center justify-between mb-5">
+                <div>
+                    <p class="text-[9px] opacity-40 uppercase font-black tracking-widest">Auditoria rapida</p>
+                    <h2 class="text-xl font-black italic text-emerald-400 uppercase tracking-tighter leading-none mt-1">Ventas vs Stock</h2>
+                </div>
+                <button onclick="setView('inventario')" class="btn-soft bg-blue-500/15 text-blue-300 border border-blue-500/20">Stock</button>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3 mb-4">
+                <div class="metric-card border-purple-500/20"><p class="text-[8px] opacity-50 uppercase font-black">Ventas</p><h3 class="text-2xl font-black text-white">$${money(totalVentas)}</h3></div>
+                <div class="metric-card border-green-500/20"><p class="text-[8px] opacity-50 uppercase font-black">Cobrado</p><h3 class="text-2xl font-black text-green-400">$${money(totalCobrado)}</h3></div>
+                <div class="metric-card border-red-500/20"><p class="text-[8px] opacity-50 uppercase font-black">Por cobrar</p><h3 class="text-2xl font-black text-red-400">$${money(totalDeuda)}</h3></div>
+                <div class="metric-card border-amber-500/20"><p class="text-[8px] opacity-50 uppercase font-black">Alertas</p><h3 class="text-2xl font-black text-amber-400">${alertas}</h3></div>
+            </div>
+
+            <div class="space-y-3 pb-24">
+                ${rows.map(r => `
+                    <div class="card-pro !mb-0 ${Math.abs(r.diff) > 0.01 ? 'border-amber-500/30 bg-amber-500/5' : 'border-emerald-500/20 bg-emerald-500/5'} slide-up">
+                        <div class="flex justify-between gap-3 items-start">
+                            <div class="min-w-0">
+                                <h3 class="text-sm font-black uppercase italic text-white leading-tight">${safeText(r.name)}</h3>
+                                <p class="text-[9px] opacity-50 uppercase font-bold mt-1">Vendido: ${r.sold.toFixed(2)} | Comprado: ${r.bought.toFixed(2)}</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-[8px] opacity-50 uppercase font-black">Stock real</p>
+                                <b class="text-2xl font-black ${r.stock <= 5 ? 'text-red-400' : 'text-white'}">${r.stock.toFixed(2)}</b>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-3 gap-2 mt-4 text-center text-[10px]">
+                            <div class="soft-panel p-3"><p class="opacity-40 uppercase font-black">Debe quedar</p><b>${r.expected.toFixed(2)}</b></div>
+                            <div class="soft-panel p-3"><p class="opacity-40 uppercase font-black">Diferencia</p><b class="${Math.abs(r.diff) > 0.01 ? 'text-amber-400' : 'text-emerald-400'}">${r.diff.toFixed(2)}</b></div>
+                            <div class="soft-panel p-3"><p class="opacity-40 uppercase font-black">Monto vendido</p><b>$${money(r.revenue)}</b></div>
+                        </div>
+                    </div>`).join("") || `<div class="card-pro text-center opacity-60 font-black uppercase">Sin materiales cargados</div>`}
             </div>`;
     }
 
@@ -602,7 +844,7 @@ window.trabajadores = [
                     <button onclick="addItem()" class="btn-main !bg-purple-600/10 !text-purple-300 !py-4 shadow-none border border-purple-500/20 font-black italic tracking-widest">+ AÑADIR ITEM</button>
                 </div>
                 <div id="vLista" class="mt-6 space-y-2">
-                    ${window.cart.map((item, idx) => `<div class="flex justify-between items-center bg-white/5 p-5 rounded-[22px] border-l-4 border-purple-500 text-xs"><div><div class="text-purple-300 font-black uppercase text-[10px] mb-1 leading-none italic font-black">${item.concepto}</div><b>${item.m}</b><br><span class="opacity-40 font-bold">${item.c} units</span></div><div class="flex items-center gap-5"><b>$${(parseFloat(item.p) || 0).toFixed(2)}</b><button onclick="removeItem(${idx})" class="text-red-500 text-xl font-black">✕</button></div></div>`).join("")}
+                    ${window.cart.map((item, idx) => `<div class="flex justify-between items-center bg-white/5 p-5 rounded-[18px] border-l-4 border-purple-500 text-xs"><div><div class="text-purple-300 font-black uppercase text-[10px] mb-1 leading-none italic font-black">${item.concepto}</div><b>${item.m}</b><br><span class="opacity-40 font-bold">${item.c} usado${item.mat_key ? ' en material' : ''}</span></div><div class="flex items-center gap-5"><b>$${(parseFloat(item.p) || 0).toFixed(2)}</b><button onclick="removeItem(${idx})" class="text-red-500 text-xl font-black">✕</button></div></div>`).join("")}
                 </div>
                 <div class="text-center my-8">
                     <div class="text-5xl font-black text-white italic tracking-tighter leading-none font-black">$${totalUSD.toFixed(2)}</div>
@@ -622,17 +864,25 @@ window.trabajadores = [
     }
 
     function renderHistorial(app) {
-        const ventas = (window.state.ventas || []).slice().reverse();
+        const q = (window.histSearch || "").trim().toUpperCase();
+        const ventas = (window.state.ventas || []).slice().reverse().filter(v => {
+            const items = (v.items || []).map(i => `${i.concepto || ''} ${i.m || ''}`).join(' ');
+            return !q || `${v.cliente || ''} ${v.fecha || ''} ${items}`.toUpperCase().includes(q);
+        });
         app.innerHTML = `
             <h2 class="text-xl font-black italic text-white mb-6 uppercase text-center tracking-tighter leading-none">Libro de Ventas 📖</h2>
             <div class="space-y-4 pb-24">
+                <input value="${safeText(window.histSearch)}" oninput="window.histSearch=this.value; render();" placeholder="BUSCAR CLIENTE, FECHA O MATERIAL" class="!mb-4 !bg-black/50">
                 ${ventas.map(v => `
-                    <div class="bg-white/5 p-4 rounded-[22px] border border-white/5 relative">
+                    <div class="bg-white/5 p-4 rounded-[22px] border border-white/5 relative ${saleBalance(v) <= 0.01 ? 'sale-paid' : 'sale-debt'}">
                         <button onclick="delVenta(${v.id})" class="absolute top-4 right-4 text-red-500 font-black text-lg bg-red-500/10 w-8 h-8 rounded-full flex items-center justify-center">✕</button>
                         
                         <div class="pr-10 mb-3">
                             <h4 class="font-black text-white uppercase italic text-sm leading-none">${v.cliente}</h4>
                             <span class="text-[9px] opacity-40 font-bold uppercase">${v.fecha}</span>
+                            <div class="mt-3">
+                                <span class="status-pill ${saleBalance(v) <= 0.01 ? 'bg-green-500/20 text-green-300 border border-green-500/20' : 'bg-red-500/20 text-red-300 border border-red-500/20'}">${saleBalance(v) <= 0.01 ? 'Pagado completo' : 'Debe $' + money(saleBalance(v))}</span>
+                            </div>
                         </div>
 
                         <div class="mt-3 p-3 bg-black/40 rounded-xl border border-white/5">
@@ -656,18 +906,20 @@ window.trabajadores = [
                                 </p>
                             </div>
                             <div class="flex gap-2">
-                                <button onclick="showReceipt(${v.id})" class="bg-purple-600/20 text-purple-400 py-2 px-3 rounded-xl text-[9px] font-black uppercase italic">Ticket 📑</button>
+                                <button onclick="showReceipt(${v.id})" class="bg-purple-600/20 text-purple-400 py-2 px-3 rounded-xl text-[9px] font-black uppercase italic">Nota 📑</button>
                                 <button onclick="editVenta(${v.id})" class="bg-blue-600/20 text-blue-400 py-2 px-3 rounded-xl text-[9px] font-black uppercase italic text-center">Editar</button>
                             </div>
                         </div>
                     </div>
-                `).join("")}
+                `).join("") || `<div class="empty-state">No hay ventas para esa busqueda</div>`}
             </div>`;
     }
 
     function renderPorCobrar(app, tasa) {
+        const q = (window.debtSearch || "").trim().toUpperCase();
         const ventas = window.state.ventas || [];
-        const deudas = ventas.filter(v => ((parseFloat(v.total) || 0) - (parseFloat(v.abono) || 0)) > 0.01);
+        const deudas = ventas.filter(v => ((parseFloat(v.total) || 0) - (parseFloat(v.abono) || 0)) > 0.01)
+            .filter(v => !q || `${v.cliente || ''} ${v.fecha || ''} ${(v.items || []).map(i => i.concepto || i.m || '').join(' ')}`.toUpperCase().includes(q));
         const clientesDeuda = {};
         deudas.forEach(v => {
             const nombre = v.cliente ? v.cliente.trim().toUpperCase() : 'DESCONOCIDO';
@@ -676,6 +928,7 @@ window.trabajadores = [
             clientesDeuda[nombre].tickets.push(v);
         });
         app.innerHTML = `<h2 class="text-xl font-black italic text-red-500 mb-8 uppercase text-center tracking-tighter">Cuentas por Cobrar 📑</h2>
+            <input value="${safeText(window.debtSearch)}" oninput="window.debtSearch=this.value; render();" placeholder="BUSCAR DEUDA POR CLIENTE, FECHA O TRABAJO" class="!mb-4 !bg-black/50">
             <div class="space-y-6">
                 ${Object.entries(clientesDeuda).map(([clienteName, data]) => `
                     <div class="card-pro !p-0 overflow-hidden border-red-500/30 shadow-2xl bg-black/60">
@@ -694,12 +947,112 @@ window.trabajadores = [
                                         <button onclick="abonar(${v.id})" class="bg-green-600/10 text-green-500 py-2 rounded-xl text-[10px] font-black italic">Abonar</button>
                                         <button onclick="liquidar(${v.id})" class="bg-green-600 text-white py-2 rounded-xl text-[10px] font-black italic">Liquidar</button>
                                         <button onclick="editVenta(${v.id})" class="bg-blue-600/20 text-blue-400 py-2 rounded-xl text-[10px] font-black uppercase italic">Editar Total</button>
-                                        <button onclick="showReceipt(${v.id})" class="bg-purple-600/20 text-purple-400 py-2 rounded-xl col-span-2 text-[10px] font-black italic uppercase tracking-widest">Factura</button>
+                                        <button onclick="delVenta(${v.id})" class="bg-red-600/20 text-red-400 py-2 rounded-xl text-[10px] font-black uppercase italic">Eliminar</button>
+                                        <button onclick="showReceipt(${v.id})" class="bg-purple-600/20 text-purple-400 py-2 rounded-xl col-span-2 text-[10px] font-black italic uppercase tracking-widest">Nota de entrega</button>
                                     </div>
                                 </div>`).join("")}
                         </div>
-                    </div>`).join("")}
+                    </div>`).join("") || `<div class="empty-state">No hay deudas pendientes</div>`}
             </div>`;
+    }
+
+    function renderReportes(app) {
+        const ventas = window.state.ventas || [];
+        const gastos = window.state.gastos || [];
+        const salesDetails = summarizeSalesDetails();
+        const materialRows = Object.entries(salesDetails.materials).sort((a, b) => b[1].total - a[1].total);
+        const serviceRows = Object.entries(salesDetails.services).sort((a, b) => b[1].total - a[1].total);
+        const months = {};
+        ventas.forEach(v => {
+            const m = (v.fecha || '').slice(0, 7) || 'SIN FECHA';
+            if(!months[m]) months[m] = { ventas: 0, cobrado: 0, gastos: 0, deuda: 0, tickets: 0 };
+            months[m].ventas += num(v.total);
+            months[m].cobrado += num(v.abono);
+            months[m].deuda += Math.max(saleBalance(v), 0);
+            months[m].tickets += 1;
+        });
+        gastos.forEach(g => {
+            const m = (g.fecha || (g.f ? g.f.slice(0, 10) : '')).slice(0, 7) || 'SIN FECHA';
+            if(!months[m]) months[m] = { ventas: 0, cobrado: 0, gastos: 0, deuda: 0, tickets: 0 };
+            months[m].gastos += num(g.monto);
+        });
+        const rows = Object.entries(months).sort(([a], [b]) => b.localeCompare(a));
+        const totals = rows.reduce((acc, [, r]) => {
+            acc.ventas += r.ventas; acc.cobrado += r.cobrado; acc.gastos += r.gastos; acc.deuda += r.deuda; acc.tickets += r.tickets;
+            return acc;
+        }, { ventas: 0, cobrado: 0, gastos: 0, deuda: 0, tickets: 0 });
+        const utilidad = totals.cobrado - totals.gastos;
+        const topClientes = Object.entries(ventas.reduce((acc, v) => {
+            const name = (v.cliente || 'SIN CLIENTE').trim().toUpperCase();
+            if(!acc[name]) acc[name] = { total: 0, deuda: 0, tickets: 0 };
+            acc[name].total += num(v.total);
+            acc[name].deuda += Math.max(saleBalance(v), 0);
+            acc[name].tickets += 1;
+            return acc;
+        }, {})).sort((a, b) => b[1].total - a[1].total).slice(0, 5);
+
+        app.innerHTML = `
+            <div class="screen-title">
+                <div><p>Reporte ejecutivo</p><h2 class="text-blue-300">Negocio</h2></div>
+                <button onclick="exportarBackup()" class="btn-soft bg-blue-500/15 text-blue-300 border border-blue-500/20">Backup</button>
+            </div>
+            <div class="grid grid-cols-2 gap-3 mb-4">
+                <div class="metric-card border-purple-500/20"><p class="text-[8px] opacity-50 uppercase font-black">Ventas</p><h3 class="text-2xl font-black">$${money(totals.ventas)}</h3></div>
+                <div class="metric-card border-green-500/20"><p class="text-[8px] opacity-50 uppercase font-black">Cobrado</p><h3 class="text-2xl font-black text-green-400">$${money(totals.cobrado)}</h3></div>
+                <div class="metric-card border-red-500/20"><p class="text-[8px] opacity-50 uppercase font-black">Gastos</p><h3 class="text-2xl font-black text-red-400">$${money(totals.gastos)}</h3></div>
+                <div class="metric-card border-amber-500/20"><p class="text-[8px] opacity-50 uppercase font-black">Caja neta</p><h3 class="text-2xl font-black ${utilidad >= 0 ? 'text-emerald-400' : 'text-red-400'}">$${money(utilidad)}</h3></div>
+            </div>
+            <div class="card-pro">
+                <p class="text-[10px] opacity-40 uppercase font-black italic mb-5 text-center">Tendencia mensual</p>
+                <div class="h-52"><canvas id="reportChart"></canvas></div>
+            </div>
+            <div class="card-pro">
+                <h3 class="text-sm font-black uppercase italic text-white mb-4">Detalle de ventas por material</h3>
+                <div class="space-y-2">
+                    ${materialRows.map(([name, r]) => `
+                        <div class="soft-panel p-3">
+                            <div class="flex justify-between gap-3 items-center">
+                                <div><b class="text-xs uppercase">${safeText(name)}</b><p class="text-[9px] opacity-45">${r.qty.toFixed(2)} usados | ${r.tickets} tickets</p></div>
+                                <b class="text-sm text-emerald-300">$${money(r.total)}</b>
+                            </div>
+                        </div>`).join("") || `<div class="empty-state">Aun no hay materiales vendidos</div>`}
+                </div>
+            </div>
+            <div class="card-pro">
+                <h3 class="text-sm font-black uppercase italic text-white mb-4">Detalle de ventas por servicio</h3>
+                <div class="space-y-2">
+                    ${serviceRows.map(([name, r]) => `
+                        <div class="soft-panel p-3">
+                            <div class="flex justify-between gap-3 items-center">
+                                <div><b class="text-xs uppercase">${safeText(name)}</b><p class="text-[9px] opacity-45">${r.qty.toFixed(2)} unidades | ${r.tickets} tickets</p></div>
+                                <b class="text-sm text-sky-300">$${money(r.total)}</b>
+                            </div>
+                        </div>`).join("") || `<div class="empty-state">Aun no hay servicios vendidos</div>`}
+                </div>
+            </div>
+            <div class="card-pro">
+                <h3 class="text-sm font-black uppercase italic text-white mb-4">Resumen por mes</h3>
+                <div class="space-y-2">
+                    ${rows.map(([m, r]) => `
+                        <div class="soft-panel p-3 text-[10px]">
+                            <div class="flex justify-between items-center mb-2"><b class="text-white">${m}</b><span class="opacity-50">${r.tickets} tickets</span></div>
+                            <div class="grid grid-cols-4 gap-2 text-center">
+                                <span>V $${money(r.ventas)}</span><span>C $${money(r.cobrado)}</span><span>G $${money(r.gastos)}</span><span>D $${money(r.deuda)}</span>
+                            </div>
+                        </div>`).join("") || `<div class="empty-state">No hay datos para reportar</div>`}
+                </div>
+            </div>
+            <div class="card-pro">
+                <h3 class="text-sm font-black uppercase italic text-white mb-4">Mejores clientes</h3>
+                <div class="space-y-2">
+                    ${topClientes.map(([name, r]) => `
+                        <div class="flex justify-between items-center soft-panel p-3">
+                            <div><b class="text-xs uppercase">${safeText(name)}</b><p class="text-[9px] opacity-40">${r.tickets} ventas | deuda $${money(r.deuda)}</p></div>
+                            <b class="text-sm text-purple-300">$${money(r.total)}</b>
+                        </div>`).join("") || `<div class="empty-state">Aun no hay clientes</div>`}
+                </div>
+            </div>`;
+        setTimeout(() => initReportChart(rows.slice().reverse()), 100);
     }
 
     function renderMore(app, inv) {
@@ -709,6 +1062,14 @@ window.trabajadores = [
                 <div onclick="setView('inventario')" class="card-pro flex items-center gap-5 border-blue-500/20 bg-blue-500/5 cursor-pointer">
                     <div class="text-4xl">📋</div>
                     <div><b class="text-lg font-black italic uppercase leading-none">Ver Lista de Precios</b><p class="text-[10px] opacity-40 uppercase font-bold tracking-widest">Detal, Mayor y Stock</p></div>
+                </div>
+                <div onclick="setView('cuadre')" class="card-pro flex items-center gap-5 border-emerald-500/20 bg-emerald-500/5 cursor-pointer">
+                    <div class="text-4xl">OK</div>
+                    <div><b class="text-lg font-black italic uppercase leading-none text-emerald-400">Cuadre Ventas / Stock</b><p class="text-[10px] opacity-60 uppercase font-black tracking-widest text-emerald-400/80">Materiales usados y diferencias</p></div>
+                </div>
+                <div onclick="setView('reportes')" class="card-pro flex items-center gap-5 border-sky-500/20 bg-sky-500/5 cursor-pointer">
+                    <div class="text-4xl">DATA</div>
+                    <div><b class="text-lg font-black italic uppercase leading-none text-sky-300">Reporte Ejecutivo</b><p class="text-[10px] opacity-60 uppercase font-black tracking-widest text-sky-300/80">Meses, caja, gastos y clientes top</p></div>
                 </div>
                 <div onclick="setView('usdt')" class="card-pro flex items-center gap-5 border-amber-500/20 bg-amber-500/5 cursor-pointer">
                     <div class="text-4xl">🔶</div>
@@ -722,7 +1083,13 @@ window.trabajadores = [
                     <div class="text-4xl">🛒</div>
                     <div><b class="text-lg font-black italic uppercase leading-none">Carga de Stock</b></div>
                 </div>
+                <div onclick="setView('catalogo')" class="card-pro flex items-center gap-5 border-purple-500/20 bg-purple-500/5 cursor-pointer">
+                    <div class="text-4xl">+</div>
+                    <div><b class="text-lg font-black italic uppercase leading-none text-purple-300">Materiales y Servicios</b><p class="text-[10px] opacity-60 uppercase font-black tracking-widest text-purple-300/80">Crear, revisar y borrar catalogo</p></div>
+                </div>
                 <button onclick="exportarBackup()" class="btn-main !bg-blue-600 mt-4 mb-2 shadow-lg font-black italic">📥 DESCARGAR RESPALDO (JSON)</button>
+                <input id="backupFile" type="file" accept="application/json" onchange="importarBackup(event)" class="hidden">
+                <button onclick="document.getElementById('backupFile').click()" class="btn-main !bg-slate-700 mb-2 shadow-lg font-black italic">RESTAURAR RESPALDO JSON</button>
                 <button onclick="window.isUnlocked = false; render();" class="btn-main mt-10 !bg-red-600 font-black italic">SALIR Y BLOQUEAR</button>
             </div>`;
     }
@@ -765,9 +1132,26 @@ window.trabajadores = [
     function renderCatalogo(app, inv) {
         app.innerHTML = `
             <div class="card-pro">
-                <h3 class="text-xs font-black text-blue-400 uppercase mb-4 italic tracking-widest">Materiales</h3>
-                <input id="nMat" placeholder="NOMBRE MATERIAL"><button onclick="crearMat()" class="btn-main !py-3 !bg-blue-600/20 shadow-none border border-blue-500/20 font-black italic">Crear Base</button>
-                <div class="mt-4 space-y-1">${Object.keys(inv).map(m => `<div class="bg-black/40 p-4 rounded-xl flex justify-between text-xs border border-white/5 italic uppercase"><span>${m}</span><button onclick="delMat('${m}')" class="text-red-500 font-black">✕</button></div>`).join("")}</div>
+                <div class="screen-title">
+                    <div><p>Catalogo</p><h2 class="text-purple-300">Materiales</h2></div>
+                    <button onclick="setView('more')" class="btn-soft bg-white/10 text-white border border-white/10">Volver</button>
+                </div>
+                <input id="nMat" placeholder="NOMBRE MATERIAL">
+                <div class="grid grid-cols-3 gap-2">
+                    <input id="nStock" type="number" placeholder="STOCK" class="!m-0">
+                    <input id="nDetal" type="number" placeholder="DETAL $" class="!m-0">
+                    <input id="nMayor" type="number" placeholder="MAYOR $" class="!m-0">
+                </div>
+                <button onclick="crearMat()" class="btn-main !py-3 !bg-blue-600/20 shadow-none border border-blue-500/20 font-black italic mt-3">Crear Material</button>
+                <div class="mt-4 space-y-1">${Object.keys(inv).map(m => `<div class="bg-black/40 p-4 rounded-xl flex justify-between text-xs border border-white/5 italic uppercase"><span>${m}</span><button onclick="delMat('${m}')" class="text-red-500 font-black">✕</button></div>`).join("") || `<div class="empty-state">Sin materiales creados</div>`}</div>
+            </div>
+            <div class="card-pro">
+                <div class="screen-title">
+                    <div><p>Catalogo</p><h2 class="text-sky-300">Servicios</h2></div>
+                </div>
+                <input id="nServ" placeholder="NOMBRE SERVICIO">
+                <button onclick="crearServicio()" class="btn-main !py-3 !bg-sky-600/20 shadow-none border border-sky-500/20 font-black italic">Crear Servicio</button>
+                <div class="mt-4 space-y-1">${(window.state.servicios || []).map((s, idx) => `<div class="bg-black/40 p-4 rounded-xl flex justify-between text-xs border border-white/5 italic uppercase"><span>${safeText(s)}</span><button onclick="delServicio(${idx})" class="text-red-500 font-black">✕</button></div>`).join("") || `<div class="empty-state">Sin servicios creados</div>`}</div>
             </div>`;
     }
 
@@ -795,10 +1179,17 @@ window.trabajadores = [
         }
         let abono = parseFloat(document.getElementById("vAbono").value) || 0;
         let total = window.cart.reduce((acc, item) => acc + (parseFloat(item.p) || 0), 0);
+        abono = Math.min(abono, total);
+
+        const faltantes = window.cart.filter(i => i.mat_key && window.state.inventario[i.mat_key] && num(window.state.inventario[i.mat_key].stock) < num(i.c));
+        if(faltantes.length) {
+            const lista = faltantes.map(i => `${i.mat_key}: stock ${num(window.state.inventario[i.mat_key].stock).toFixed(2)} / usado ${num(i.c).toFixed(2)}`).join("\n");
+            if(!confirm("Hay materiales con stock insuficiente:\n\n" + lista + "\n\nRegistrar de todos modos?")) return;
+        }
 
         window.cart.forEach(i => { 
             if (i.mat_key && window.state.inventario[i.mat_key]) {
-                window.state.inventario[i.mat_key].stock -= i.c; 
+                window.state.inventario[i.mat_key].stock = num(window.state.inventario[i.mat_key].stock) - num(i.c); 
             }
         });
 
@@ -841,25 +1232,26 @@ window.trabajadores = [
         v.abono = v.total; await window.sync(); showToast("✅ LIQUIDADO");
     };
 
+    window.editVenta = async (id) => {
+        const v = window.state.ventas.find(x => x.id === id);
+        if (!v) return showToast("Venta no encontrada");
+        const totalRaw = prompt("Nuevo TOTAL $:", num(v.total).toFixed(2));
+        if (totalRaw === null) return;
+        const nuevoTotal = parseFloat(String(totalRaw).replace(',', '.'));
+        if (isNaN(nuevoTotal) || nuevoTotal < 0) return showToast("Valor invalido");
+        const abonoRaw = prompt("Abonado actual $:", num(v.abono).toFixed(2));
+        if (abonoRaw === null) return;
+        const nuevoAbono = parseFloat(String(abonoRaw).replace(',', '.'));
+        if (isNaN(nuevoAbono) || nuevoAbono < 0) return showToast("Abono invalido");
+        v.total = nuevoTotal;
+        v.abono = Math.min(nuevoAbono, nuevoTotal);
+        if(!v.historialAbonos) v.historialAbonos = [];
+        v.historialAbonos.push({ fecha: new Date().toISOString().split('T')[0], monto: 0, nota: "AJUSTE MANUAL" });
+        await window.sync();
+        showToast("Venta actualizada");
+    };
+
     window.abonar = async (id) => { 
-window.editVenta = async (id) => {
-    const v = window.state.ventas.find(x => x.id === id);
-    if (!v) return;
-
-    let nuevoTotal = prompt("Nuevo TOTAL $:", v.total);
-    if (nuevoTotal === null) return;
-
-    nuevoTotal = parseFloat(nuevoTotal);
-    if (isNaN(nuevoTotal)) {
-        showToast("❌ Valor inválido");
-        return;
-    }
-
-    v.total = nuevoTotal;
-
-    await window.sync();
-    showToast("✅ TOTAL ACTUALIZADO");
-};
         const v = window.state.ventas.find(x => x.id === id); let val = prompt("Monto $:"); if (!val) return;
         const monto = parseFloat(val.replace(',', '.')); if(!v.historialAbonos) v.historialAbonos = [];
         v.historialAbonos.push({ fecha: new Date().toISOString().split('T')[0], monto, nota: "ABONO MANUAL" });
@@ -902,6 +1294,7 @@ window.registrarMerma = async (materialNombre) => {
     window.showReceipt = function(ventaId) {
         const v = window.state.ventas.find(x => x.id === ventaId); 
         if(!v) return;
+        window.currentReceiptId = ventaId;
         const tasa = window.state.tasaBCV || 0;
         const deuda = (parseFloat(v.total) - parseFloat(v.abono));
 
@@ -910,6 +1303,7 @@ window.registrarMerma = async (materialNombre) => {
                 <div style="font-size: 28px; margin-bottom: 5px;">👻</div>
                 <div style="font-size: 18px; font-weight: 900; letter-spacing: 1px;">GHOST PRINT</div>
                 <div style="font-size: 8px; text-transform: uppercase; opacity: 0.7;">Publicidad y Soluciones Gráficas</div>
+                <div style="font-size: 11px; font-weight: 900; margin-top: 8px; padding: 5px 8px; border: 1px solid #111; display: inline-block; border-radius: 999px;">NOTA DE ENTREGA</div>
             </div>
 
             <div style="margin-bottom: 10px; font-size: 10px; line-height: 1.4;">
@@ -922,8 +1316,11 @@ window.registrarMerma = async (materialNombre) => {
             
             <div style="margin-bottom: 10px;">
                 ${v.items.map(i => `
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-                        <span style="flex: 1;">${i.c}x ${i.concepto}</span>
+                    <div style="display: flex; justify-content: space-between; gap: 8px; margin-bottom: 7px; align-items: flex-start;">
+                        <span style="flex: 1;">
+                            <b>${safeText(i.concepto || 'GENERAL')}</b><br>
+                            <span style="font-size: 9px; color: #555;">Material/servicio: ${safeText(i.m || i.mat_key || 'LIBRE')} | Cantidad: ${num(i.c).toFixed(2)}</span>
+                        </span>
                         <span style="font-weight: bold;">$${parseFloat(i.p).toFixed(2)}</span>
                     </div>
                 `).join('')}
@@ -958,11 +1355,45 @@ window.registrarMerma = async (materialNombre) => {
     };
 
     window.closeReceipt = () => document.getElementById("receiptModal").classList.add("hidden");
-    window.delVenta = async (id) => { if(confirm("¿Borrar?")) { window.state.ventas = window.state.ventas.filter(v => v.id !== id); await window.sync(); } };
+    window.delVenta = async (id) => { 
+        const v = window.state.ventas.find(x => x.id === id);
+        if(!v) return showToast("Venta no encontrada");
+        if(confirm("Borrar esta venta/deuda y devolver sus materiales al stock?")) { 
+            restoreStockFromSale(v);
+            window.state.ventas = window.state.ventas.filter(v => v.id !== id); 
+            await window.sync(); 
+            showToast("Venta eliminada y stock restaurado");
+        } 
+    };
     window.delUSDT = async (idx) => { if(confirm("¿Borrar?")) { window.state.comprasUSDT.splice(idx, 1); await window.sync(); } };
     window.cambiarTasa = async () => { const n = prompt("Tasa:"); if(n) { window.state.tasaBCV = parseFloat(n); await window.sync(); } };
     window.editItemInv = async (n) => { let nS = parseFloat(prompt("Nuevo Stock:", window.state.inventario[n].stock)); if(!isNaN(nS)) { window.state.inventario[n].stock = nS; await window.sync(); } };
     window.delMat = async (n) => { if(confirm("Borrar?")) { delete window.state.inventario[n]; await window.sync(); } };
+    window.crearMat = async () => {
+        const name = (document.getElementById("nMat")?.value || "").trim().toUpperCase();
+        if(!name) return showToast("Nombre del material");
+        window.state.inventario[name] = {
+            stock: num(document.getElementById("nStock")?.value),
+            precioDetal: num(document.getElementById("nDetal")?.value),
+            precioMayor: num(document.getElementById("nMayor")?.value)
+        };
+        await window.sync();
+        showToast("Material creado");
+    };
+    window.crearServicio = async () => {
+        const name = (document.getElementById("nServ")?.value || "").trim().toUpperCase();
+        if(!name) return showToast("Nombre del servicio");
+        if(!window.state.servicios) window.state.servicios = [];
+        if(!window.state.servicios.includes(name)) window.state.servicios.push(name);
+        await window.sync();
+        showToast("Servicio creado");
+    };
+    window.delServicio = async (idx) => {
+        if(confirm("Borrar servicio?")) {
+            window.state.servicios = (window.state.servicios || []).filter((_, i) => i !== idx);
+            await window.sync();
+        }
+    };
     window.removeItem = (idx) => { window.cart.splice(idx, 1); render(); };
     window.updateVentaUI = () => {
         const m = document.getElementById("vMat")?.value, t = document.getElementById("vTipo")?.value, c = parseFloat(document.getElementById("vCant")?.value) || 1;
@@ -984,13 +1415,177 @@ window.registrarMerma = async (materialNombre) => {
         showToast("✅ RESPALDO DESCARGADO");
     };
 
+    window.importarBackup = async (event) => {
+        const file = event.target.files?.[0];
+        if(!file) return;
+        try {
+            const text = await file.text();
+            const data = JSON.parse(text);
+            if(!data || !Array.isArray(data.ventas) || typeof data.inventario !== 'object') return showToast("Backup invalido");
+            if(confirm("Restaurar este respaldo? Esto reemplaza los datos actuales en Firebase.")) {
+                window.state = {
+                    ventas: data.ventas || [],
+                    inventario: data.inventario || {},
+                    compras: data.compras || [],
+                    gastos: data.gastos || [],
+                    comprasUSDT: data.comprasUSDT || [],
+                    servicios: data.servicios || window.state.servicios || [],
+                    metaMensual: data.metaMensual || window.state.metaMensual || 3000,
+                    tasaBCV: data.tasaBCV || window.state.tasaBCV || 0
+                };
+                await window.sync();
+                showToast("Respaldo restaurado");
+            }
+        } catch(e) {
+            showToast("No se pudo leer el backup");
+        } finally {
+            event.target.value = "";
+        }
+    };
+
     window.shareReceipt = () => {
         const content = document.getElementById("receiptContent").innerText;
-        const textoWhatsApp = "*👻 GHOST PRINT - COMPROBANTE DIGITAL*\n" + 
+        const textoWhatsApp = "*👻 GHOST PRINT - NOTA DE ENTREGA*\n" + 
                               "------------------------------------------\n\n" + 
                               content + 
                               "\n\n*¡Gracias por su confianza!*";
         window.open(`https://wa.me/?text=${encodeURIComponent(textoWhatsApp)}`);
+    };
+
+    function wrapCanvasText(ctx, text, x, y, maxWidth, lineHeight) {
+        const words = String(text || '').split(' ');
+        let line = '';
+        for (let n = 0; n < words.length; n++) {
+            const testLine = line + words[n] + ' ';
+            if (ctx.measureText(testLine).width > maxWidth && n > 0) {
+                ctx.fillText(line.trim(), x, y);
+                line = words[n] + ' ';
+                y += lineHeight;
+            } else {
+                line = testLine;
+            }
+        }
+        ctx.fillText(line.trim(), x, y);
+        return y + lineHeight;
+    }
+
+    async function receiptImageBlob(v) {
+        const width = 900;
+        const rowH = 58;
+        const height = Math.max(1120, 760 + ((v.items || []).length * rowH));
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, width, height);
+
+        ctx.fillStyle = '#111827';
+        ctx.font = '900 58px Inter, Arial';
+        ctx.fillText('GHOST PRINT', 190, 95);
+        ctx.font = '900 84px Arial';
+        ctx.fillText('GP', 54, 102);
+        ctx.strokeStyle = '#8b5cf6';
+        ctx.lineWidth = 8;
+        ctx.strokeRect(34, 28, 126, 96);
+        ctx.font = '800 20px Inter, Arial';
+        ctx.fillStyle = '#6b7280';
+        ctx.fillText('Publicidad y Soluciones Graficas', 194, 128);
+
+        ctx.fillStyle = '#8b5cf6';
+        ctx.fillRect(34, 162, 832, 58);
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '900 28px Inter, Arial';
+        ctx.fillText('NOTA DE ENTREGA', 54, 201);
+
+        ctx.fillStyle = '#111827';
+        ctx.font = '800 22px Inter, Arial';
+        ctx.fillText(`Cliente: ${v.cliente || 'SIN CLIENTE'}`, 54, 270);
+        ctx.fillText(`Fecha: ${v.fecha || ''}`, 54, 306);
+        ctx.fillText(`Pago: ${v.metodoPago || 'CONTADO'}`, 54, 342);
+        ctx.fillText(`Nota #: ${v.id}`, 520, 270);
+        ctx.fillText(`Vendedor: ${v.vendedor || 'ADMIN'}`, 520, 306);
+
+        ctx.strokeStyle = '#e5e7eb';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(54, 390, 792, 54);
+        ctx.fillStyle = '#111827';
+        ctx.font = '900 18px Inter, Arial';
+        ctx.fillText('DETALLE', 74, 424);
+        ctx.fillText('MONTO', 734, 424);
+
+        let y = 494;
+        ctx.font = '800 20px Inter, Arial';
+        (v.items || []).forEach(i => {
+            ctx.fillStyle = '#111827';
+            y = wrapCanvasText(ctx, `${i.concepto || 'GENERAL'}`, 74, y, 520, 24);
+            ctx.fillStyle = '#6b7280';
+            ctx.font = '700 17px Inter, Arial';
+            ctx.fillText(`Material/servicio: ${i.m || i.mat_key || 'LIBRE'} | Cantidad: ${num(i.c).toFixed(2)}`, 74, y);
+            ctx.fillStyle = '#111827';
+            ctx.font = '900 22px Inter, Arial';
+            ctx.fillText(`$${money(i.p)}`, 720, y - 12);
+            y += 44;
+            ctx.strokeStyle = '#f1f5f9';
+            ctx.beginPath();
+            ctx.moveTo(54, y - 18);
+            ctx.lineTo(846, y - 18);
+            ctx.stroke();
+            ctx.font = '800 20px Inter, Arial';
+        });
+
+        const deuda = Math.max(saleBalance(v), 0);
+        const totalY = Math.max(y + 30, height - 250);
+        ctx.fillStyle = '#f8fafc';
+        ctx.fillRect(520, totalY, 326, 154);
+        ctx.strokeStyle = '#e5e7eb';
+        ctx.strokeRect(520, totalY, 326, 154);
+        ctx.fillStyle = '#111827';
+        ctx.font = '900 24px Inter, Arial';
+        ctx.fillText('TOTAL', 546, totalY + 42);
+        ctx.fillText(`$${money(v.total)}`, 690, totalY + 42);
+        ctx.font = '800 20px Inter, Arial';
+        ctx.fillText('ABONADO', 546, totalY + 82);
+        ctx.fillText(`$${money(v.abono)}`, 700, totalY + 82);
+        ctx.fillStyle = deuda > 0.01 ? '#dc2626' : '#16a34a';
+        ctx.fillText(deuda > 0.01 ? 'PENDIENTE' : 'PAGADO', 546, totalY + 122);
+        ctx.fillText(`$${money(deuda)}`, 700, totalY + 122);
+
+        ctx.fillStyle = '#111827';
+        ctx.font = '800 18px Inter, Arial';
+        ctx.fillText(`Monto en bolivares: Bs. ${formatVE(v.total)}`, 54, totalY + 55);
+        ctx.fillStyle = '#6b7280';
+        ctx.font = '700 16px Inter, Arial';
+        ctx.fillText('Recibi conforme la mercancia / servicio descrito en esta nota.', 54, totalY + 112);
+        ctx.beginPath();
+        ctx.moveTo(54, totalY + 158);
+        ctx.lineTo(390, totalY + 158);
+        ctx.strokeStyle = '#111827';
+        ctx.stroke();
+        ctx.fillText('Firma / Sello del cliente', 54, totalY + 184);
+
+        return await new Promise(resolve => canvas.toBlob(resolve, 'image/png', 0.95));
+    }
+
+    window.shareReceiptImage = async () => {
+        const v = window.state.ventas.find(x => x.id === window.currentReceiptId);
+        if(!v) return showToast("Abre una nota primero");
+        const blob = await receiptImageBlob(v);
+        const file = new File([blob], `NOTA_ENTREGA_GHOSTPRINT_${v.id}.png`, { type: 'image/png' });
+        try {
+            if(navigator.canShare && navigator.canShare({ files: [file] })) {
+                await navigator.share({ files: [file], title: 'Nota de entrega GhostPrint', text: 'Nota de entrega GhostPrint' });
+                return;
+            }
+            throw new Error("share-not-supported");
+        } catch(e) {
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = file.name;
+            a.click();
+            URL.revokeObjectURL(a.href);
+            showToast("Imagen descargada");
+        }
     };
 
     function initChart(vM, gM) { 
@@ -1008,6 +1603,32 @@ window.registrarMerma = async (materialNombre) => {
             }, 
             options: { plugins: { legend: { display: false } } } 
         }); 
+    }
+
+    function initReportChart(rows) {
+        const ctx = document.getElementById('reportChart');
+        if(!ctx) return;
+        const clean = rows.slice(-8);
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: clean.map(([m]) => m),
+                datasets: [
+                    { label: 'Cobrado', data: clean.map(([, r]) => r.cobrado), backgroundColor: '#22c55e' },
+                    { label: 'Gastos', data: clean.map(([, r]) => r.gastos), backgroundColor: '#ef4444' },
+                    { label: 'Deuda', data: clean.map(([, r]) => r.deuda), backgroundColor: '#f59e0b' }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { labels: { color: '#e5e7eb', boxWidth: 10, font: { size: 10, weight: 'bold' } } } },
+                scales: {
+                    x: { ticks: { color: '#94a3b8', font: { size: 9 } }, grid: { display: false } },
+                    y: { ticks: { color: '#94a3b8', font: { size: 9 } }, grid: { color: 'rgba(255,255,255,.06)' } }
+                }
+            }
+        });
     }
 
     render();
