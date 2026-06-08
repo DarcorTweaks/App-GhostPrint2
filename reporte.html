@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>Ghost Print · Reporte de Trabajo</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,400;0,600;0,800;1,400&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --p:#7B3FA0;--p2:#9B5FC0;--o:#F07020;--o2:#f59340;
+  --g:#22c55e;--r:#ef4444;--y:#f59e0b;
+  --ink:#0d0810;--ink2:#130d18;--ink3:#1e1230;
+  --bd:rgba(255,255,255,.09);--tx:#f5f0ff;--mt:rgba(245,240,255,.42);
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{background:var(--ink);color:var(--tx);font-family:"DM Sans",sans-serif;min-height:100vh;overflow-x:hidden}
+body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:radial-gradient(ellipse 80% 50% at 50% -5%,rgba(123,63,160,.28),transparent 60%),
+             radial-gradient(ellipse 50% 40% at 90% 80%,rgba(240,112,32,.08),transparent 60%)}
+
+/* HEADER */
+.hdr{position:sticky;top:0;z-index:50;padding:14px 18px;background:rgba(13,8,16,.94);
+  border-bottom:1px solid var(--bd);backdrop-filter:blur(20px);
+  display:flex;align-items:center;justify-content:space-between}
+.hdr-icon{width:36px;height:36px;background:linear-gradient(135deg,var(--p),var(--o));
+  border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px}
+.hdr-title{font-family:"Bebas Neue";font-size:20px;letter-spacing:2px;line-height:1}
+.hdr-sub{font-size:8px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--mt)}
+.hdr-badge{background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.3);color:var(--g);
+  padding:4px 10px;border-radius:999px;font-size:9px;font-weight:800;letter-spacing:.1em;
+  text-transform:uppercase;display:flex;align-items:center;gap:5px}
+.dot-g{width:7px;height:7px;border-radius:50%;background:var(--g);box-shadow:0 0 8px var(--g);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+
+.app{position:relative;z-index:1;padding:20px 16px 40px;max-width:480px;margin:0 auto}
+
+/* ORDEN CODE BANNER */
+.orden-banner{background:linear-gradient(135deg,rgba(123,63,160,.25),rgba(240,112,32,.15));
+  border:1px solid rgba(123,63,160,.4);border-radius:16px;padding:14px 18px;
+  margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;
+  position:relative;overflow:hidden}
+.orden-banner::before{content:"";position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.2),transparent)}
+.orden-code{font-family:"JetBrains Mono";font-size:28px;font-weight:700;
+  letter-spacing:3px;color:var(--o);line-height:1}
+.orden-lbl{font-size:8px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;
+  color:var(--mt);margin-bottom:3px}
+.orden-hint{font-size:9px;color:rgba(245,240,255,.3);margin-top:2px}
+
+/* CARDS */
+.card{background:rgba(26,18,40,.78);border:1px solid var(--bd);border-radius:20px;
+  padding:18px;margin-bottom:12px;backdrop-filter:blur(8px);position:relative;overflow:hidden}
+.card::before{content:"";position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.1),transparent)}
+.card-title{font-family:"Bebas Neue";font-size:13px;letter-spacing:2px;color:var(--mt);
+  margin-bottom:12px;display:flex;align-items:center;gap:7px}
+
+/* INPUTS */
+.inp{width:100%;background:rgba(255,255,255,.04);border:1px solid var(--bd);border-radius:12px;
+  color:var(--tx);padding:13px 15px;font-size:15px;font-family:"DM Sans";font-weight:600;
+  outline:none;transition:border-color .2s,background .2s;margin-bottom:9px;
+  -webkit-appearance:none;appearance:none}
+.inp:focus{border-color:var(--p);background:rgba(123,63,160,.07)}
+.inp::placeholder{color:rgba(245,240,255,.2);font-weight:400}
+select.inp{cursor:pointer}
+.inp-label{font-size:9px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--mt);margin-bottom:4px;display:block}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:9px}
+.g2 .inp{margin-bottom:0}
+
+/* CHIPS */
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:9px}
+.chip{padding:6px 13px;border:1px solid var(--bd);border-radius:999px;font-size:11px;
+  font-weight:700;cursor:pointer;transition:all .15s cubic-bezier(.34,1.56,.64,1);
+  color:var(--mt);user-select:none}
+.chip:active{transform:scale(.9)}
+.chip.on{background:rgba(123,63,160,.25);border-color:var(--p2);color:var(--tx);box-shadow:0 0 12px rgba(123,63,160,.3)}
+
+/* PAGO */
+.pago-toggle{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:9px}
+.pago-btn{padding:14px 10px;border-radius:13px;border:2px solid var(--bd);
+  background:rgba(255,255,255,.03);cursor:pointer;text-align:center;
+  transition:all .18s cubic-bezier(.34,1.56,.64,1)}
+.pago-btn:active{transform:scale(.94)}
+.pago-btn .pago-ico{font-size:22px;display:block;margin-bottom:4px}
+.pago-btn .pago-lbl{font-family:"Bebas Neue";font-size:13px;letter-spacing:1.5px;color:var(--mt)}
+.pago-btn.cobrado{border-color:var(--g);background:rgba(34,197,94,.12)}
+.pago-btn.cobrado .pago-lbl{color:var(--g)}
+.pago-btn.pendiente{border-color:var(--y);background:rgba(245,158,11,.1)}
+.pago-btn.pendiente .pago-lbl{color:var(--y)}
+
+/* FOTO */
+.foto-zone{border:2px dashed rgba(255,255,255,.12);border-radius:14px;padding:20px;
+  text-align:center;cursor:pointer;transition:all .2s;margin-bottom:9px;position:relative}
+.foto-zone:active{transform:scale(.97)}
+.foto-zone.has-foto{border-style:solid;border-color:rgba(123,63,160,.4);padding:0;overflow:hidden}
+.foto-zone img{width:100%;border-radius:12px;display:block;max-height:200px;object-fit:cover}
+.foto-overlay{position:absolute;top:8px;right:8px;background:rgba(0,0,0,.7);
+  border-radius:999px;padding:5px 10px;font-size:10px;font-weight:800;cursor:pointer;
+  color:#fff;border:1px solid rgba(255,255,255,.2)}
+.foto-hint{font-size:10px;color:var(--mt);font-weight:700}
+.foto-ico{font-size:28px;margin-bottom:6px}
+
+/* PRICE */
+.price-box{background:rgba(240,112,32,.06);border:1px solid rgba(240,112,32,.2);
+  border-radius:14px;padding:14px;text-align:center;margin-bottom:9px}
+
+/* BUTTONS */
+.btn{display:block;width:100%;padding:15px;border:none;border-radius:14px;
+  font-family:"Bebas Neue";font-size:17px;letter-spacing:2px;cursor:pointer;
+  transition:transform .12s,opacity .12s,box-shadow .2s}
+.btn:active{transform:scale(.96);opacity:.85}
+.btn-g{background:linear-gradient(135deg,#16a34a,var(--g));color:#fff;box-shadow:0 4px 22px rgba(34,197,94,.3);margin-bottom:8px}
+.btn-o{background:linear-gradient(135deg,var(--o),#c45010);color:#fff;box-shadow:0 4px 22px rgba(240,112,32,.35);margin-bottom:8px}
+.btn-s{background:rgba(255,255,255,.06);border:1px solid var(--bd);color:var(--tx)}
+
+/* PREVIEW */
+.preview-box{background:rgba(0,0,0,.35);border:1px solid rgba(34,197,94,.25);border-radius:14px;
+  padding:16px;font-family:"JetBrains Mono";font-size:12px;line-height:1.7;
+  color:rgba(245,240,255,.85);white-space:pre-wrap;word-break:break-word;
+  margin-bottom:12px;min-height:80px}
+
+/* HISTORIAL */
+.hist-item{background:rgba(255,255,255,.03);border:1px solid var(--bd);border-radius:13px;
+  padding:12px 14px;margin-bottom:8px;animation:fadeUp .25s ease}
+.hist-item.ok{border-color:rgba(34,197,94,.2)}
+.hist-item.pend{border-color:rgba(245,158,11,.25)}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.hist-code{font-family:"JetBrains Mono";font-size:11px;font-weight:700;
+  color:var(--o);background:rgba(240,112,32,.1);border:1px solid rgba(240,112,32,.2);
+  border-radius:6px;padding:2px 7px;display:inline-block;margin-bottom:5px}
+.pill-g{display:inline-block;padding:3px 9px;border-radius:999px;font-size:8px;font-weight:800;
+  letter-spacing:.07em;text-transform:uppercase;background:rgba(34,197,94,.15);color:var(--g);border:1px solid rgba(34,197,94,.25)}
+.pill-y{display:inline-block;padding:3px 9px;border-radius:999px;font-size:8px;font-weight:800;
+  letter-spacing:.07em;text-transform:uppercase;background:rgba(245,158,11,.15);color:var(--y);border:1px solid rgba(245,158,11,.25)}
+.hist-thumb{width:100%;border-radius:9px;margin-top:8px;max-height:130px;object-fit:cover;display:block}
+
+/* TABS */
+.tabs{display:flex;gap:6px;margin-bottom:16px}
+.tab{flex:1;padding:9px 6px;border:1px solid var(--bd);border-radius:11px;
+  background:rgba(255,255,255,.04);color:var(--mt);font-family:"Bebas Neue";font-size:13px;
+  letter-spacing:1.5px;cursor:pointer;text-align:center;transition:all .18s}
+.tab.on{background:rgba(123,63,160,.2);border-color:var(--p2);color:var(--tx)}
+.counter{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;
+  border-radius:50%;background:var(--o);color:#fff;font-size:9px;font-weight:800;margin-left:5px}
+
+.empty{text-align:center;padding:30px 14px;border:1px dashed rgba(255,255,255,.1);
+  border-radius:14px;color:var(--mt);font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase}
+.toast{position:fixed;top:70px;left:50%;transform:translateX(-50%) translateY(-8px);
+  background:var(--ink3);border:1px solid var(--bd);color:var(--tx);padding:8px 18px;
+  border-radius:999px;font-size:11px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;
+  z-index:999;opacity:0;pointer-events:none;transition:all .22s cubic-bezier(.34,1.56,.64,1);white-space:nowrap}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+::-webkit-scrollbar{display:none}
+</style>
+</head>
+<body>
+<div class="toast" id="toast"></div>
+<header class="hdr">
+  <div style="display:flex;align-items:center;gap:10px">
+    <div class="hdr-icon">🖨</div>
+    <div><div class="hdr-title">Ghost Print</div><div class="hdr-sub">Reporte de trabajo</div></div>
+  </div>
+  <div class="hdr-badge"><div class="dot-g"></div>Activo</div>
+</header>
+<div class="app" id="app"></div>
+
+<script>
+var MATS    = ["Lona","Blackout","Mesh","Vinil","PVC","Tela Sublimada","Canvas","Papel Bond","Sticker","Foam","Madera","Otro"];
+var TRABAJOS= ["Impresión Gran Formato","Banner","Pendón","Vitrina","Sticker Cortado","Ploteo","Laminado","Montaje","Sublimación","Diseño","Otro"];
+var UNIDADES= ["m²","ml","pcs","ft²","unidades"];
+
+var S         = load();
+var currentTab= "nuevo";
+var matSel    = "";
+var pagoSel   = "";
+var fotoB64   = "";
+var fotoFile  = null;
+var codigoActual = "";   // código generado para el reporte en curso
+
+// ── CÓDIGO DE ORDEN: formato DDMM-NN ──
+function hoy2() {
+  var n = new Date();
+  var d = String(n.getDate()).padStart(2,"0");
+  var m = String(n.getMonth()+1).padStart(2,"0");
+  return d + m;  // ej "0806"
+}
+
+function generarCodigo() {
+  var prefijo = hoy2();
+  // Contar cuántos reportes del día ya hay
+  var rHoy = (S.reportes||[]).filter(function(r){ return r.codigo && r.codigo.startsWith(prefijo); });
+  var num = String(rHoy.length + 1).padStart(2,"0");
+  return prefijo + "-" + num;   // ej "0806-03"
+}
+
+// ── STORAGE ──
+function load() {
+  try { var d = localStorage.getItem("gp_rep3"); return d ? JSON.parse(d) : {reportes:[], empleado:""}; }
+  catch(e) { return {reportes:[], empleado:""}; }
+}
+function save() { try { localStorage.setItem("gp_rep3", JSON.stringify(S)); } catch(e) {} }
+
+// ── RENDER ──
+function render() {
+  var app = document.getElementById("app");
+
+  // Si no hay código activo, generar uno nuevo
+  if (!codigoActual) codigoActual = generarCodigo();
+
+  var nameHdr = S.empleado ?
+    '<div style="background:rgba(123,63,160,.12);border:1px solid rgba(123,63,160,.25);border-radius:13px;padding:10px 14px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between">' +
+    '<div><div style="font-size:9px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--mt)">Operador</div>' +
+    '<div style="font-size:15px;font-weight:800;margin-top:2px">'+esc(S.empleado)+'</div></div>' +
+    '<button onclick="cambiarNombre()" style="background:rgba(255,255,255,.06);border:1px solid var(--bd);color:var(--mt);padding:5px 10px;border-radius:8px;font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;cursor:pointer">Cambiar</button>' +
+    '</div>' : "";
+
+  var cnt = S.reportes.length;
+  var tabs =
+    '<div class="tabs">'+
+    '<div class="tab '+(currentTab==="nuevo"?"on":"")+'" onclick="switchTab(\'nuevo\')">📋 Nuevo</div>'+
+    '<div class="tab '+(currentTab==="historial"?"on":"")+'" onclick="switchTab(\'historial\')">'+
+    '📦 Historial'+(cnt?'<span class="counter">'+cnt+'</span>':'')+
+    '</div></div>';
+
+  app.innerHTML = nameHdr + tabs + (currentTab==="nuevo" ? renderNuevo() : renderHistorial());
+  restoreChips();
+  bindFoto();
+}
+
+function renderNuevo() {
+  var matChips = MATS.map(function(m){ return '<div class="chip" data-mat="'+esc(m)+'" onclick="toggleMat(this)">'+esc(m)+'</div>'; }).join("");
+  var trabOpts = TRABAJOS.map(function(t){ return '<option value="'+esc(t)+'">'+esc(t)+'</option>'; }).join("");
+  var unidOpts = UNIDADES.map(function(u){ return '<option value="'+esc(u)+'">'+u+'</option>'; }).join("");
+
+  var fotoHTML = fotoB64 ?
+    '<div class="foto-zone has-foto" id="fotoZone">'+
+    '<img src="'+fotoB64+'" alt="Foto">'+
+    '<div class="foto-overlay" onclick="quitarFoto()">✕ Quitar</div>'+
+    '</div>' :
+    '<div class="foto-zone" id="fotoZone" onclick="document.getElementById(\'fotoInput\').click()">'+
+    '<div class="foto-ico">📸</div>'+
+    '<div class="foto-hint">Toca para agregar foto del trabajo</div>'+
+    '<div style="font-size:9px;color:rgba(245,240,255,.2);margin-top:4px;font-weight:600">Cámara o galería</div>'+
+    '</div>';
+
+  return (
+    // ── BANNER CÓDIGO DE ORDEN ──
+    '<div class="orden-banner">'+
+    '<div>'+
+    '<div class="orden-lbl">Código de orden</div>'+
+    '<div class="orden-code">'+esc(codigoActual)+'</div>'+
+    '<div class="orden-hint">Usa este código en tu factura Ghost Print</div>'+
+    '</div>'+
+    '<div style="text-align:right">'+
+    '<div style="font-size:28px">🧾</div>'+
+    '<div style="font-size:9px;color:var(--mt);margin-top:3px;font-weight:700">'+hoy2().slice(0,2)+'/'+hoy2().slice(2)+'</div>'+
+    '</div>'+
+    '</div>'+
+
+    // ── FORMULARIO ──
+    '<div class="card">'+
+    '<div class="card-title"><span>📋</span> Datos del Trabajo</div>'+
+
+    '<label class="inp-label">Tipo de trabajo</label>'+
+    '<select id="f_trabajo" class="inp" onchange="genPreview()"><option value="">-- Selecciona --</option>'+trabOpts+'</select>'+
+
+    '<label class="inp-label">Cliente</label>'+
+    '<input id="f_cliente" class="inp" placeholder="Nombre del cliente" oninput="genPreview()">'+
+
+    '<label class="inp-label">Material</label>'+
+    '<div class="chips" id="chips_mat">'+matChips+'</div>'+
+
+    '<label class="inp-label">Metraje / Cantidad</label>'+
+    '<div class="g2">'+
+    '<input id="f_cant" type="number" class="inp" placeholder="0.00" step="0.01" min="0" oninput="genPreview()" style="font-family:Bebas Neue;font-size:22px;text-align:center">'+
+    '<select id="f_unidad" class="inp" onchange="genPreview()">'+unidOpts+'</select>'+
+    '</div>'+
+
+    '<label class="inp-label">Monto ($)</label>'+
+    '<div class="price-box">'+
+    '<input id="f_monto" type="number" class="inp" placeholder="0.00" step="0.01" min="0" '+
+    'style="background:none;border:none;font-family:Bebas Neue;font-size:48px;text-align:center;color:var(--o);padding:0;margin:0;width:100%" oninput="genPreview()">'+
+    '<div style="font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--mt);margin-top:2px">Monto en dólares</div>'+
+    '</div>'+
+
+    '<label class="inp-label">Estado del pago</label>'+
+    '<div class="pago-toggle">'+
+    '<div class="pago-btn '+(pagoSel==="cobrado"?"cobrado":"")+'" onclick="setPago(\'cobrado\')">'+
+    '<span class="pago-ico">✅</span><span class="pago-lbl">Cobrado</span></div>'+
+    '<div class="pago-btn '+(pagoSel==="pendiente"?"pendiente":"")+'" onclick="setPago(\'pendiente\')">'+
+    '<span class="pago-ico">⏳</span><span class="pago-lbl">Pendiente</span></div>'+
+    '</div>'+
+
+    '<label class="inp-label">Foto del trabajo</label>'+
+    fotoHTML+
+    '<input type="file" id="fotoInput" accept="image/*" capture="environment" style="display:none">'+
+
+    '<label class="inp-label">Observaciones (opcional)</label>'+
+    '<input id="f_obs" class="inp" placeholder="Ej: Urgente, instalación incluida..." oninput="genPreview()">'+
+    '</div>'+
+
+    // ── PREVIEW Y BOTONES ──
+    '<div class="card" style="border-color:rgba(34,197,94,.18);background:rgba(34,197,94,.04)">'+
+    '<div class="card-title"><span>👀</span> Vista previa del mensaje</div>'+
+    '<div class="preview-box" id="preview">Completa el formulario para ver el mensaje...</div>'+
+    '<button class="btn btn-g" onclick="enviarWhatsApp()">📲 Enviar por WhatsApp</button>'+
+    '<button class="btn btn-o" onclick="enviarConFoto()">📸 Enviar Foto + Texto</button>'+
+    '<button class="btn btn-s" onclick="copiarMensaje()">📋 Solo copiar mensaje</button>'+
+    '</div>'
+  );
+}
+
+function renderHistorial() {
+  if (!S.reportes.length) return '<div class="empty">📭<br><br>Sin reportes aún.<br>Registra tu primer trabajo.</div>';
+
+  var totalCob  = S.reportes.filter(function(r){return r.pago==="cobrado";}).reduce(function(a,r){return a+parseFloat(r.monto||0);},0);
+  var totalPend = S.reportes.filter(function(r){return r.pago==="pendiente";}).reduce(function(a,r){return a+parseFloat(r.monto||0);},0);
+
+  var items = S.reportes.slice().reverse().map(function(r,i){
+    var idx = S.reportes.length-1-i;
+    var thumbHTML = r.foto ? '<img class="hist-thumb" src="'+r.foto+'" alt="foto">' : "";
+    var pillHTML  = r.pago==="cobrado" ? '<span class="pill-g">✅ Cobrado</span>' :
+                    r.pago==="pendiente" ? '<span class="pill-y">⏳ Pendiente</span>' : '';
+    return (
+      '<div class="hist-item '+(r.pago==="cobrado"?"ok":"pend")+'">'+
+      '<div class="hist-code">'+esc(r.codigo||"—")+'</div>'+
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start">'+
+      '<div>'+
+      '<div style="font-size:9px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--mt)">'+esc(r.fecha)+' · '+esc(r.hora)+'</div>'+
+      '<div style="font-size:14px;font-weight:800;margin-top:3px">'+esc(r.cliente)+'</div>'+
+      '<div style="font-size:11px;color:var(--mt);margin-top:1px">'+esc(r.trabajo)+' · '+esc(r.material)+'</div>'+
+      '<div style="font-size:10px;color:var(--mt)">'+esc(r.cantidad)+' '+esc(r.unidad)+'</div>'+
+      '</div>'+
+      '<div style="text-align:right">'+
+      '<div style="font-family:Bebas Neue;font-size:24px;color:var(--o)">$'+parseFloat(r.monto||0).toFixed(2)+'</div>'+
+      pillHTML+
+      '</div></div>'+
+      thumbHTML+
+      '<div style="display:flex;gap:6px;margin-top:9px">'+
+      '<button onclick="reenviar('+idx+')" style="flex:1;padding:7px;border:1px solid rgba(34,197,94,.3);background:rgba(34,197,94,.07);color:var(--g);border-radius:9px;font-size:10px;font-weight:800;cursor:pointer">📲 Reenviar</button>'+
+      '<button onclick="eliminar('+idx+')" style="padding:7px 11px;border:1px solid rgba(239,68,68,.25);background:rgba(239,68,68,.07);color:#f87171;border-radius:9px;font-size:12px;cursor:pointer">🗑</button>'+
+      '</div></div>'
+    );
+  }).join("");
+
+  return (
+    '<div class="card" style="border-color:rgba(240,112,32,.2);background:rgba(240,112,32,.04)">'+
+    '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">'+
+    '<div><div style="font-size:8px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--mt)">Trabajos</div>'+
+    '<div style="font-family:Bebas Neue;font-size:32px;letter-spacing:-1px">'+S.reportes.length+'</div></div>'+
+    '<div><div style="font-size:8px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--mt)">Cobrado</div>'+
+    '<div style="font-family:Bebas Neue;font-size:32px;letter-spacing:-1px;color:var(--g)">$'+totalCob.toFixed(2)+'</div></div>'+
+    '<div><div style="font-size:8px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--mt)">Pendiente</div>'+
+    '<div style="font-family:Bebas Neue;font-size:32px;letter-spacing:-1px;color:var(--y)">$'+totalPend.toFixed(2)+'</div></div>'+
+    '</div></div>'+
+    '<button class="btn btn-s" onclick="exportarResumen()" style="margin-bottom:14px">📊 Enviar resumen del día</button>'+
+    items
+  );
+}
+
+// ── FOTO ──
+function bindFoto() {
+  var inp = document.getElementById("fotoInput");
+  if (inp) inp.onchange = cargarFoto;
+}
+function cargarFoto(ev) {
+  var file = ev.target.files && ev.target.files[0];
+  if (!file) return;
+  fotoFile = file;
+  var reader = new FileReader();
+  reader.onload = function(e){ fotoB64 = e.target.result; render(); genPreview(); };
+  reader.readAsDataURL(file);
+}
+function quitarFoto(){ fotoB64=""; fotoFile=null; render(); }
+
+// ── CHIPS ──
+function toggleMat(el) {
+  document.querySelectorAll("#chips_mat .chip").forEach(function(c){ c.classList.remove("on"); });
+  matSel = (matSel===el.dataset.mat) ? "" : el.dataset.mat;
+  if (matSel) el.classList.add("on");
+  genPreview();
+}
+function restoreChips() {
+  if (currentTab!=="nuevo") return;
+  document.querySelectorAll("#chips_mat .chip").forEach(function(c){
+    if (c.dataset.mat===matSel) c.classList.add("on");
+  });
+}
+
+// ── PAGO ──
+function setPago(tipo) {
+  pagoSel = pagoSel===tipo ? "" : tipo;
+  render(); genPreview(); restoreChips();
+}
+
+// ── PREVIEW ──
+function getFormData() {
+  return {
+    codigo:   codigoActual,
+    trabajo:  val("f_trabajo"),
+    cliente:  val("f_cliente"),
+    material: matSel,
+    cantidad: val("f_cant"),
+    unidad:   val("f_unidad"),
+    monto:    val("f_monto"),
+    obs:      val("f_obs"),
+    pago:     pagoSel,
+    foto:     fotoB64
+  };
+}
+
+function buildMsg(d) {
+  var now = new Date();
+  var hora  = now.toLocaleTimeString("es-VE",{hour:"2-digit",minute:"2-digit"});
+  var fecha = now.toLocaleDateString("es-VE",{day:"2-digit",month:"2-digit",year:"numeric"});
+  var pagoStr = d.pago==="cobrado" ? "✅ COBRADO" : d.pago==="pendiente" ? "⏳ PENDIENTE" : "—";
+  return (
+    "🖨 *GHOST PRINT — REPORTE DE TRABAJO*\n"+
+    "━━━━━━━━━━━━━━━━\n"+
+    "🧾 *Orden N°:* "+( d.codigo||"—" )+"\n"+
+    "👤 *Operador:* "+(S.empleado||"—")+"\n"+
+    "📅 *Fecha:* "+fecha+"  🕐 "+hora+"\n"+
+    "━━━━━━━━━━━━━━━━\n"+
+    "📋 *Trabajo:* "+(d.trabajo||"—")+"\n"+
+    "👥 *Cliente:* "+(d.cliente||"—")+"\n"+
+    "🧱 *Material:* "+(d.material||"—")+"\n"+
+    "📐 *Metraje:* "+(d.cantidad||"0")+" "+(d.unidad||"m²")+"\n"+
+    "💵 *Monto:* $"+parseFloat(d.monto||0).toFixed(2)+"\n"+
+    "💳 *Pago:* "+pagoStr+"\n"+
+    (d.obs ? "📝 *Obs:* "+d.obs+"\n" : "")+
+    (d.foto ? "📸 *Foto adjunta*\n" : "")+
+    "━━━━━━━━━━━━━━━━\n"+
+    "✅ _Reporte desde Ghost Print App_"
+  );
+}
+
+function genPreview() {
+  var d = getFormData();
+  var el = document.getElementById("preview");
+  if (el) el.textContent = buildMsg(d);
+}
+
+// ── ENVIAR ──
+var NUMERO_JEFE = localStorage.getItem("gp_jefe") || "";
+
+function getNumero() {
+  if (!NUMERO_JEFE) {
+    var num = prompt("📱 Número WhatsApp del jefe (con código país, ej: 584123720318):");
+    if (num){ NUMERO_JEFE=num.replace(/\D/g,""); localStorage.setItem("gp_jefe",NUMERO_JEFE); }
+  }
+  return NUMERO_JEFE;
+}
+
+function validar(d) {
+  if (!d.trabajo) { toast("⚠️ Selecciona el tipo de trabajo","#f59e0b"); return false; }
+  if (!d.cliente) { toast("⚠️ Escribe el nombre del cliente","#f59e0b"); return false; }
+  if (!d.monto)   { toast("⚠️ Ingresa el monto","#f59e0b"); return false; }
+  if (!d.pago)    { toast("⚠️ Indica si fue cobrado o pendiente","#f59e0b"); return false; }
+  return true;
+}
+
+function enviarWhatsApp() {
+  var d = getFormData(); if (!validar(d)) return;
+  guardarReporte(d);
+  var msg = buildMsg(d);
+  var num = getNumero();
+  var url = num ? "https://wa.me/"+num+"?text="+encodeURIComponent(msg) : "https://wa.me/?text="+encodeURIComponent(msg);
+  window.open(url,"_blank");
+  toast("✅ Abriendo WhatsApp...","#22c55e");
+  limpiar();
+}
+
+function enviarConFoto() {
+  var d = getFormData(); if (!validar(d)) return;
+  if (!d.foto){ toast("📸 Primero agrega una foto","#f59e0b"); return; }
+  guardarReporte(d);
+  var msg = buildMsg(d);
+  var link = document.createElement("a");
+  link.href = fotoB64; link.download = "GP_"+d.codigo+"_"+Date.now()+".jpg"; link.click();
+  navigator.clipboard.writeText(msg).then(function(){
+    toast("📸 Foto descargada · Texto copiado","#22c55e");
+    var num = getNumero();
+    var url = num ? "https://wa.me/"+num : "https://wa.me/";
+    setTimeout(function(){
+      window.open(url,"_blank");
+      alert("✅ Orden: "+d.codigo+"\n\n1. Foto guardada en tu galería\n2. Texto copiado\n3. En WhatsApp: adjunta la foto y pega el texto");
+    }, 700);
+    limpiar();
+  }).catch(function(){ toast("Copia el mensaje manualmente","#f87171"); });
+}
+
+function copiarMensaje() {
+  var d = getFormData();
+  var msg = buildMsg(d);
+  navigator.clipboard.writeText(msg).then(function(){
+    guardarReporte(d);
+    toast("📋 Copiado · Orden "+d.codigo,"#22c55e");
+    limpiar();
+  }).catch(function(){ toast("Error al copiar","#f87171"); });
+}
+
+// ── GUARDAR ──
+function guardarReporte(d) {
+  if (!d.trabajo||!d.cliente||!d.monto) return;
+  var now = new Date();
+  S.reportes.push({
+    codigo:   d.codigo,
+    fecha:    now.toLocaleDateString("es-VE"),
+    hora:     now.toLocaleTimeString("es-VE",{hour:"2-digit",minute:"2-digit"}),
+    trabajo:  d.trabajo, cliente: d.cliente, material: d.material,
+    cantidad: d.cantidad, unidad: d.unidad, monto: d.monto,
+    obs: d.obs, pago: d.pago, foto: d.foto||"", ts: Date.now()
+  });
+  save();
+}
+
+function limpiar() {
+  matSel=""; pagoSel=""; fotoB64=""; fotoFile=null;
+  codigoActual = generarCodigo(); // nuevo código para el próximo reporte
+  setTimeout(function(){ render(); },600);
+}
+
+// ── HISTORIAL ──
+function reenviar(idx) {
+  var r = S.reportes[idx]; if (!r) return;
+  var pagoStr = r.pago==="cobrado"?"✅ COBRADO":r.pago==="pendiente"?"⏳ PENDIENTE":"—";
+  var msg =
+    "🖨 *GHOST PRINT — REPORTE DE TRABAJO*\n"+
+    "━━━━━━━━━━━━━━━━\n"+
+    "🧾 *Orden N°:* "+(r.codigo||"—")+"\n"+
+    "👤 *Operador:* "+(S.empleado||"—")+"\n"+
+    "📅 *Fecha:* "+r.fecha+"  🕐 "+r.hora+"\n"+
+    "━━━━━━━━━━━━━━━━\n"+
+    "📋 *Trabajo:* "+r.trabajo+"\n"+
+    "👥 *Cliente:* "+r.cliente+"\n"+
+    "🧱 *Material:* "+(r.material||"—")+"\n"+
+    "📐 *Metraje:* "+r.cantidad+" "+r.unidad+"\n"+
+    "💵 *Monto:* $"+parseFloat(r.monto||0).toFixed(2)+"\n"+
+    "💳 *Pago:* "+pagoStr+"\n"+
+    (r.obs?"📝 *Obs:* "+r.obs+"\n":"")+
+    (r.foto?"📸 *Foto adjunta*\n":"")+
+    "━━━━━━━━━━━━━━━━\n"+
+    "🔁 _Reenvío de reporte anterior_";
+  if (r.foto){ var lk=document.createElement("a");lk.href=r.foto;lk.download="GP_"+r.codigo+"_reenvio.jpg";lk.click(); }
+  var num = NUMERO_JEFE || localStorage.getItem("gp_jefe")||"";
+  var url = num ? "https://wa.me/"+num+"?text="+encodeURIComponent(msg) : "https://wa.me/?text="+encodeURIComponent(msg);
+  window.open(url,"_blank");
+  toast("📲 Reenviando orden "+r.codigo,"#22c55e");
+}
+
+function eliminar(idx) {
+  if (!confirm("¿Eliminar reporte "+S.reportes[idx].codigo+"?")) return;
+  S.reportes.splice(idx,1); save(); render();
+  toast("🗑 Eliminado","#f87171");
+}
+
+function exportarResumen() {
+  var hoy = new Date().toLocaleDateString("es-VE");
+  var rHoy = S.reportes.filter(function(r){ return r.fecha===hoy; });
+  if (!rHoy.length){ toast("Sin reportes de hoy","#f59e0b"); return; }
+  var totalCob  = rHoy.filter(function(r){return r.pago==="cobrado";}).reduce(function(a,r){return a+parseFloat(r.monto||0);},0);
+  var totalPend = rHoy.filter(function(r){return r.pago==="pendiente";}).reduce(function(a,r){return a+parseFloat(r.monto||0);},0);
+  var lineas = rHoy.map(function(r,i){
+    var p = r.pago==="cobrado"?"✅":"⏳";
+    return "["+r.codigo+"] "+r.trabajo+" → "+r.cliente+" | "+r.cantidad+" "+r.unidad+" de "+(r.material||"—")+" = $"+parseFloat(r.monto).toFixed(2)+" "+p;
+  }).join("\n");
+  var msg =
+    "🖨 *GHOST PRINT — RESUMEN DEL DÍA*\n"+
+    "━━━━━━━━━━━━━━━━\n"+
+    "👤 *Operador:* "+(S.empleado||"—")+"\n"+
+    "📅 *Fecha:* "+hoy+"\n"+
+    "━━━━━━━━━━━━━━━━\n"+
+    lineas+"\n"+
+    "━━━━━━━━━━━━━━━━\n"+
+    "📊 *Total trabajos:* "+rHoy.length+"\n"+
+    "✅ *Cobrado:* $"+totalCob.toFixed(2)+"\n"+
+    "⏳ *Pendiente:* $"+totalPend.toFixed(2)+"\n"+
+    "💵 *Total:* $"+(totalCob+totalPend).toFixed(2)+"\n"+
+    "━━━━━━━━━━━━━━━━\n"+
+    "✅ _Resumen automático Ghost Print_";
+  var num = NUMERO_JEFE || localStorage.getItem("gp_jefe")||"";
+  var url = num ? "https://wa.me/"+num+"?text="+encodeURIComponent(msg) : "https://wa.me/?text="+encodeURIComponent(msg);
+  window.open(url,"_blank");
+}
+
+// ── NOMBRE ──
+function pedirNombre() {
+  var n = prompt("👤 ¿Cuál es tu nombre? (aparecerá en los reportes)");
+  if (n&&n.trim()){ S.empleado=n.trim().toUpperCase(); save(); render(); }
+}
+function cambiarNombre() {
+  var n = prompt("👤 Nuevo nombre:", S.empleado);
+  if (n&&n.trim()){ S.empleado=n.trim().toUpperCase(); save(); render(); }
+}
+
+function switchTab(t){ currentTab=t; render(); }
+function val(id){ var el=document.getElementById(id); return el?el.value.trim():""; }
+function esc(s){ return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+function toast(msg,color){
+  var el=document.getElementById("toast"); el.textContent=msg;
+  if(color) el.style.borderColor=color+"55"; el.classList.add("on");
+  setTimeout(function(){ el.classList.remove("on"); },2800);
+}
+
+if (!S.empleado) setTimeout(pedirNombre,400);
+render();
+</script>
+</body>
+</html>
