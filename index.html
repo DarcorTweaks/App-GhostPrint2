@@ -252,7 +252,7 @@ window.pressKey=function(d){if(pinBuf.length<4){pinBuf+=d;updDots();if(pinBuf.le
 window.delKey=function(){pinBuf=pinBuf.slice(0,-1);updDots();};
 function updDots(){document.querySelectorAll(".pdot").forEach(function(d,i){d.classList.toggle("on",i<pinBuf.length);});}
 function checkPin(){
-  if(pinBuf===MASTER){user={nombre:"ADMIN",rol:"MAESTRO"};unlock();return;}
+  if(pinBuf===MASTER){user={nombre:"DARWING CORREA",rol:"MAESTRO"};unlock();return;}
   var emp=(S.empleados||DEFAULT_EMP).find(function(w){return w.pin===pinBuf;});
   if(emp){user={nombre:emp.nombre,rol:emp.nivel==="COMPLETO"?"COMPLETO":"LIMITADO"};unlock();}
   else{pinBuf="";updDots();toast("PIN INCORRECTO","#f87171");}
@@ -350,6 +350,21 @@ function rInicio(app){
   var facHoy=ventasHoy.reduce(function(a,v){return a+n(v.total);},0);
   var cobHoy=ventasHoy.reduce(function(a,v){return a+n(v.abono);},0);
 
+  // ===== CONTROL DE CAJA: basado en lo COBRADO (dinero real en mano) =====
+  // Por cada venta, calculamos proporcional a lo que ya pagaron
+  // Ej: vendiste vinil $50 costo $20, cliente pago $30 (60%) → reserva $12, libre $18
+  var reservaCobrado=0,gananciaLibreCobrado=0,reservaTotal=0,gananciaTotalProy=0;
+  var periodS=periodStart();
+  (S.ventas||[]).filter(function(v){return(v.fecha||'')>=periodS;}).forEach(function(v){
+    var cogs=ventaCOGS(v);
+    var tot=n(v.total),pag=Math.min(n(v.abono),tot);
+    var frac=tot>0?Math.min(pag/tot,1):0;
+    reservaCobrado+=cogs*frac;
+    gananciaLibreCobrado+=pag-cogs*frac;
+    reservaTotal+=cogs;
+    gananciaTotalProy+=tot-cogs;
+  });
+
   app.innerHTML=
     '<div class="fa sec"><div><div class="ps">Hola, '+safe(user.nombre)+'</div><div class="pt">Resumen</div></div>'+(isFullAccess()?'<button class="btn bs bsm" onclick="nuevoPeriodo()">Empezar de cero</button>':'')+'</div>'+
 
@@ -370,10 +385,33 @@ function rInicio(app){
     '<div style="display:flex;justify-content:space-between;margin-top:6px"><span style="font-size:10px;font-weight:800;color:var(--mt)">META $'+meta+'</span><span style="font-size:10px;font-weight:800;color:var(--o)">'+porc.toFixed(0)+'%</span></div>'+
     '</div>'+
 
-    '<div class="g2 fa fa2" style="margin-bottom:14px">'+
-    '<div class="tile cg"><div class="tlbl">Caja acumulada (todo)</div><div class="bns" style="color:var(--g)">$'+money(cajaTotal)+'</div><div class="mo">Bs. '+fmtBS(cajaTotal)+'</div></div>'+
-    '<div class="tile cr"><div class="tlbl">Deudas por cobrar</div><div class="bns" style="color:#f87171">$'+money(deudaTotal)+'</div></div>'+
+    '<div class="c fa fa2" style="padding:0;overflow:hidden;border-color:rgba(255,255,255,.1);cursor:pointer" onclick="go(\'cuadre\')">'+
+      '<div style="background:linear-gradient(135deg,rgba(239,68,68,.15),rgba(123,63,160,.12));padding:11px 16px;border-bottom:1px solid rgba(255,255,255,.07);display:flex;justify-content:space-between;align-items:center">'+
+        '<div style="font-size:9px;font-weight:800;color:var(--mt);text-transform:uppercase;letter-spacing:.1em">&#127974; Control de caja — materiales</div>'+
+        '<div style="font-size:9px;font-weight:800;color:var(--p2)">Ver detalle &#8250;</div>'+
+      '</div>'+
+      '<div style="padding:4px 0 2px;text-align:center;font-size:8px;font-weight:800;color:var(--g);text-transform:uppercase;letter-spacing:.1em;background:rgba(34,197,94,.04);border-bottom:1px solid rgba(255,255,255,.06)">&#9679; Tiempo real — basado en lo cobrado</div>'+
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:1px;background:rgba(255,255,255,.06)">'+
+        '<div style="background:rgba(13,8,16,.88);padding:13px 16px;text-align:center">'+
+          '<div style="font-size:9px;font-weight:800;color:rgba(239,68,68,.8);text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px">&#127974; Reservar en caja</div>'+
+          '<div style="font-family:Bebas Neue;font-size:28px;color:#f87171">$'+money(reservaCobrado)+'</div>'+
+          '<div style="font-size:9px;color:var(--mt)">No tocar — es para reponer</div>'+
+        '</div>'+
+        '<div style="background:rgba(13,8,16,.88);padding:13px 16px;text-align:center">'+
+          '<div style="font-size:9px;font-weight:800;color:'+(gananciaLibreCobrado>=0?'rgba(34,197,94,.8)':'rgba(239,68,68,.8)')+';text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px">&#128176; Ganancia libre</div>'+
+          '<div style="font-family:Bebas Neue;font-size:28px;color:'+(gananciaLibreCobrado>=0?'var(--g)':'#f87171')+'">'+(gananciaLibreCobrado>=0?'':'-')+'$'+money(Math.abs(gananciaLibreCobrado))+'</div>'+
+          '<div style="font-size:9px;color:var(--mt)">Toca esto para gastos</div>'+
+        '</div>'+
+      '</div>'+
+      '<div style="background:rgba(255,255,255,.025);border-top:1px solid rgba(255,255,255,.06);padding:9px 16px;display:flex;justify-content:space-between;align-items:center">'+
+        '<div style="font-size:9px;font-weight:800;color:var(--mt);text-transform:uppercase;letter-spacing:.08em">&#128313; Proyecci\u00f3n si cobras todo</div>'+
+        '<div style="display:flex;gap:14px">'+
+          '<div style="text-align:center"><div style="font-size:8px;color:rgba(239,68,68,.7);font-weight:800">Reservar</div><div style="font-family:Bebas Neue;font-size:15px;color:#f87171">$'+money(reservaTotal)+'</div></div>'+
+          '<div style="text-align:center"><div style="font-size:8px;color:'+(gananciaTotalProy>=0?'rgba(34,197,94,.7)':'rgba(239,68,68,.7)')+';font-weight:800">Libre</div><div style="font-family:Bebas Neue;font-size:15px;color:'+(gananciaTotalProy>=0?'var(--g)':'#f87171')+'">$'+money(gananciaTotalProy)+'</div></div>'+
+        '</div>'+
+      '</div>'+
     '</div>'+
+
 
     '<div class="g4 fa fa3" style="margin-bottom:14px">'+
     '<div class="qb" onclick="go(\'ventas\')"><div style="font-size:22px">&#9889;</div><div style="font-size:10px;font-weight:800;color:var(--mt)">VENDER</div></div>'+
@@ -580,12 +618,125 @@ function rInventario(app){
 
 function rCuadre(app){
   var inv=S.inventario||{},usage={};
-  (S.ventas||[]).forEach(function(v){(v.items||[]).filter(function(i){return i.mat_key&&i.mat_key.trim()!=="";}).forEach(function(i){if(!usage[i.mat_key])usage[i.mat_key]={sold:0,rev:0};usage[i.mat_key].sold+=n(i.c);usage[i.mat_key].rev+=n(i.p);});});
-  var rows=Object.entries(inv).map(function(e){var nm=e[0],it=e[1];var bought=(S.compras||[]).filter(function(c){return c.m===nm;}).reduce(function(a,c){return a+n(c.c);},0);var sold=usage[nm]?usage[nm].sold:0;var stk=n(it.stock),exp=bought-sold,diff=exp-stk;return{nm:nm,bought:bought,sold:sold,stk:stk,exp:exp,diff:diff,rev:usage[nm]?usage[nm].rev:0};}).sort(function(a,b){return Math.abs(b.diff)-Math.abs(a.diff);});
+  (S.ventas||[]).forEach(function(v){
+    var tot=n(v.total),pag=Math.min(n(v.abono),tot);
+    var frac=tot>0?Math.min(pag/tot,1):0;
+    (v.items||[]).filter(function(i){return i.mat_key&&i.mat_key.trim()!=="";}).forEach(function(i){
+      if(!usage[i.mat_key])usage[i.mat_key]={sold:0,rev:0,revCob:0,costoCob:0};
+      usage[i.mat_key].sold+=n(i.c);
+      usage[i.mat_key].rev+=n(i.p);
+      // proporcional a lo pagado
+      usage[i.mat_key].revCob+=n(i.p)*frac;
+      usage[i.mat_key].costoCob+=itemCost(i)*frac;
+    });
+  });
+  var rows=Object.entries(inv).map(function(e){
+    var nm=e[0],it=e[1];
+    var bought=(S.compras||[]).filter(function(c){return c.m===nm;}).reduce(function(a,c){return a+n(c.c);},0);
+    var sold=usage[nm]?usage[nm].sold:0;
+    var stk=n(it.stock),exp=bought-sold,diff=exp-stk;
+    var cu=avgCost(nm);
+    var costoUsado=cu*sold;
+    var rev=usage[nm]?usage[nm].rev:0;
+    var revCob=usage[nm]?usage[nm].revCob:0;
+    var costoCob=usage[nm]?usage[nm].costoCob:0;
+    var ganancia=rev-costoUsado;
+    var gananciaCob=revCob-costoCob;
+    var margen=rev>0?((ganancia/rev)*100):0;
+    var margenCob=revCob>0?((gananciaCob/revCob)*100):0;
+    return{nm:nm,bought:bought,sold:sold,stk:stk,exp:exp,diff:diff,rev:rev,revCob:revCob,cu:cu,costoUsado:costoUsado,costoCob:costoCob,ganancia:ganancia,gananciaCob:gananciaCob,margen:margen,margenCob:margenCob};
+  }).sort(function(a,b){return Math.abs(b.diff)-Math.abs(a.diff);});
   var alerts=rows.filter(function(r){return Math.abs(r.diff)>0.01;}).length;
-  var h='<div class="sec fa"><div><div class="ps">Auditoria</div><div class="pt" style="color:var(--g)">Cuadre</div></div></div>'+
-    '<div class="tile cy fa fa1" style="margin-bottom:14px"><div class="tlbl">Alertas de diferencia</div><div class="bns" style="color:var(--y)">'+alerts+'</div></div>';
-  rows.forEach(function(r,i){var al=Math.abs(r.diff)>0.01;h+='<div style="background:rgba(255,255,255,.035);border:1.5px solid '+(al?"rgba(245,158,11,.32)":"rgba(34,197,94,.22)")+';border-radius:15px;padding:15px;margin-bottom:9px;animation:fadeUp .28s ease '+(i*.04)+'s both"><div style="display:flex;justify-content:space-between;align-items:start;gap:10px;margin-bottom:11px"><div><div style="font-family:Bebas Neue;font-size:17px">'+safe(r.nm)+'</div><div class="mo">Comprado: '+r.bought.toFixed(1)+' - Vendido: '+r.sold.toFixed(1)+'</div></div><div style="text-align:right"><div class="tlbl">Stock real</div><div style="font-family:Bebas Neue;font-size:28px;'+(r.stk<=5?"color:var(--r)":"")+'">'+r.stk.toFixed(1)+'</div></div></div><div class="g3" style="gap:6px;text-align:center;font-size:11px"><div class="mc" style="padding:9px"><div class="mo">Debe quedar</div><div style="font-weight:800">'+r.exp.toFixed(1)+'</div></div><div class="mc" style="padding:9px"><div class="mo">Diferencia</div><div style="font-weight:800;color:'+(al?"var(--y)":"var(--g)")+'">'+r.diff.toFixed(1)+'</div></div><div class="mc" style="padding:9px"><div class="mo">Vendido $</div><div style="font-weight:800">$'+money(r.rev)+'</div></div></div></div>';});
+  var totalReservaCob=rows.reduce(function(a,r){return a+r.costoCob;},0);
+  var totalLibreCob=rows.reduce(function(a,r){return a+r.gananciaCob;},0);
+  var totalReservaTot=rows.reduce(function(a,r){return a+r.costoUsado;},0);
+  var totalLibreTot=rows.reduce(function(a,r){return a+r.ganancia;},0);
+  var h='<div class="sec fa"><div><div class="ps">Auditoria de materiales</div><div class="pt" style="color:var(--g)">Cuadre</div></div></div>'+
+    '<div class="c fa fa1" style="background:rgba(13,8,16,.9);border:1.5px solid rgba(255,255,255,.1);margin-bottom:14px;padding:0;overflow:hidden">'+
+      '<div style="background:linear-gradient(135deg,rgba(239,68,68,.15),rgba(123,63,160,.1));padding:12px 16px;border-bottom:1px solid rgba(255,255,255,.07);display:flex;justify-content:space-between;align-items:center">'+
+        '<div style="font-size:10px;font-weight:800;color:var(--mt);text-transform:uppercase;letter-spacing:.1em">Resumen global</div>'+
+        '<div style="font-size:9px;font-weight:800;color:var(--y)">'+alerts+' alertas de stock</div>'+
+      '</div>'+
+      '<div style="padding:4px 0 2px;text-align:center;font-size:8px;font-weight:800;color:var(--g);text-transform:uppercase;letter-spacing:.1em;background:rgba(34,197,94,.04);border-bottom:1px solid rgba(255,255,255,.06)">&#9679; Tiempo real — solo lo cobrado</div>'+
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:1px;background:rgba(255,255,255,.06)">'+
+        '<div style="background:rgba(13,8,16,.85);padding:14px 16px;text-align:center">'+
+          '<div style="font-size:9px;font-weight:800;color:rgba(239,68,68,.85);text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px">&#127974; Reservar ahora</div>'+
+          '<div style="font-family:Bebas Neue;font-size:28px;color:#f87171">$'+money(totalReservaCob)+'</div>'+
+          '<div style="font-size:9px;color:var(--mt)">Del dinero que ya entraste</div>'+
+        '</div>'+
+        '<div style="background:rgba(13,8,16,.85);padding:14px 16px;text-align:center">'+
+          '<div style="font-size:9px;font-weight:800;color:'+(totalLibreCob>=0?'rgba(34,197,94,.85)':'rgba(239,68,68,.85)')+';text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px">&#128176; Libre ahora</div>'+
+          '<div style="font-family:Bebas Neue;font-size:28px;color:'+(totalLibreCob>=0?'var(--g)':'#f87171')+'">'+(totalLibreCob>=0?'':'-')+'$'+money(Math.abs(totalLibreCob))+'</div>'+
+          '<div style="font-size:9px;color:var(--mt)">Puedes gastar esto</div>'+
+        '</div>'+
+      '</div>'+
+      '<div style="background:rgba(255,255,255,.025);border-top:1px solid rgba(255,255,255,.06);padding:9px 16px;display:flex;justify-content:space-between;align-items:center">'+
+        '<div style="font-size:9px;font-weight:800;color:var(--mt);text-transform:uppercase;letter-spacing:.08em">&#128313; Si cobras todo lo que deben</div>'+
+        '<div style="display:flex;gap:14px">'+
+          '<div style="text-align:center"><div style="font-size:8px;color:rgba(239,68,68,.7);font-weight:800">Reservar</div><div style="font-family:Bebas Neue;font-size:15px;color:#f87171">$'+money(totalReservaTot)+'</div></div>'+
+          '<div style="text-align:center"><div style="font-size:8px;color:'+(totalLibreTot>=0?'rgba(34,197,94,.7)':'rgba(239,68,68,.7)')+';font-weight:800">Libre</div><div style="font-family:Bebas Neue;font-size:15px;color:'+(totalLibreTot>=0?'var(--g)':'#f87171')+'">$'+money(totalLibreTot)+'</div></div>'+
+        '</div>'+
+      '</div>'+
+    '</div>'+
+    '<div class="ps fa" style="margin:4px 0 12px">Detalle por material</div>';
+  rows.forEach(function(r,i){
+    var al=Math.abs(r.diff)>0.01;
+    var ganPos=r.ganancia>=0;
+    h+='<div style="background:rgba(255,255,255,.03);border:1.5px solid '+(al?'rgba(245,158,11,.32)':'rgba(34,197,94,.2)')+';border-radius:18px;overflow:hidden;margin-bottom:12px;animation:fadeUp .28s ease '+(i*.05)+'s both">'+
+      '<div style="padding:14px 16px 12px;display:flex;justify-content:space-between;align-items:flex-start;gap:10px;border-bottom:1px solid rgba(255,255,255,.07)">'+
+        '<div style="flex:1">'+
+          '<div style="font-family:Bebas Neue;font-size:20px;letter-spacing:.5px">'+safe(r.nm)+'</div>'+
+          '<div class="mo">Vendido: '+r.sold.toFixed(1)+' u | Costo prom: $'+money(r.cu)+'/u</div>'+
+        '</div>'+
+        '<div style="text-align:right;flex-shrink:0">'+
+          '<div style="font-size:9px;font-weight:800;color:var(--mt);text-transform:uppercase">Stock</div>'+
+          '<div style="font-family:Bebas Neue;font-size:34px;line-height:1;'+(r.stk<=5?'color:var(--r)':'')+'">'+r.stk.toFixed(1)+'</div>'+
+          (r.stk<=5?'<div style="font-size:9px;font-weight:800;color:var(--r)">&#9888; BAJO</div>':'')+
+        '</div>'+
+      '</div>'+
+      '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;background:rgba(255,255,255,.05)">'+
+        '<div style="background:rgba(9,6,12,.9);padding:11px 8px;text-align:center">'+
+          '<div style="font-size:8px;font-weight:800;color:rgba(96,165,250,.8);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">Cobrado</div>'+
+          '<div style="font-family:Bebas Neue;font-size:18px;color:#60a5fa">$'+money(r.rev)+'</div>'+
+        '</div>'+
+        '<div style="background:rgba(9,6,12,.9);padding:11px 8px;text-align:center">'+
+          '<div style="font-size:8px;font-weight:800;color:rgba(239,68,68,.8);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">Costo</div>'+
+          '<div style="font-family:Bebas Neue;font-size:18px;color:#f87171">$'+money(r.costoUsado)+'</div>'+
+        '</div>'+
+        '<div style="background:rgba(9,6,12,.9);padding:11px 8px;text-align:center">'+
+          '<div style="font-size:8px;font-weight:800;color:'+(ganPos?'rgba(34,197,94,.8)':'rgba(239,68,68,.8)')+';text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">Ganancia</div>'+
+          '<div style="font-family:Bebas Neue;font-size:18px;color:'+(ganPos?'var(--g)':'#f87171')+'">'+(ganPos?'':'-')+'$'+money(Math.abs(r.ganancia))+'</div>'+
+        '</div>'+
+      '</div>'+
+      '<div style="padding:12px 16px;display:grid;grid-template-columns:1fr 1fr;gap:8px">'+
+        '<div style="background:rgba(239,68,68,.07);border:1px solid rgba(239,68,68,.18);border-radius:12px;padding:10px 12px">'+
+          '<div style="font-size:9px;font-weight:800;color:rgba(239,68,68,.8);text-transform:uppercase;letter-spacing:.06em">&#127974; Guardar en caja</div>'+
+          '<div style="font-family:Bebas Neue;font-size:24px;color:#f87171;margin-top:3px">$'+money(r.costoUsado)+'</div>'+
+          '<div style="font-size:9px;color:var(--mt)">Para reponer material</div>'+
+        '</div>'+
+        '<div style="background:'+(ganPos?'rgba(34,197,94,.07)':'rgba(239,68,68,.07)')+';border:1px solid '+(ganPos?'rgba(34,197,94,.18)':'rgba(239,68,68,.18)')+';border-radius:12px;padding:10px 12px">'+
+          '<div style="font-size:9px;font-weight:800;color:'+(ganPos?'rgba(34,197,94,.8)':'rgba(239,68,68,.8)')+';text-transform:uppercase;letter-spacing:.06em">'+(ganPos?'&#128176;':'&#9888;')+' Ganancia libre</div>'+
+          '<div style="font-family:Bebas Neue;font-size:24px;color:'+(ganPos?'var(--g)':'#f87171')+';margin-top:3px">'+(ganPos?'':'-')+'$'+money(Math.abs(r.ganancia))+'</div>'+
+          '<div style="font-size:9px;color:var(--mt)">Margen: '+r.margen.toFixed(0)+'%</div>'+
+        '</div>'+
+      '</div>'+
+      (al?
+        '<div style="padding:0 16px 12px">'+
+          '<div style="background:rgba(245,158,11,.07);border:1px solid rgba(245,158,11,.2);border-radius:10px;padding:10px 13px">'+
+            '<div style="font-size:10px;font-weight:800;color:var(--y);margin-bottom:6px">&#9888; Los numeros del historial no coinciden con el stock fisico</div>'+
+            '<div style="font-size:10px;color:var(--mt);line-height:1.5">'+
+              'Segun lo que compraste y vendiste historicamente, deberian quedar <b style="color:var(--tx)">'+r.exp.toFixed(1)+'u</b> — '+
+              'pero el sistema muestra <b style="color:var(--tx)">'+r.stk.toFixed(1)+'u</b>. '+
+              'Diferencia de <b style="color:var(--y)">'+Math.abs(r.diff).toFixed(1)+'u</b>. '+
+              'Esto pasa si cargaste el stock manualmente o hubo merma no registrada.'+
+            '</div>'+
+          '</div>'+
+        '</div>'
+        :
+        '<div style="padding:0 16px 10px;text-align:center;font-size:10px;font-weight:800;color:rgba(34,197,94,.6)">&#10003; El stock cuadra con el historial de compras y ventas</div>'
+      )+
+    '</div>';
+  });
   if(rows.length===0)h+='<div class="empty">Sin materiales</div>';
   app.innerHTML=h;
 }
@@ -693,6 +844,7 @@ function rMore(app){
   var h='<div class="sec fa"><div><div class="ps">Ghost Print</div><div class="pt">Mas opciones</div></div></div>'+
     '<div class="c fa" style="display:flex;align-items:center;gap:12px"><div class="logo-badge">'+safe(user.nombre.charAt(0))+'</div><div><div style="font-weight:800;font-size:16px">'+safe(user.nombre)+'</div><span class="badge-role">'+(user.rol==="MAESTRO"?"Administrador":user.rol==="COMPLETO"?"Acceso completo":"Acceso limitado")+'</span></div></div>';
   if(isFullAccess()){
+    h+='<div style="background:rgba(239,68,68,.06);border:1.5px solid rgba(239,68,68,.22);border-radius:16px;padding:14px 17px;margin-bottom:9px;cursor:pointer;display:flex;align-items:center;gap:14px" onclick="mesNuevo()"><div style="font-size:22px;width:44px;height:44px;border-radius:12px;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.25);display:flex;align-items:center;justify-content:center;flex-shrink:0">&#8635;</div><div><div style="font-weight:800;font-size:15px;color:#f87171">Iniciar Mes Nuevo</div><div class="mo">Resetea periodo y carga inventario inicial</div></div></div>';
     admin.forEach(function(o,i){h+='<div onclick="go(\''+o.v+'\')" class="c fa" style="animation-delay:'+(i*.04)+'s;cursor:pointer;display:flex;align-items:center;gap:14px;padding:15px 17px;margin-bottom:9px"><div style="font-size:22px;width:44px;height:44px;border-radius:12px;background:rgba(255,255,255,.06);border:1px solid var(--bd);display:flex;align-items:center;justify-content:center;flex-shrink:0">'+o.i+'</div><div><div style="font-weight:800;font-size:15px;color:'+o.c+'">'+o.t+'</div><div class="mo">'+o.s+'</div></div></div>';});
     h+='<div class="dv"></div>'+
       '<div class="g2" style="gap:8px;margin-bottom:9px"><button class="btn bs" onclick="exportBK()">Backup JSON</button><label class="btn bs" style="text-align:center;cursor:pointer">Restaurar<input type="file" accept="application/json" onchange="importBK(event)" style="display:none"></label></div>'+
@@ -840,7 +992,38 @@ window.cambiarTasa=window.syncRates;
 async function autoSyncRates(){var last=S.tasaLastSync||0;if(Date.now()-last>21600000){await window.syncRates();}}
 window.syncBCV=window.syncRates;
 
-// EMPLEADOS
+// ===== MES NUEVO =====
+window.mesNuevo=async function(){
+  if(!confirm("INICIO DE MES NUEVO\n\nEsto hara:\n✓ Reiniciar el periodo de resumen desde hoy\n✓ Poner todo el stock actual en 0\n✓ Cargar el inventario inicial que configuraste\n✓ Agregar TINTA IMPRESION (30% = 90m de capacidad)\n\nEl historial de ventas y las deudas NO se tocan.\n\nContinuar?"))return;
+  // Reiniciar periodo
+  S.inicioPeriodo=today();
+  // Poner todo el stock en 0
+  Object.keys(S.inventario||{}).forEach(function(m){S.inventario[m].stock=0;});
+  // Inventario inicial del mes
+  var inv={
+    'VINIL BLANCO GLOSSY DE 1.37':{stock:5},
+    'VINIL CLEAR BRILLANTE DE 1.37':{stock:3},
+    'BANNER DE 1.37':{stock:58},
+    'VINIL CLEAR MATE DE 1.37':{stock:30},
+    'BANNER DE 1.80':{stock:15},
+    'VINIL DE ROTULACION BLANCO REFLECTIVO':{stock:15},
+    'VINIL DE ROTULACION ROJO':{stock:30},
+    'VINIL DE ROTULACION AMARILLO':{stock:20},
+    'TINTA IMPRESION':{stock:90}
+  };
+  Object.keys(inv).forEach(function(nm){
+    if(!S.inventario[nm])S.inventario[nm]={stock:0,precioDetal:0,precioMayor:0};
+    S.inventario[nm].stock=inv[nm].stock;
+  });
+  // Registrar compra de tinta para tener costo promedio correcto
+  // 30% de un kit = 90m capacidad = $48 (30% de $160)
+  if(!S.compras)S.compras=[];
+  S.compras.push({m:'TINTA IMPRESION',c:90,costo:48,f:new Date().toISOString()});
+  await sync();
+  toast('Mes nuevo iniciado correctamente','#22c55e');
+  go('inicio');
+};
+
 window.crearEmp=async function(){
   var nom=($("eNom")&&$("eNom").value||"").trim().toUpperCase();
   var pin=($("ePin")&&$("ePin").value||"").trim();
