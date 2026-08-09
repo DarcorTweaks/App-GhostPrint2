@@ -695,7 +695,7 @@ function rHistorial(app){
       '<div><div style="font-family:Bebas Neue;font-size:20px;letter-spacing:.5px">'+safe(cli)+'</div>'+
       '<div class="mo">'+d.tks.length+' factura'+(d.tks.length>1?'s':'')+' &middot; Total $'+money(d.total)+'</div>'+
       '<div style="margin-top:4px">'+(hasDebt?'<span class="pill pr">DEBE $'+money(d.deuda)+'</span>':'<span class="pill pg">AL DIA</span>')+' <span style="font-size:10px;color:var(--g);font-weight:800">Pagado $'+money(d.cobrado)+'</span></div></div>'+
-      '<div style="font-size:18px;color:var(--mt);transition:transform .2s;transform:rotate('+(isOpen?'180':'0')+'deg)">&#9660;</div></div>';
+      '<div style="display:flex;align-items:center;gap:12px">'+(hasDebt?'<button class="btn bs bsm" style="padding:4px 8px;font-size:12px" onclick="event.stopPropagation();shareClientDebtImage(\''+cli.replace(/'/g,"\\'")+'\')">COMPARTIR</button>':'')+'<div style="font-size:18px;color:var(--mt);transition:transform .2s;transform:rotate('+(isOpen?'180':'0')+'deg)">&#9660;</div></div></div>';
     if(isOpen){
       h+='<div style="padding:10px 14px">';
       d.tks.forEach(function(v){
@@ -735,7 +735,7 @@ function rCobrar(app){
       '<div style="padding:15px 17px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;border-bottom:'+(isOpen?'1px solid rgba(239,68,68,.18)':'none')+'" onclick="window._debtOpen[\''+cli.replace(/'/g,"\\'")+'\']='+(isOpen?'false':'true')+';render()">'+
       '<div><div style="font-family:Bebas Neue;font-size:20px">'+safe(cli)+'</div>'+
       '<div class="mo">'+d.tks.length+' factura'+(d.tks.length>1?'s':'')+' pendiente'+(d.tks.length>1?'s':'')+'</div></div>'+
-      '<div style="display:flex;align-items:center;gap:12px"><div style="font-family:Bebas Neue;font-size:27px;color:#f87171">$'+money(d.d)+'</div>'+
+      '<div style="display:flex;align-items:center;gap:12px"><button class="btn bs bsm" style="padding:4px 8px;font-size:12px;background:rgba(239,68,68,.15);color:#f87171;border-color:rgba(239,68,68,.3)" onclick="event.stopPropagation();shareClientDebtImage(\''+cli.replace(/'/g,"\\'")+'\')">COMPARTIR</button><div style="font-family:Bebas Neue;font-size:27px;color:#f87171">$'+money(d.d)+'</div>'+
       '<div style="font-size:18px;color:var(--mt);transition:transform .2s;transform:rotate('+(isOpen?'180':'0')+'deg)">&#9660;</div></div></div>';
     if(isOpen){
       h+='<div style="padding:14px">';
@@ -1312,11 +1312,74 @@ window.shareImg=async function(){
   c.fillStyle="#7B3FA0";c.fillRect(0,H-32,W,32);c.fillStyle="rgba(255,255,255,.8)";c.font="11px Arial";var ft="Gracias por su confianza! - Ghost Print";c.fillText(ft,(W-c.measureText(ft).width)/2,H-9);
   var blob=await new Promise(function(res){cv.toBlob(res,"image/png",0.96);});
   var file=new File([blob],"RECIBO_GP_"+v.id+".png",{type:"image/png"});
-  try{if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:"Recibo Ghost Print"});return;}throw 0;}
-  catch(e){var a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=file.name;a.click();URL.revokeObjectURL(a.href);toast("Imagen descargada");}
+  var isMobile=/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  if(isMobile&&navigator.canShare&&navigator.canShare({files:[file]})){try{await navigator.share({files:[file],title:"Recibo Ghost Print"});return;}catch(e){}}
+  var a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=file.name;a.click();URL.revokeObjectURL(a.href);toast("Imagen descargada");
 };
 
 window.exportBK=function(){var a=document.createElement("a");a.href="data:text/json;charset=utf-8,"+encodeURIComponent(JSON.stringify(S));a.download="GHOSTPRINT_"+today()+".json";document.body.appendChild(a);a.click();a.remove();toast("Backup descargado","#22c55e");};
+
+window.shareClientDebtImage=async function(cliName){
+  var deudas=(S.ventas||[]).filter(function(v){return (v.cliente||"").trim().toUpperCase()===cliName.toUpperCase()&&sDebt(v)>0.01;}).sort(function(a,b){return a.id-b.id;});
+  if(deudas.length===0){toast("El cliente no tiene deudas pendientes","#22c55e");return;}
+  var totalDeuda=deudas.reduce(function(a,v){return a+sDebt(v);},0);
+  
+  var W=760,rowH=46,H=Math.max(860,600+(deudas.length*rowH));
+  var cv=document.createElement("canvas");cv.width=W;cv.height=H;
+  var c=cv.getContext("2d");
+  c.fillStyle="#fff";c.fillRect(0,0,W,H);
+  c.fillStyle="#7B3FA0";c.fillRect(0,0,W,90);
+  try{var li=await loadImg(LOGO);var lh=64,lw=lh*(li.width/li.height);c.drawImage(li,26,13,lw,lh);}catch(e){c.fillStyle="#F07020";c.fillRect(18,20,50,50);c.fillStyle="#fff";c.font="bold 20px Arial";c.fillText("GP",30,52);}
+  c.fillStyle="#fff";c.font="bold 26px Arial";c.fillText("GHOST PRINT",132,44);
+  c.font="12px Arial";c.fillStyle="rgba(255,255,255,.7)";c.fillText("Publicidad & Soluciones Graficas",132,64);
+  c.fillStyle="#F07020";c.fillRect(0,90,W,35);
+  c.fillStyle="#fff";c.font="bold 14px Arial";var bt="ESTADO DE CUENTA";c.fillText(bt,(W-c.measureText(bt).width)/2,114);
+  
+  c.fillStyle="#111";c.font="bold 13px Arial";
+  c.fillText("CLIENTE: "+cliName.toUpperCase(),28,152);
+  c.fillText("FECHA DE EMISION: "+today(),400,152);
+  
+  c.strokeStyle="#ddd";c.lineWidth=1;c.beginPath();c.moveTo(28,172);c.lineTo(W-28,172);c.stroke();
+  
+  var y=202;
+  c.fillStyle="#888";c.font="bold 11px Arial";
+  c.fillText("FECHA",32,y-10);
+  c.fillText("DETALLE",130,y-10);
+  c.fillText("MONTO",W-160,y-10);
+  c.fillText("DEUDA",W-80,y-10);
+  
+  deudas.forEach(function(v){
+    var desc=((v.items||[])[0]?(v.items[0].concepto||"TRABAJO"):"FACTURA") + (v.items&&v.items.length>1?" (+"+(v.items.length-1)+")":"");
+    c.fillStyle="#111";c.font="bold 13px Arial";
+    c.fillText(v.fecha||"",32,y);
+    c.fillText(desc.slice(0,35),130,y);
+    c.fillStyle="#555";
+    c.fillText("$"+money(v.total),W-160,y);
+    c.fillStyle="#dc2626";
+    c.fillText("$"+money(sDebt(v)),W-80,y);
+    
+    c.strokeStyle="#eee";c.lineWidth=1;c.beginPath();c.moveTo(28,y+16);c.lineTo(W-28,y+16);c.stroke();
+    y+=rowH;
+  });
+  
+  var ty=y+18;
+  c.fillStyle="#7B3FA0";c.fillRect(28,ty,W-56,34);
+  c.fillStyle="#fff";c.font="bold 18px Arial";
+  c.fillText("TOTAL DEUDA: $"+money(totalDeuda),36,ty+23);
+  
+  var bsY=ty+60;
+  c.fillStyle="#f8f8f8";c.fillRect(28,bsY,W-56,48);c.strokeStyle="#e0d0f0";c.strokeRect(28,bsY,W-56,48);
+  c.fillStyle="#888";c.font="10px Arial";var bsLbl="Equivalente en Bolivares";c.fillText(bsLbl,(W-c.measureText(bsLbl).width)/2,bsY+15);
+  var bsVal="Bs. "+(totalDeuda*(S.tasaBCV||0)).toLocaleString("es-VE",{minimumFractionDigits:2});c.fillStyle="#111";c.font="bold 18px Arial";c.fillText(bsVal,(W-c.measureText(bsVal).width)/2,bsY+36);
+  
+  c.fillStyle="#7B3FA0";c.fillRect(0,H-32,W,32);c.fillStyle="rgba(255,255,255,.8)";c.font="11px Arial";var ft="Gracias por su confianza! - Ghost Print";c.fillText(ft,(W-c.measureText(ft).width)/2,H-9);
+  
+  var blob=await new Promise(function(res){cv.toBlob(res,"image/png",0.96);});
+  var file=new File([blob],"ESTADO_CUENTA_"+cliName.replace(/[^a-z0-9]/gi,"_")+".png",{type:"image/png"});
+  var isMobile=/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  if(isMobile&&navigator.canShare&&navigator.canShare({files:[file]})){try{await navigator.share({files:[file],title:"Estado de Cuenta Ghost Print"});return;}catch(e){}}
+  var a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=file.name;a.click();URL.revokeObjectURL(a.href);toast("Imagen descargada");
+};
 window.importBK=async function(ev){var file=ev.target.files&&ev.target.files[0];if(!file)return;try{var data=JSON.parse(await file.text());if(!data||!Array.isArray(data.ventas)){toast("Backup invalido","#f87171");return;}if(confirm("Restaurar? Se reemplazaran los datos actuales.")){S=norm(data);toast("Restaurando datos en Firebase...");var i;for(i=0;i<S.ventas.length;i++){await db.collection("ventas").doc(S.ventas[i].id.toString()).set(S.ventas[i]);}for(i=0;i<(S.compras||[]).length;i++){var c=S.compras[i];await db.collection("compras").doc(c.id.toString()).set(c);}for(i=0;i<(S.gastos||[]).length;i++){var g=S.gastos[i];await db.collection("gastos").doc(g.id.toString()).set(g);}for(i=0;i<(S.comprasUSDT||[]).length;i++){var u=S.comprasUSDT[i];await db.collection("comprasUSDT").doc(u.id.toString()).set(u);}await sync();toast("Backup restaurado completamente","#22c55e");}}catch(e){toast("Error al leer el archivo","#f87171");}finally{ev.target.value="";}};
 
 // ===== GRAFICOS =====
