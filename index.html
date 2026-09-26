@@ -237,26 +237,47 @@ select.inp{cursor:pointer}
   #czRoot .btn-danger { background: #ff3366; color: #fff; }
   #czRoot .btn-danger:hover { opacity: 0.9; }
 
-  /* ---------- Layout Grid ---------- */
+  /* ---------- Layout Grid ----------
+     Se muestra SIEMPRE una sola columna (formulario) y la vista previa
+     del documento se oculta por defecto, tanto en PC como en celular.
+     Esto evita que la vista previa se corte o se monte sobre el
+     formulario, y deja el campo de Descripcion con todo el ancho
+     disponible. La vista previa se abre solo cuando el usuario la pide
+     con el boton "Vista Previa" (o Imprimir/PDF para el resultado real). */
   #czRoot .layout {
     display: grid;
-    grid-template-columns: 440px 1fr;
+    grid-template-columns: 1fr;
     min-height: calc(100vh - 65px);
-  }
-  @media (max-width: 1040px) {
-    #czRoot .layout { grid-template-columns: 1fr; }
+    max-width: 100vw;
+    overflow-x: hidden;
   }
 
   #czRoot .panel {
     padding: 22px;
-    border-right: 1px solid var(--ink-line);
     overflow-y: auto;
-    max-height: calc(100vh - 65px);
+    max-height: none;
     background: var(--ink-card);
+    max-width: 900px;
+    width: 100%;
+    margin: 0 auto;
+    min-width: 0;
+    box-sizing: border-box;
   }
-  @media (max-width: 1040px) {
-    #czRoot .panel { border-right: none; border-bottom: 1px solid var(--ink-line); max-height: none; }
+
+  /* ---------- Barra de alternancia Formulario / Vista Previa (siempre visible) ---------- */
+  #czRoot .mobile-tabs {
+    display: flex; gap: 8px; padding: 10px 14px;
+    background: var(--ink-soft); border-bottom: 1px solid var(--ink-line);
+    position: sticky; top: 0; z-index: 30;
   }
+  #czRoot .mobile-tabs button {
+    flex: 1; justify-content: center; background: transparent; color: var(--text-dim);
+    border: 1px solid var(--ink-line); max-width: 260px;
+  }
+  #czRoot .mobile-tabs button.on { background: linear-gradient(135deg, var(--gp-purple) 0%, var(--gp-orange) 100%); color: #fff; border-color: transparent; }
+  #czRoot .layout:not(.show-preview) .preview-wrap { display: none; }
+  #czRoot .layout.show-preview .panel { display: none; }
+  #czRoot .layout.show-preview .preview-wrap { display: flex; }
 
   #czRoot .field-group {
     margin-bottom: 20px;
@@ -320,9 +341,22 @@ select.inp{cursor:pointer}
     display: grid;
     grid-template-columns: 1fr 70px 95px 32px;
     gap: 8px;
-    align-items: end;
+    align-items: start;
   }
   #czRoot .product-row label { margin-top: 0; font-size: 11px; }
+  #czRoot .product-row .grid > div > label { margin-bottom: 4px; }
+  #czRoot textarea.desc-area {
+    width: 100%;
+    min-height: 38px;
+    max-height: 220px;
+    line-height: 1.4;
+    overflow-y: auto;
+    resize: none;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  #czRoot .product-row .grid input[type=number] { margin-top: 0; }
+  #czRoot .product-row .rm-btn { margin-top: 21px; }
   #czRoot .mini-total {
     font-size: 11.5px;
     color: var(--text-dim);
@@ -390,7 +424,18 @@ select.inp{cursor:pointer}
     flex-direction: column;
     align-items: center;
     background: radial-gradient(circle at 50% 20%, #1a1429 0%, #0a0711 70%);
-    overflow-x: auto;
+    overflow-x: hidden;
+    max-width: 100%;
+    min-width: 0;
+  }
+  #czRoot .doc-scale-wrap {
+    max-width: 100%;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+  }
+  #czRoot .doc-scale-inner {
+    transform-origin: top center;
   }
   #czRoot .preview-info {
     display: flex;
@@ -875,7 +920,9 @@ select.inp{cursor:pointer}
       -webkit-print-color-adjust: exact !important;
       print-color-adjust: exact !important;
     }
-    #hdr, #nav, #czRoot .preview-info, #czRoot .topbar, #czRoot .panel, #czRoot .modal-bg, #czRoot .toast { display: none !important; }
+    #hdr, #nav, #czRoot .preview-info, #czRoot .topbar, #czRoot .panel, #czRoot .modal-bg, #czRoot .toast, #czRoot .mobile-tabs { display: none !important; }
+    #czRoot .layout .preview-wrap { display: flex !important; }
+    #czRoot #docCapture { zoom: 1 !important; }
   }
 
 </style>
@@ -894,6 +941,20 @@ select.inp{cursor:pointer}
 </header>
 <div id="app"></div>
 <nav id="nav"></nav>
+
+<button id="voiceFab" onclick="voiceListen()" title="Crear por voz" style="display:none;position:fixed;right:16px;bottom:78px;width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,#9B5DE5 0%,#F97316 100%);border:none;box-shadow:0 6px 20px rgba(155,93,229,.45);z-index:900;display:flex;align-items:center;justify-content:center;cursor:pointer;">
+  <svg id="voiceFabIcon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+</button>
+<div id="voiceOverlay" style="display:none;position:fixed;inset:0;background:rgba(8,4,16,.88);z-index:1200;align-items:center;justify-content:center;flex-direction:column;text-align:center;padding:24px;">
+  <div id="voicePulse" style="width:90px;height:90px;border-radius:50%;background:radial-gradient(circle,rgba(155,93,229,.55),transparent 70%);display:flex;align-items:center;justify-content:center;margin-bottom:18px;animation:voicePulse 1.2s infinite ease-in-out;">
+    <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+  </div>
+  <div style="color:#fff;font-weight:700;font-size:15px;margin-bottom:6px" id="voiceStatus">Escuchando...</div>
+  <div style="color:rgba(255,255,255,.6);font-size:12.5px;max-width:280px;margin-bottom:18px">Di algo como: "crea una venta de 20 dólares a Yazmin", "registra un gasto de 15 en gasolina", "nuevo presupuesto para Promar"</div>
+  <div id="voiceTranscript" style="color:#C084FC;font-size:13px;min-height:18px;margin-bottom:18px;"></div>
+  <button onclick="voiceCancel()" style="background:rgba(255,255,255,.08);color:#fff;border:1px solid rgba(255,255,255,.2);padding:10px 22px;border-radius:20px;font-size:13px;cursor:pointer;">Cancelar</button>
+</div>
+<style>@keyframes voicePulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.12);opacity:.75}}</style>
 
 <div class="ov" id="recModal">
   <div class="ob">
@@ -1063,6 +1124,7 @@ function checkPin(){
 function unlock(){
   unlocked=true;
   $("hdr").style.display="flex";$("nav").style.display="flex";
+  if($("voiceFab") && typeof webkitSpeechRecognition!=="undefined") $("voiceFab").style.display="flex";
   $("ubadge").textContent=user.nombre;
   view=isFullAccess()?"inicio":"ventas";
   if(user.rol==="LIMITADO"&&!canAccess("inicio"))view="ventas";
@@ -1077,7 +1139,7 @@ function unlock(){
     }, 2500);
   }
 }
-window.logout=function(){if(confirm("Cerrar sesion?")){unlocked=false;pinBuf="";$("hdr").style.display="none";$("nav").style.display="none";render();}};
+window.logout=function(){if(confirm("Cerrar sesion?")){unlocked=false;pinBuf="";$("hdr").style.display="none";$("nav").style.display="none";if($("voiceFab"))$("voiceFab").style.display="none";render();}};
 
 function buildNav(){
   var nav=$("nav");
@@ -2163,10 +2225,19 @@ var CZ_HTML=`<div id="czRoot">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
       Imprimir / PDF
     </button>
+    <button class="btn-primary" id="btnRegisterSale" onclick="CZ.registerAsSale()" style="background:linear-gradient(135deg,#10B981 0%,#059669 100%);box-shadow:0 4px 15px rgba(16,185,129,.35);">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+      Registrar como Venta
+    </button>
   </div>
 </div>
 
-<div class="layout">
+<div class="mobile-tabs">
+  <button type="button" class="on" id="tabBtnForm" onclick="CZ.showTab('form')">&#9998; Formulario</button>
+  <button type="button" id="tabBtnPreview" onclick="CZ.showTab('preview')">&#128065; Vista Previa</button>
+</div>
+
+<div class="layout" id="czLayout">
   <!-- ================= FORM PANEL ================= -->
   <div class="panel">
 
@@ -2195,7 +2266,10 @@ var CZ_HTML=`<div id="czRoot">
           <input type="text" id="quoteNumber" oninput="CZ.render()" placeholder="0115">
         </div>
         <div>
-          <label>Fecha de Emisión</label>
+          <label style="display:flex; justify-content:space-between; align-items:center;">
+            <span>Fecha de Emisión</span>
+            <span onclick="CZ.setToday()" style="cursor:pointer; font-size:10.5px; color:var(--gp-orange); font-weight:700; text-decoration:underline;">Hoy</span>
+          </label>
           <input type="date" id="quoteDate" oninput="CZ.render()">
         </div>
       </div>
@@ -2215,7 +2289,8 @@ var CZ_HTML=`<div id="czRoot">
         Datos del Cliente
       </h3>
       <label>Nombre del Cliente / Contacto</label>
-      <input type="text" id="clientName" placeholder="Nombre completo" oninput="CZ.render()">
+      <input type="text" id="clientName" list="clientNameList" placeholder="Nombre completo" autocomplete="off" oninput="CZ.render(); CZ.autoFillClient(this.value);">
+      <datalist id="clientNameList"></datalist>
       <div class="row2">
         <div>
           <label>Empresa / Razón Social</label>
@@ -2673,6 +2748,7 @@ function initApp() {
   }
 
   newQuote(true);
+  renderClientDatalist();
 }
 
 function setInitialNumberForCurrentType() {
@@ -2737,7 +2813,7 @@ function renderProductForm() {
         <div class="grid">
           <div>
             <label>Descripción</label>
-            <input type="text" value="${escapeHtml(p.desc)}" placeholder="Detalle del producto" oninput="CZ.updateProduct(${idx}, 'desc', this.value)">
+            <textarea rows="1" class="desc-area" placeholder="Detalle del producto" oninput="CZ.updateProduct(${idx}, 'desc', this.value); CZ.autoGrow(this);">${escapeHtml(p.desc)}</textarea>
           </div>
           <div>
             <label>Cant.</label>
@@ -2754,6 +2830,13 @@ function renderProductForm() {
     `;
   });
   productListEl.innerHTML = formHtml;
+  productListEl.querySelectorAll('textarea.desc-area').forEach(function(ta) { autoGrow(ta); });
+}
+
+/* Hace crecer el textarea de Descripcion segun el texto, para que nunca quede oculto */
+function autoGrow(el) {
+  el.style.height = 'auto';
+  el.style.height = (el.scrollHeight) + 'px';
 }
 
 function addProduct() {
@@ -2991,7 +3074,24 @@ function render() {
       miniTotalEl.innerHTML = `Subtotal: <span>${escapeHtml(currency)} ${(q * pr).toFixed(2)}</span>`;
     }
   });
+
+  fitDocPreview();
 }
+
+/* Escala el documento (tamano carta fijo) para que siempre quepa en pantalla,
+   evitando que se corte o se salga en moviles/tablets. */
+function fitDocPreview() {
+  const wrap = document.querySelector('#czRoot .preview-wrap');
+  const doc = document.getElementById('docCapture');
+  if (!wrap || !doc) return;
+  const available = wrap.clientWidth - 32; // padding allowance
+  const docWidthPx = doc.offsetWidth / (parseFloat(doc.style.zoom) || 1) || 816;
+  const scale = Math.max(0.28, Math.min(1, available / docWidthPx));
+  doc.style.zoom = scale;
+}
+window.addEventListener('resize', function() {
+  if (document.getElementById('docCapture')) fitDocPreview();
+});
 
 /* ================= ACTIONS ================= */
 function newQuote(isInit = false) {
@@ -3084,7 +3184,56 @@ function saveCurrentDocumentToHistory() {
   };
 
   appStorage.set(docRecord.id, docRecord);
+  saveClientToDirectory(docRecord.client);
   return docRecord;
+}
+
+/* ================= DIRECTORIO DE CLIENTES (memoria automatica) =================
+   Guarda cada cliente/empresa usado, para no tener que volver a escribirlo:
+   al escribir un nombre ya guardado, el resto de los datos se autocompletan solos. */
+var CLIENTS_KEY = 'gp_cz_clients_v1';
+function loadClientDirectory() {
+  try { return JSON.parse(localStorage.getItem(CLIENTS_KEY)) || []; }
+  catch (e) { return []; }
+}
+function saveClientDirectory(list) {
+  try { localStorage.setItem(CLIENTS_KEY, JSON.stringify(list)); } catch (e) {}
+}
+function saveClientToDirectory(client) {
+  if (!client || !client.name || !client.name.trim()) return;
+  var list = loadClientDirectory();
+  var key = client.name.trim().toLowerCase();
+  var idx = list.findIndex(function(c) { return (c.name || '').trim().toLowerCase() === key; });
+  var rec = {
+    name: client.name.trim(),
+    company: (client.company || '').trim(),
+    id: (client.id || '').trim(),
+    phone: (client.phone || '').trim(),
+    email: (client.email || '').trim()
+  };
+  if (idx > -1) list[idx] = rec; else list.push(rec);
+  saveClientDirectory(list);
+  renderClientDatalist();
+}
+function renderClientDatalist() {
+  var dl = document.getElementById('clientNameList');
+  if (!dl) return;
+  var list = loadClientDirectory();
+  dl.innerHTML = list.map(function(c) { return '<option value="' + escapeHtml(c.name) + '">'; }).join('');
+}
+function autoFillClient(name) {
+  var list = loadClientDirectory();
+  var key = (name || '').trim().toLowerCase();
+  if (!key) return;
+  var found = list.find(function(c) { return (c.name || '').trim().toLowerCase() === key; });
+  if (found) {
+    document.getElementById('clientCompany').value = found.company || '';
+    document.getElementById('clientId').value = found.id || '';
+    document.getElementById('clientPhone').value = found.phone || '';
+    document.getElementById('clientEmail').value = found.email || '';
+    render();
+    showToast('Datos de ' + found.name + ' completados automaticamente');
+  }
 }
 
 function manualSave() {
@@ -3094,7 +3243,13 @@ function manualSave() {
 
 async function downloadImage() {
   showToast('Generando imagen de alta resolución...');
+  const layout = document.getElementById('czLayout');
+  const wasPreview = layout && layout.classList.contains('show-preview');
+  if (layout) layout.classList.add('show-preview');
   const captureEl = document.getElementById('docCapture');
+  const prevZoom = captureEl.style.zoom;
+  captureEl.style.zoom = '';
+  await new Promise(r => setTimeout(r, 60));
 
   try {
     const canvas = await html2canvas(captureEl, {
@@ -3119,6 +3274,10 @@ async function downloadImage() {
   } catch(err) {
     console.error(err);
     alert('Hubo un problema al generar la imagen. Prueba con el botón "Imprimir / PDF".');
+  } finally {
+    captureEl.style.zoom = prevZoom;
+    if (layout && !wasPreview) layout.classList.remove('show-preview');
+    fitDocPreview();
   }
 }
 
@@ -3292,7 +3451,86 @@ function closeConfirm() {
   document.getElementById('confirmModal').classList.remove('open');
 }
 
+/* Fuerza la fecha de hoy con un toque, por si el navegador dejo una fecha vieja guardada */
+function setToday() {
+  document.getElementById('quoteDate').value = new Date().toISOString().split('T')[0];
+  render();
+  showToast('Fecha actualizada a hoy');
+}
 
+/* ================= TABS MOVIL (Formulario / Vista Previa) ================= */
+function showTab(which) {
+  const layout = document.getElementById('czLayout');
+  const btnForm = document.getElementById('tabBtnForm');
+  const btnPreview = document.getElementById('tabBtnPreview');
+  if (!layout) return;
+  if (which === 'preview') {
+    layout.classList.add('show-preview');
+    if (btnForm) btnForm.classList.remove('on');
+    if (btnPreview) btnPreview.classList.add('on');
+    setTimeout(fitDocPreview, 30);
+  } else {
+    layout.classList.remove('show-preview');
+    if (btnForm) btnForm.classList.add('on');
+    if (btnPreview) btnPreview.classList.remove('on');
+  }
+}
+
+/* ================= REGISTRAR NOTA DE ENTREGA / PRESUPUESTO COMO VENTA =================
+   Enlaza este modulo (que guarda localmente) con el modulo de Ventas (Firebase),
+   para que al entregar la mercancia quede reflejado automaticamente en Historial,
+   Deudas y Reportes sin tener que cargarlo dos veces. */
+async function registerAsSale() {
+  try {
+    if (!products.length || !products.some(p => (p.desc || '').trim())) {
+      showToast('Agrega al menos un producto antes de registrar la venta');
+      return;
+    }
+    const clientNameVal = (document.getElementById('clientName').value || '').trim();
+    if (!clientNameVal) {
+      showToast('Ingresa el nombre del cliente antes de registrar la venta');
+      return;
+    }
+    let subtotal = 0;
+    products.forEach(p => { subtotal += ((parseFloat(p.qty) || 0) * (parseFloat(p.price) || 0)); });
+    const useDiscount = document.getElementById('useDiscount').checked;
+    const discountPct = parseFloat(document.getElementById('discountPct').value) || 0;
+    const discountAmt = useDiscount ? (subtotal * (discountPct / 100)) : 0;
+    const subAfterDisc = subtotal - discountAmt;
+    const useTax = document.getElementById('useTax').checked;
+    const taxPct = parseFloat(document.getElementById('taxPct').value) || 0;
+    const grandTotal = subAfterDisc + (useTax ? (subAfterDisc * (taxPct / 100)) : 0);
+    const number = document.getElementById('quoteNumber').value.trim() || formatNumber(counters[docType]);
+    const date = document.getElementById('quoteDate').value || new Date().toISOString().split('T')[0];
+
+    const venta = {
+      id: Date.now().toString(),
+      fecha: date,
+      cliente: clientNameVal.toUpperCase(),
+      whatsapp: (document.getElementById('clientPhone').value || '').trim(),
+      vendedor: (window.user && window.user.nombre) || 'ADMIN',
+      total: grandTotal,
+      abono: 0,
+      origenDocumento: { tipo: docType, numero: number },
+      items: products.filter(p => (p.desc || '').trim()).map(p => ({
+        desc: p.desc,
+        c: parseFloat(p.qty) || 0,
+        precio: parseFloat(p.price) || 0,
+        mat_key: ''
+      })),
+      historialAbonos: []
+    };
+
+    if (typeof db !== 'undefined' && db.collection) {
+      await db.collection('ventas').doc(venta.id).set(venta);
+      showToast('Venta registrada y enlazada con este documento');
+    } else {
+      showToast('No se pudo conectar con Ventas. Verifica tu conexion');
+    }
+  } catch (e) {
+    showToast('Error al registrar la venta: ' + (e.message || e));
+  }
+}
 
   window.CZ = {
     init: initApp,
@@ -3313,11 +3551,115 @@ function closeConfirm() {
     closeHistoryModal: closeHistoryModal,
     loadDocument: loadDocument,
     promptDeleteDocument: promptDeleteDocument,
-    closeConfirm: closeConfirm
+    closeConfirm: closeConfirm,
+    showTab: showTab,
+    registerAsSale: registerAsSale,
+    setToday: setToday,
+    autoGrow: autoGrow,
+    autoFillClient: autoFillClient
   };
 })();
 
 // ===== FIN MODULO COTIZACIONES =====
+
+/* ===================== CREAR POR VOZ ===================== */
+var voiceRec=null,voiceActive=false;
+function voiceListen(){
+  var SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){toast("Tu navegador no soporta dictado por voz. Usa Chrome en Android.","#f87171");return;}
+  $("voiceOverlay").style.display="flex";
+  $("voiceStatus").textContent="Escuchando...";
+  $("voiceTranscript").textContent="";
+  voiceRec=new SR();
+  voiceRec.lang="es-VE";
+  voiceRec.interimResults=true;
+  voiceRec.maxAlternatives=1;
+  voiceActive=true;
+  voiceRec.onresult=function(e){
+    var txt="";
+    for(var i=0;i<e.results.length;i++){txt+=e.results[i][0].transcript;}
+    $("voiceTranscript").textContent=txt;
+    if(e.results[e.results.length-1].isFinal){
+      $("voiceStatus").textContent="Procesando...";
+      setTimeout(function(){voiceHandleCommand(txt);},250);
+    }
+  };
+  voiceRec.onerror=function(e){
+    voiceActive=false;
+    $("voiceOverlay").style.display="none";
+    if(e.error!=="aborted")toast("No se entendio, intenta de nuevo","#f87171");
+  };
+  voiceRec.onend=function(){
+    if(voiceActive){voiceActive=false;$("voiceOverlay").style.display="none";}
+  };
+  try{voiceRec.start();}catch(err){toast("No se pudo iniciar el microfono","#f87171");$("voiceOverlay").style.display="none";}
+}
+function voiceCancel(){
+  voiceActive=false;
+  if(voiceRec){try{voiceRec.stop();}catch(e){}}
+  $("voiceOverlay").style.display="none";
+}
+function voiceExtractAmount(txt){
+  var m=txt.match(/(\d+([.,]\d+)?)/);
+  if(m)return parseFloat(m[1].replace(",","."));
+  return null;
+}
+function voiceExtractName(txt){
+  var m=txt.match(/(?:para|a|cliente)\s+([a-zA-ZñÑáéíóúÁÉÍÓÚ ]+?)(?:$|\s+por|\s+de\s+\d)/i);
+  if(m)return m[1].trim();
+  return "";
+}
+function voiceExtractDesc(txt,afterWord){
+  var re=new RegExp(afterWord+"\\s+(?:de\\s+)?(.+)","i");
+  var m=txt.match(re);
+  return m?m[1].trim():"";
+}
+function voiceHandleCommand(txt){
+  $("voiceOverlay").style.display="none";
+  var t=txt.toLowerCase().trim();
+  var monto=voiceExtractAmount(t);
+  var cliente=voiceExtractName(t);
+
+  if(/gasto|gaste|gasté/.test(t)){
+    go("gastos");
+    setTimeout(function(){
+      if($("gMonto")&&monto)$("gMonto").value=monto;
+      if($("gDesc"))$("gDesc").value=voiceExtractDesc(t,"gasto").replace(/\d+([.,]\d+)?/,"").trim().toUpperCase();
+      toast("Gasto por voz: revisa y pulsa Guardar","#f59e0b");
+    },300);
+  } else if(/compra|compre|compré/.test(t)){
+    go("compras");
+    setTimeout(function(){
+      if($("cCosto")&&monto)$("cCosto").value=monto;
+      toast("Compra por voz: completa el material y pulsa Guardar","#f59e0b");
+    },300);
+  } else if(/nota de entrega|entrega/.test(t)){
+    go("cotizaciones");
+    setTimeout(function(){
+      if(window.CZ)CZ.setDocType("entrega");
+      if(cliente&&document.getElementById("clientName"))document.getElementById("clientName").value=cliente.toUpperCase();
+      if(window.CZ)CZ.render();
+      toast("Nota de entrega por voz: revisa y guarda","#a78bfa");
+    },400);
+  } else if(/presupuesto|cotizacion|cotización/.test(t)){
+    go("cotizaciones");
+    setTimeout(function(){
+      if(window.CZ)CZ.setDocType("presupuesto");
+      if(cliente&&document.getElementById("clientName"))document.getElementById("clientName").value=cliente.toUpperCase();
+      if(window.CZ)CZ.render();
+      toast("Presupuesto por voz: revisa y guarda","#a78bfa");
+    },400);
+  } else if(/venta|vender|vendi|vendí/.test(t)){
+    go("ventas");
+    setTimeout(function(){
+      if($("vCli")&&cliente)$("vCli").value=cliente.toUpperCase();
+      if($("vPrec")&&monto)$("vPrec").value=monto;
+      toast("Venta por voz: completa el producto y pulsa Guardar","#22c55e");
+    },300);
+  } else {
+    toast('No entendi el comando. Di "venta", "gasto", "compra" o "presupuesto"',"#f87171");
+  }
+}
 
 if($("hdrLogo"))$("hdrLogo").src=LOGO;
 render();
