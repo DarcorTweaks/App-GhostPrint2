@@ -3604,57 +3604,123 @@ function voiceExtractAmount(txt){
   if(m)return parseFloat(m[1].replace(",","."));
   return null;
 }
-function voiceExtractName(txt){
-  var m=txt.match(/(?:para|a|cliente)\s+([a-zA-ZñÑáéíóúÁÉÍÓÚ ]+?)(?:$|\s+por|\s+de\s+\d)/i);
-  if(m)return m[1].trim();
-  return "";
+function voiceExtractNumbers(txt){
+  var out=[],re=/\d+(?:[.,]\d+)?/g,m;
+  while((m=re.exec(txt))){out.push(parseFloat(m[0].replace(",",".")));}
+  return out;
 }
-function voiceExtractDesc(txt,afterWord){
-  var re=new RegExp(afterWord+"\\s+(?:de\\s+)?(.+)","i");
-  var m=txt.match(re);
-  return m?m[1].trim():"";
+function voiceNormalize(s){
+  return (s||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").trim();
+}
+/* Busca, en cualquier parte de la frase, un nombre que ya conozcamos
+   (clientes de ventas anteriores + clientes guardados en Presupuestos).
+   Asi no hace falta decir "a" o "para": basta con mencionar el nombre. */
+function voiceKnownClients(){
+  var set={};
+  (S.ventas||[]).forEach(function(v){if(v.cliente)set[v.cliente]=true;});
+  try{
+    var czList=JSON.parse(localStorage.getItem('gp_cz_clients_v1'))||[];
+    czList.forEach(function(c){if(c.name)set[c.name]=true;});
+  }catch(e){}
+  return Object.keys(set);
+}
+function voiceFindKnownMatch(text,candidates){
+  var norm=voiceNormalize(text),best=null,bestLen=0;
+  (candidates||[]).forEach(function(c){
+    if(!c)return;
+    var nc=voiceNormalize(c);
+    if(nc.length>=3&&norm.indexOf(nc)>-1&&nc.length>bestLen){best=c;bestLen=nc.length;}
+  });
+  return best;
+}
+function voiceExtractName(txt){
+  var patterns=[
+    /\b(?:para|a|cliente|del cliente|de parte de|proveedor)\b\s+([a-zA-ZñÑáéíóúÁÉÍÓÚ]+(?:\s+[a-zA-ZñÑáéíóúÁÉÍÓÚ]+){0,2})/i
+  ];
+  for(var i=0;i<patterns.length;i++){
+    var m=txt.match(patterns[i]);
+    if(m){
+      var name=m[1].trim().replace(/\b(de|dolares|dolar|bolivares|pesos|por|cada|uno|una|unidades|unidad|hoy|gasto|venta|presupuesto|compra|entrega|cantidad|precio|en)\b.*$/i,'').trim();
+      if(name&&name.split(' ').length<=4&&name.length>1)return name;
+    }
+  }
+  return "";
 }
 function voiceHandleCommand(txt){
   $("voiceOverlay").style.display="none";
   var t=txt.toLowerCase().trim();
-  var monto=voiceExtractAmount(t);
-  var cliente=voiceExtractName(t);
+  var numbers=voiceExtractNumbers(t);
+  var monto=numbers.length?numbers[numbers.length-1]:null;
+  var cliente=voiceFindKnownMatch(t,voiceKnownClients())||voiceExtractName(t);
+  var inv=(typeof S!=="undefined"&&S.inventario)?S.inventario:{};
+  var knownMat=voiceFindKnownMatch(t,Object.keys(inv));
+  var knownServ=voiceFindKnownMatch(t,(typeof S!=="undefined"&&S.servicios)||[]);
+  var esMayor=/mayor|mayorista/.test(t);
 
-  if(/gasto|gaste|gasté/.test(t)){
+  if(/gasto|gaste|gast[eé]|pagu[eé]/.test(t)){
     go("gastos");
     setTimeout(function(){
       if($("gMonto")&&monto)$("gMonto").value=monto;
-      if($("gDesc"))$("gDesc").value=voiceExtractDesc(t,"gasto").replace(/\d+([.,]\d+)?/,"").trim().toUpperCase();
-      toast("Gasto por voz: revisa y pulsa Guardar","#f59e0b");
+      var desc=t.replace(/gasto|gaste|gast[eé]|registra|registrar|un|una|de|pagu[eé]/gi,'').replace(/\d+([.,]\d+)?/g,'').trim();
+      if($("gDesc")&&desc)$("gDesc").value=desc.toUpperCase();
+      var cat="OTROS";
+      if(/luz|agua|alquiler|renta|gasolina|transporte|internet|telefono/.test(t))cat="OPERATIVO";
+      else if(/sueldo|nomina|empleado/.test(t))cat="SUELDOS";
+      else if(/publicidad|anuncio|marketing|promocion/.test(t))cat="PUBLICIDAD";
+      else if(/insumo|material|papel|tinta/.test(t))cat="INSUMOS";
+      if($("gCat"))$("gCat").value=cat;
+      toast("Gasto por voz: revisa y pulsa Guardar egreso","#f59e0b");
     },300);
-  } else if(/compra|compre|compré/.test(t)){
+  } else if(/compra|compre|compr[eé]/.test(t)){
     go("compras");
     setTimeout(function(){
+      if(knownMat&&$("cMat"))$("cMat").value=knownMat;
+      if($("cCant")&&numbers.length>1)$("cCant").value=numbers[0];
       if($("cCosto")&&monto)$("cCosto").value=monto;
-      toast("Compra por voz: completa el material y pulsa Guardar","#f59e0b");
+      if(cliente&&$("cProv"))$("cProv").value=cliente.toUpperCase();
+      toast("Compra por voz: revisa y pulsa Ingresar stock","#f59e0b");
     },300);
   } else if(/nota de entrega|entrega/.test(t)){
     go("cotizaciones");
     setTimeout(function(){
       if(window.CZ)CZ.setDocType("entrega");
-      if(cliente&&document.getElementById("clientName"))document.getElementById("clientName").value=cliente.toUpperCase();
+      if(cliente&&document.getElementById("clientName")){
+        document.getElementById("clientName").value=cliente.toUpperCase();
+        if(window.CZ)CZ.autoFillClient(cliente);
+      }
       if(window.CZ)CZ.render();
       toast("Nota de entrega por voz: revisa y guarda","#a78bfa");
     },400);
-  } else if(/presupuesto|cotizacion|cotización/.test(t)){
+  } else if(/presupuesto|cotizacion|cotizaci[oó]n/.test(t)){
     go("cotizaciones");
     setTimeout(function(){
       if(window.CZ)CZ.setDocType("presupuesto");
-      if(cliente&&document.getElementById("clientName"))document.getElementById("clientName").value=cliente.toUpperCase();
+      if(cliente&&document.getElementById("clientName")){
+        document.getElementById("clientName").value=cliente.toUpperCase();
+        if(window.CZ)CZ.autoFillClient(cliente);
+      }
       if(window.CZ)CZ.render();
       toast("Presupuesto por voz: revisa y guarda","#a78bfa");
     },400);
-  } else if(/venta|vender|vendi|vendí/.test(t)){
+  } else if(/venta|vender|vend[ií]|factura/.test(t)){
     go("ventas");
     setTimeout(function(){
-      if($("vCli")&&cliente)$("vCli").value=cliente.toUpperCase();
-      if($("vPrec")&&monto)$("vPrec").value=monto;
-      toast("Venta por voz: completa el producto y pulsa Guardar","#22c55e");
+      if($("vCli")&&cliente){
+        $("vCli").value=cliente.toUpperCase();
+        if(typeof saleDraft!=="undefined")saleDraft.cliente=cliente.toUpperCase();
+      }
+      if(knownMat&&$("vMat")){
+        $("vMat").value=knownMat;
+        if($("vTipo"))$("vTipo").value=esMayor?"MAYOR":"DETAL";
+      } else if(knownServ&&$("vServ")){
+        $("vServ").value=knownServ;
+      }
+      if($("vCant")&&numbers.length>1)$("vCant").value=numbers[0];
+      if(!knownMat&&$("vPrec")&&monto)$("vPrec").value=monto;
+      var concepto=t.replace(/venta|vender|vend[ií]|crea|registra|una|un|de|factura/gi,'').replace(/\d+([.,]\d+)?/g,'').trim();
+      if($("vConc")&&concepto&&!knownMat)$("vConc").value=concepto.toUpperCase().slice(0,40);
+      if(typeof autoPrice==="function")autoPrice();
+      toast("Venta por voz: revisa y anade al carrito","#22c55e");
     },300);
   } else {
     toast('No entendi el comando. Di "venta", "gasto", "compra" o "presupuesto"',"#f87171");
