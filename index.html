@@ -2143,12 +2143,13 @@ window.shareClientDebtImage=async function(cliName){
   
   c.strokeStyle="#ddd";c.lineWidth=1;c.beginPath();c.moveTo(28,172);c.lineTo(W-28,172);c.stroke();
   
-  var y=202;
+  var y=222;
   c.fillStyle="#888";c.font="bold 11px Arial";
-  c.fillText("FECHA",32,y-10);
-  c.fillText("DETALLE",130,y-10);
-  c.fillText("MONTO",W-160,y-10);
-  c.fillText("DEUDA",W-80,y-10);
+  c.fillText("FECHA",32,y-32);
+  c.fillText("DETALLE",130,y-32);
+  c.fillText("MONTO",W-160,y-32);
+  c.fillText("DEUDA",W-80,y-32);
+  c.strokeStyle="#eee";c.lineWidth=1;c.beginPath();c.moveTo(28,y-20);c.lineTo(W-28,y-20);c.stroke();
   
   deudas.forEach(function(v){
     var desc=((v.items||[])[0]?(v.items[0].concepto||"TRABAJO"):"FACTURA") + (v.items&&v.items.length>1?" (+"+(v.items.length-1)+")":"");
