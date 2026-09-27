@@ -2643,7 +2643,7 @@ var CZ_HTML=`<div id="czRoot">
         <span style="font-size:10.5px; color:var(--text-dim);">Comienza en 0115</span>
       </div>
       <div>
-        <label>Correlativo Notas de Entrega</label>
+        <label>Correlativo Notas de Entrega + Ventas/Recibos</label>
         <input type="number" id="settingCounterDelivery" value="1" min="1">
         <span style="font-size:10.5px; color:var(--text-dim);">Comienza en 0001</span>
       </div>
@@ -2800,7 +2800,12 @@ function initApp() {
 }
 
 function setInitialNumberForCurrentType() {
-  const currentCount = counters[docType] || (docType === 'presupuesto' ? 115 : 1);
+  /* Nota de Entrega comparte correlativo con Ventas/Recibos (S.facturaCounter),
+     para que ambos tipos de documento sigan una misma secuencia sin chocar.
+     Presupuesto mantiene su propio correlativo local, sin cambios. */
+  const currentCount = docType === 'entrega'
+    ? (S.facturaCounter || 1)
+    : (counters[docType] || (docType === 'presupuesto' ? 115 : 1));
   document.getElementById('quoteNumber').value = formatNumber(currentCount);
 }
 
@@ -2959,7 +2964,8 @@ function render() {
   }
 
   const rawNum = document.getElementById('quoteNumber').value.trim();
-  const formattedNum = rawNum ? (rawNum.startsWith('N.°') || rawNum.startsWith('N°') ? rawNum : 'N.° ' + formatNumber(rawNum)) : 'N.° ' + formatNumber(counters[docType]);
+  const fallbackCount = docType === 'entrega' ? (S.facturaCounter || 1) : counters[docType];
+  const formattedNum = rawNum ? (rawNum.startsWith('N.°') || rawNum.startsWith('N°') ? rawNum : 'N.° ' + formatNumber(rawNum)) : 'N.° ' + formatNumber(fallbackCount);
   document.getElementById('docNumber').textContent = formattedNum;
 
   const rawDate = document.getElementById('quoteDate').value;
@@ -3173,12 +3179,17 @@ function newQuote(isInit = false) {
 
 function incrementCurrentCounter() {
   const rawNum = document.getElementById('quoteNumber').value.trim();
-  const currentNum = parseInt(rawNum.replace(/\D/g, ''), 10) || counters[docType] || (docType === 'presupuesto' ? 115 : 1);
-  
-  counters[docType] = currentNum + 1;
-  appStorage.set('counters', counters);
-
-  document.getElementById('quoteNumber').value = formatNumber(counters[docType]);
+  if (docType === 'entrega') {
+    const currentNum = parseInt(rawNum.replace(/\D/g, ''), 10) || S.facturaCounter || 1;
+    S.facturaCounter = currentNum + 1;
+    sync();
+    document.getElementById('quoteNumber').value = formatNumber(S.facturaCounter);
+  } else {
+    const currentNum = parseInt(rawNum.replace(/\D/g, ''), 10) || counters[docType] || (docType === 'presupuesto' ? 115 : 1);
+    counters[docType] = currentNum + 1;
+    appStorage.set('counters', counters);
+    document.getElementById('quoteNumber').value = formatNumber(counters[docType]);
+  }
   currentDocId = null;
   render();
 }
@@ -3188,7 +3199,7 @@ function saveCurrentDocumentToHistory() {
     currentDocId = 'doc_' + Date.now();
   }
 
-  const number = document.getElementById('quoteNumber').value.trim() || formatNumber(counters[docType]);
+  const number = document.getElementById('quoteNumber').value.trim() || formatNumber(docType === 'entrega' ? (S.facturaCounter || 1) : counters[docType]);
   const date = document.getElementById('quoteDate').value || new Date().toISOString().split('T')[0];
   const currency = document.getElementById('currency').value || '$';
   
@@ -3307,7 +3318,7 @@ async function downloadImage() {
       backgroundColor: '#ffffff'
     });
 
-    const numStr = document.getElementById('quoteNumber').value.trim() || formatNumber(counters[docType]);
+    const numStr = document.getElementById('quoteNumber').value.trim() || formatNumber(docType === 'entrega' ? (S.facturaCounter || 1) : counters[docType]);
     const cleanNum = numStr.replace(/[^a-zA-Z0-9_-]/g, '_');
     const filename = `${docType.toUpperCase()}_${cleanNum}_GhostPrint.png`;
 
@@ -3348,7 +3359,7 @@ function openSettings() {
   document.getElementById('companyTaxId').value = company.taxId || '';
 
   document.getElementById('settingCounterQuote').value = counters.presupuesto || 115;
-  document.getElementById('settingCounterDelivery').value = counters.entrega || 1;
+  document.getElementById('settingCounterDelivery').value = S.facturaCounter || 1;
 
   const logoPreview = document.getElementById('logoPreview');
   if (logoPreview) {
@@ -3362,7 +3373,7 @@ function closeSettings() {
   document.getElementById('settingsModal').classList.remove('open');
 }
 
-function saveSettings() {
+async function saveSettings() {
   company.name = document.getElementById('companyName').value.trim();
   company.address = document.getElementById('companyAddress').value.trim();
   company.phone = document.getElementById('companyPhone').value.trim();
@@ -3371,10 +3382,12 @@ function saveSettings() {
   company.taxId = document.getElementById('companyTaxId').value.trim();
 
   counters.presupuesto = parseInt(document.getElementById('settingCounterQuote').value, 10) || 115;
-  counters.entrega = parseInt(document.getElementById('settingCounterDelivery').value, 10) || 1;
+  /* El correlativo de Entrega ahora es el mismo contador compartido de Ventas/Recibos */
+  S.facturaCounter = parseInt(document.getElementById('settingCounterDelivery').value, 10) || 1;
 
   appStorage.set('company', company);
   appStorage.set('counters', counters);
+  await sync();
 
   setInitialNumberForCurrentType();
   closeSettings();
@@ -3548,7 +3561,8 @@ async function registerAsSale() {
     const useTax = document.getElementById('useTax').checked;
     const taxPct = parseFloat(document.getElementById('taxPct').value) || 0;
     const grandTotal = subAfterDisc + (useTax ? (subAfterDisc * (taxPct / 100)) : 0);
-    const number = document.getElementById('quoteNumber').value.trim() || formatNumber(counters[docType]);
+    const fallbackCount = docType === 'entrega' ? (S.facturaCounter || 1) : counters[docType];
+    const number = document.getElementById('quoteNumber').value.trim() || formatNumber(fallbackCount);
     const date = document.getElementById('quoteDate').value || new Date().toISOString().split('T')[0];
 
     const venta = {
@@ -3575,6 +3589,7 @@ async function registerAsSale() {
 
     if (typeof db !== 'undefined' && db.collection) {
       await db.collection('ventas').doc(venta.id.toString()).set(venta);
+      incrementCurrentCounter();
       showToast('Venta registrada y enlazada con este documento');
     } else {
       showToast('No se pudo conectar con Ventas. Verifica tu conexion');
