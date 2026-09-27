@@ -1000,6 +1000,18 @@ var n=function(v){return parseFloat(v)||0;};
 var money=function(v){return n(v).toLocaleString("es-VE",{minimumFractionDigits:2,maximumFractionDigits:2});};
 var safe=function(v){return String(v||"").replace(/[&<>"']/g,function(c){var m={"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"};return m[c];});};
 var sDebt=function(v){return Math.max(n(v.total)-n(v.abono),0);};
+/* Etiqueta de referencia al Presupuesto/Nota de Entrega que origino esta venta
+   (usa el mismo N° del documento), o el N° de factura propio si la venta
+   se registro directo. Toda venta nueva queda con un numero visible. */
+var docRefLabel=function(v){
+  if(!v)return "";
+  if(v.origenDocumento&&v.origenDocumento.numero){
+    var tipo=v.origenDocumento.tipo==="entrega"?"Nota de Entrega":(v.origenDocumento.tipo==="presupuesto"?"Presupuesto":"Documento");
+    return tipo+" N\u00b0 "+v.origenDocumento.numero;
+  }
+  if(v.numeroFactura)return "Factura N\u00b0 "+v.numeroFactura;
+  return "";
+};
 var isPaid=function(v){return sDebt(v)<0.01;};
 var compraDebt=function(c){return Math.max(n(c.costo)-n(c.abono!=null?c.abono:c.costo),0);};
 var isCompraPaid=function(c){return compraDebt(c)<0.01;};
@@ -1044,7 +1056,7 @@ window.closeForm=function(){$("formModal").classList.remove("open");};
 function norm(d){
   var emp=(d&&d.empleados)?d.empleados:DEFAULT_EMP.slice();
   emp=emp.map(function(e){if(!e.nivel)e.nivel="LIMITADO";return e;});
-  return{ventas:d&&d.ventas?d.ventas:S.ventas||[],inventario:d&&d.inventario?d.inventario:{},compras:d&&d.compras?d.compras:S.compras||[],gastos:d&&d.gastos?d.gastos:S.gastos||[],comprasUSDT:d&&d.comprasUSDT?d.comprasUSDT:S.comprasUSDT||[],servicios:d&&d.servicios?d.servicios:["DISENO","IMPRESION","CORTE"],metaMensual:d&&d.metaMensual?d.metaMensual:3000,tasaBCV:d&&d.tasaBCV?d.tasaBCV:0,tasaBinance:d&&d.tasaBinance?d.tasaBinance:0,tasaLastSync:d&&d.tasaLastSync?d.tasaLastSync:null,empleados:emp,inicioPeriodo:d&&d.inicioPeriodo?d.inicioPeriodo:null};
+  return{ventas:d&&d.ventas?d.ventas:S.ventas||[],inventario:d&&d.inventario?d.inventario:{},compras:d&&d.compras?d.compras:S.compras||[],gastos:d&&d.gastos?d.gastos:S.gastos||[],comprasUSDT:d&&d.comprasUSDT?d.comprasUSDT:S.comprasUSDT||[],servicios:d&&d.servicios?d.servicios:["DISENO","IMPRESION","CORTE"],metaMensual:d&&d.metaMensual?d.metaMensual:3000,tasaBCV:d&&d.tasaBCV?d.tasaBCV:0,tasaBinance:d&&d.tasaBinance?d.tasaBinance:0,tasaLastSync:d&&d.tasaLastSync?d.tasaLastSync:null,empleados:emp,inicioPeriodo:d&&d.inicioPeriodo?d.inicioPeriodo:null,facturaCounter:d&&d.facturaCounter?d.facturaCounter:1};
 }
 async function sync(){
   try {
@@ -1056,7 +1068,8 @@ async function sync(){
       tasaBinance: S.tasaBinance || 0,
       tasaLastSync: S.tasaLastSync || null,
       empleados: S.empleados || DEFAULT_EMP,
-      inicioPeriodo: S.inicioPeriodo || null
+      inicioPeriodo: S.inicioPeriodo || null,
+      facturaCounter: S.facturaCounter || 1
     };
     await DOC.set(metadata);
     render();
@@ -1064,6 +1077,15 @@ async function sync(){
     console.error("Error guardando en Firebase:", error);
     alert("Hubo un error al guardar en la base de datos:\n" + error.message);
   }
+}
+/* Numero de factura correlativo (4 digitos), compartido para todas las ventas
+   que no vengan ya con un numero de Presupuesto/Nota de Entrega propio. */
+function fmtFactura(num){return String(num).padStart(4,"0");}
+async function nextFacturaNumber(){
+  var num=S.facturaCounter||1;
+  S.facturaCounter=num+1;
+  await sync();
+  return fmtFactura(num);
 }
 var dataLoaded=false;
 DOC.onSnapshot(
@@ -1496,7 +1518,7 @@ function rHistorial(app){
         var actions=isFullAccess()?'<div style="display:flex;gap:6px"><button class="btn bp bsm" onclick="showRec('+v.id+')">Recibo</button><button class="btn bs bsm" onclick="editV('+v.id+')">Editar</button></div>':'<button class="btn bp bsm" onclick="showRec('+v.id+')">Recibo</button>';
         h+='<div class="mc" style="position:relative">'+
           (isFullAccess()?'<button onclick="delVenta('+v.id+')" style="position:absolute;top:8px;right:8px;background:rgba(239,68,68,.16);border:1px solid rgba(239,68,68,.25);color:#f87171;width:26px;height:26px;border-radius:50%;font-size:13px;cursor:pointer">&times;</button>':'')+
-          '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;padding-right:'+(isFullAccess()?'34px':'0')+'"><div class="mo">'+v.fecha+' - '+(v.metodoPago||"CONTADO")+' - '+(v.vendedor||"ADMIN")+'</div><span class="pill '+(isPaid(v)?'pg':'pr')+'" style="font-size:9px">'+(isPaid(v)?'PAGADO':'DEBE $'+money(sDebt(v)))+'</span></div>'+
+          '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;padding-right:'+(isFullAccess()?'34px':'0')+'"><div class="mo">'+v.fecha+' - '+(v.metodoPago||"CONTADO")+' - '+(v.vendedor||"ADMIN")+(docRefLabel(v)?' &middot; <span style="color:var(--p2);font-weight:800">'+docRefLabel(v)+'</span>':'')+'</div><span class="pill '+(isPaid(v)?'pg':'pr')+'" style="font-size:9px">'+(isPaid(v)?'PAGADO':'DEBE $'+money(sDebt(v)))+'</span></div>'+
           iH+aH+
           '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding-top:10px;border-top:1px solid var(--bd)">'+
           '<div style="font-family:JetBrains Mono;font-size:13px">$'+money(v.abono)+' / $'+money(v.total)+'</div>'+actions+'</div></div>';
@@ -1820,6 +1842,7 @@ function rMore(app){
     admin.forEach(function(o,i){h+='<div onclick="go(\''+o.v+'\')" class="c fa" style="animation-delay:'+(i*.04)+'s;cursor:pointer;display:flex;align-items:center;gap:14px;padding:15px 17px;margin-bottom:9px"><div style="font-size:22px;width:44px;height:44px;border-radius:12px;background:rgba(255,255,255,.06);border:1px solid var(--bd);display:flex;align-items:center;justify-content:center;flex-shrink:0">'+o.i+'</div><div><div style="font-weight:800;font-size:15px;color:'+o.c+'">'+o.t+'</div><div class="mo">'+o.s+'</div></div></div>';});
     h+='<div class="dv"></div>'+
       '<div class="g2" style="gap:8px;margin-bottom:9px"><button class="btn bs" onclick="exportBK()">Backup JSON</button><label class="btn bs" style="text-align:center;cursor:pointer">Restaurar<input type="file" accept="application/json" onchange="importBK(event)" style="display:none"></label></div>'+
+      '<button class="btn bs" onclick="backfillFacturas()" style="margin-bottom:9px">&#128290; Numerar facturas de ventas antiguas</button>'+
       '<button class="btn by" onclick="cambiarMeta()" style="margin-bottom:9px">Meta mensual: $'+(S.metaMensual||3000)+'</button>'+
       '<button class="btn bs" onclick="syncRates()" style="margin-bottom:9px">&#128260; Actualizar tasas \u2014 BCV: '+(S.tasaBCV>0?"Bs."+S.tasaBCV.toFixed(2):"---")+' | Binance: '+(S.tasaBinance>0?"Bs."+S.tasaBinance.toFixed(2):"---")+'</button>';
   }
@@ -1858,9 +1881,10 @@ window.saveVenta=async function(){
   if(falt.length){var lst=falt.map(function(i){return i.mat_key+": stock "+n(S.inventario[i.mat_key].stock).toFixed(1)+", necesitas "+n(i.c).toFixed(1);}).join("\n");if(!confirm("Stock insuficiente:\n\n"+lst+"\n\nRegistrar igual?"))return;}
   cart.forEach(function(item){if(item.mat_key&&item.mat_key.trim()!==""&&S.inventario[item.mat_key]){S.inventario[item.mat_key].stock=n(S.inventario[item.mat_key].stock)-n(item.c);}});
   var hAb=abono>0?[{fecha:fecha,monto:abono,nota:"Abono inicial"}]:[];
-  var newV = {id:Date.now(),cliente:cli,vendedor:user.nombre,total:tot,abono:abono,historialAbonos:hAb,fecha:fecha,items:cart.slice(),metodoPago:metodo,whatsapp:wha};
+  var numeroFactura=await nextFacturaNumber();
+  var newV = {id:Date.now(),numeroFactura:numeroFactura,cliente:cli,vendedor:user.nombre,total:tot,abono:abono,historialAbonos:hAb,fecha:fecha,items:cart.slice(),metodoPago:metodo,whatsapp:wha};
   await db.collection("ventas").doc(newV.id.toString()).set(newV);
-  cart=[];resetDraft();await sync();toast("Venta registrada","#22c55e");
+  cart=[];resetDraft();await sync();toast("Venta registrada - Factura N\u00b0 "+numeroFactura,"#22c55e");
 };
 
 window.liquidar=async function(id){var v=S.ventas.find(function(x){return x.id===id;});if(!v)return;var falta=sDebt(v);if(!v.historialAbonos)v.historialAbonos=[];v.historialAbonos.push({fecha:today(),monto:falta,nota:"Liquidacion completa"});v.abono=v.total;await db.collection("ventas").doc(v.id.toString()).set(v);await sync();toast("Cuenta liquidada","#22c55e");};
@@ -2061,7 +2085,7 @@ window.showRec=function(id){
     '<div style="background:#7B3FA0;padding:17px 19px;display:flex;align-items:center;gap:12px">'+
     '<img src="'+LOGO_ICON+'" alt="Ghost Print" style="height:52px;width:auto;flex-shrink:0;object-fit:contain">'+
     '<div><div style="font-weight:900;font-size:18px;letter-spacing:1.2px;color:#fff">GHOST PRINT</div><div style="font-size:9px;color:rgba(255,255,255,.65);text-transform:uppercase;letter-spacing:.15em">Publicidad & Soluciones Graficas</div></div></div>'+
-    '<div style="background:#F07020;padding:8px;text-align:center"><div style="font-size:12px;font-weight:900;letter-spacing:.15em;color:#fff">RECIBO</div></div>'+
+    '<div style="background:#F07020;padding:8px 16px;display:flex;justify-content:space-between;align-items:center"><div style="font-size:12px;font-weight:900;letter-spacing:.15em;color:#fff">RECIBO</div>'+(docRefLabel(v)?'<div style="font-size:12px;font-weight:900;color:#fff">N\u00b0 '+(v.origenDocumento&&v.origenDocumento.numero?v.origenDocumento.numero:v.numeroFactura)+'</div>':'')+'</div>'+
     '<div style="padding:18px 19px">'+
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:14px;font-size:11px">'+
     '<div><div style="color:#888;font-size:9px;font-weight:800;text-transform:uppercase">Cliente</div><div style="font-weight:800;margin-top:2px">'+safe(v.cliente)+'</div></div>'+
@@ -2069,6 +2093,7 @@ window.showRec=function(id){
     '<div><div style="color:#888;font-size:9px;font-weight:800;text-transform:uppercase">Pago</div><div style="font-weight:700;margin-top:2px">'+(v.metodoPago||"CONTADO")+'</div></div>'+
     '<div><div style="color:#888;font-size:9px;font-weight:800;text-transform:uppercase">Vendedor</div><div style="font-weight:700;margin-top:2px">'+(v.vendedor||"ADMIN")+'</div></div>'+
     '</div>'+
+    (v.origenDocumento&&v.origenDocumento.numero?'<div style="background:rgba(123,63,160,.08);border:1px solid rgba(123,63,160,.25);border-radius:8px;padding:7px 10px;margin-bottom:14px;font-size:11px;font-weight:800;color:#7B3FA0">&#128203; Generado desde: '+docRefLabel(v)+'</div>':'')+
     '<div style="border-top:2px solid #111;padding-top:11px;margin-bottom:11px">'+iH+'</div>'+
     '<div style="display:flex;justify-content:space-between;font-weight:800;font-size:16px;padding:9px 0;border-top:2px solid #111"><span>TOTAL</span><span>$'+money(v.total)+'</span></div>'+
     '<div style="display:flex;justify-content:space-between;font-size:12px;color:#444;padding:4px 0"><span>Abonado</span><span>$'+money(v.abono)+'</span></div>'+
@@ -2098,10 +2123,12 @@ window.shareImg=async function(){
   c.fillStyle="#fff";c.font="bold 26px Arial";c.fillText("GHOST PRINT",132,44);
   c.font="12px Arial";c.fillStyle="rgba(255,255,255,.7)";c.fillText("Publicidad & Soluciones Graficas",132,64);
   c.fillStyle="#F07020";c.fillRect(0,90,W,35);
-  c.fillStyle="#fff";c.font="bold 14px Arial";var bt="RECIBO";c.fillText(bt,(W-c.measureText(bt).width)/2,114);
+  c.fillStyle="#fff";c.font="bold 14px Arial";var bt="RECIBO";c.fillText(bt,28,114);
+  if(docRefLabel(v)){var fn="N\u00b0 "+(v.origenDocumento&&v.origenDocumento.numero?v.origenDocumento.numero:v.numeroFactura);c.font="bold 14px Arial";c.fillText(fn,W-28-c.measureText(fn).width,114);}
   c.fillStyle="#111";c.font="bold 13px Arial";
   c.fillText("CLIENTE: "+String(v.cliente).toUpperCase(),28,152);c.fillText("FECHA: "+(v.fecha||""),28,174);
   c.fillText("PAGO: "+(v.metodoPago||"CONTADO"),28,196);c.fillText("VENDEDOR: "+(v.vendedor||"ADMIN"),400,152);
+  if(v.origenDocumento&&v.origenDocumento.numero){c.fillStyle="#7B3FA0";c.font="bold 11px Arial";c.fillText("REF: "+docRefLabel(v),400,174);}
   c.strokeStyle="#ddd";c.lineWidth=1;c.beginPath();c.moveTo(28,212);c.lineTo(W-28,212);c.stroke();
   var y=242;
   (v.items||[]).forEach(function(it){c.fillStyle="#111";c.font="bold 13px Arial";c.fillText(String(it.concepto||"TRABAJO").slice(0,54),32,y);c.fillStyle="#555";c.font="11px Arial";c.fillText(String(it.m||it.mat_key||"LIBRE")+" - Cant: "+n(it.c).toFixed(1),32,y+17);c.fillStyle="#111";c.font="bold 16px Arial";c.fillText("$"+money(it.p),W-106,y);c.strokeStyle="#eee";c.lineWidth=1;c.beginPath();c.moveTo(28,y+29);c.lineTo(W-28,y+29);c.stroke();y+=rowH;});
@@ -2119,6 +2146,22 @@ window.shareImg=async function(){
   var a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=file.name;a.click();URL.revokeObjectURL(a.href);toast("Imagen descargada");
 };
 
+window.backfillFacturas=async function(){
+  var pendientes=(S.ventas||[]).filter(function(v){return !v.numeroFactura&&!(v.origenDocumento&&v.origenDocumento.numero);}).sort(function(a,b){return a.id-b.id;});
+  if(!pendientes.length){toast("Todas las ventas ya tienen numero de factura","#22c55e");return;}
+  if(!confirm("Se asignara un numero de factura a "+pendientes.length+" venta(s) antigua(s), empezando por la mas vieja. Esto no se puede deshacer. Continuar?"))return;
+  toast("Asignando numeros...");
+  var num=S.facturaCounter||1;
+  for(var i=0;i<pendientes.length;i++){
+    pendientes[i].numeroFactura=fmtFactura(num);
+    await db.collection("ventas").doc(pendientes[i].id.toString()).set(pendientes[i]);
+    num++;
+  }
+  S.facturaCounter=num;
+  await sync();
+  toast(pendientes.length+" factura(s) numeradas con exito","#22c55e");
+};
+
 window.exportBK=function(){var a=document.createElement("a");a.href="data:text/json;charset=utf-8,"+encodeURIComponent(JSON.stringify(S));a.download="GHOSTPRINT_"+today()+".json";document.body.appendChild(a);a.click();a.remove();toast("Backup descargado","#22c55e");};
 
 window.shareClientDebtImage=async function(cliName){
@@ -2126,7 +2169,7 @@ window.shareClientDebtImage=async function(cliName){
   if(deudas.length===0){toast("El cliente no tiene deudas pendientes","#22c55e");return;}
   var totalDeuda=deudas.reduce(function(a,v){return a+sDebt(v);},0);
   
-  var W=760,rowH=46,H=Math.max(860,600+(deudas.length*rowH));
+  var W=760,rowH=58,H=Math.max(860,620+(deudas.length*rowH));
   var cv=document.createElement("canvas");cv.width=W;cv.height=H;
   var c=cv.getContext("2d");
   c.fillStyle="#fff";c.fillRect(0,0,W,H);
@@ -2160,8 +2203,10 @@ window.shareClientDebtImage=async function(cliName){
     c.fillText("$"+money(v.total),W-160,y);
     c.fillStyle="#dc2626";
     c.fillText("$"+money(sDebt(v)),W-80,y);
+    var ref=docRefLabel(v);
+    if(ref){c.fillStyle="#7B3FA0";c.font="10px Arial";c.fillText(ref,130,y+15);}
     
-    c.strokeStyle="#eee";c.lineWidth=1;c.beginPath();c.moveTo(28,y+16);c.lineTo(W-28,y+16);c.stroke();
+    c.strokeStyle="#eee";c.lineWidth=1;c.beginPath();c.moveTo(28,y+28);c.lineTo(W-28,y+28);c.stroke();
     y+=rowH;
   });
   
@@ -3507,25 +3552,29 @@ async function registerAsSale() {
     const date = document.getElementById('quoteDate').value || new Date().toISOString().split('T')[0];
 
     const venta = {
-      id: Date.now().toString(),
+      id: Date.now(),
+      numeroFactura: number,
       fecha: date,
       cliente: clientNameVal.toUpperCase(),
       whatsapp: (document.getElementById('clientPhone').value || '').trim(),
       vendedor: (window.user && window.user.nombre) || 'ADMIN',
+      metodoPago: 'CONTADO',
       total: grandTotal,
       abono: 0,
       origenDocumento: { tipo: docType, numero: number },
       items: products.filter(p => (p.desc || '').trim()).map(p => ({
-        desc: p.desc,
+        concepto: p.desc.toUpperCase(),
+        m: p.desc.toUpperCase(),
+        p: (parseFloat(p.qty) || 0) * (parseFloat(p.price) || 0),
         c: parseFloat(p.qty) || 0,
-        precio: parseFloat(p.price) || 0,
+        t: 'LIBRE',
         mat_key: ''
       })),
       historialAbonos: []
     };
 
     if (typeof db !== 'undefined' && db.collection) {
-      await db.collection('ventas').doc(venta.id).set(venta);
+      await db.collection('ventas').doc(venta.id.toString()).set(venta);
       showToast('Venta registrada y enlazada con este documento');
     } else {
       showToast('No se pudo conectar con Ventas. Verifica tu conexion');
