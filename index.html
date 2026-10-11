@@ -1057,7 +1057,7 @@ window.closeForm=function(){$("formModal").classList.remove("open");};
 function norm(d){
   var emp=(d&&d.empleados)?d.empleados:DEFAULT_EMP.slice();
   emp=emp.map(function(e){if(!e.nivel)e.nivel="LIMITADO";return e;});
-  return{ventas:d&&d.ventas?d.ventas:S.ventas||[],inventario:d&&d.inventario?d.inventario:{},compras:d&&d.compras?d.compras:S.compras||[],gastos:d&&d.gastos?d.gastos:S.gastos||[],comprasUSDT:d&&d.comprasUSDT?d.comprasUSDT:S.comprasUSDT||[],servicios:d&&d.servicios?d.servicios:["DISENO","IMPRESION","CORTE"],metaMensual:d&&d.metaMensual?d.metaMensual:3000,tasaBCV:d&&d.tasaBCV?d.tasaBCV:0,tasaBinance:d&&d.tasaBinance?d.tasaBinance:0,tasaLastSync:d&&d.tasaLastSync?d.tasaLastSync:null,empleados:emp,inicioPeriodo:d&&d.inicioPeriodo?d.inicioPeriodo:null,saldoInicial:d&&d.saldoInicial?parseFloat(d.saldoInicial)||0:0,productos:d&&d.productos?d.productos:SEED_PROD.map(function(p){return Object.assign({},p);}),facturaCounter:d&&d.facturaCounter?d.facturaCounter:1};
+  return{ventas:d&&d.ventas?d.ventas:S.ventas||[],inventario:d&&d.inventario?d.inventario:{},compras:d&&d.compras?d.compras:S.compras||[],gastos:d&&d.gastos?d.gastos:S.gastos||[],comprasUSDT:d&&d.comprasUSDT?d.comprasUSDT:S.comprasUSDT||[],servicios:d&&d.servicios?d.servicios:["DISENO","IMPRESION","CORTE"],metaMensual:d&&d.metaMensual?d.metaMensual:3000,tasaBCV:d&&d.tasaBCV?d.tasaBCV:0,tasaBinance:d&&d.tasaBinance?d.tasaBinance:0,tasaLastSync:d&&d.tasaLastSync?d.tasaLastSync:null,empleados:emp,inicioPeriodo:d&&d.inicioPeriodo?d.inicioPeriodo:null,saldoInicial:d&&d.saldoInicial?parseFloat(d.saldoInicial)||0:0,productos:d&&d.productos?d.productos:SEED_PROD.map(function(p){return Object.assign({},p);}),facturaCounter:d&&d.facturaCounter?d.facturaCounter:22};
 }
 async function sync(){
   try {
@@ -1480,6 +1480,7 @@ function rVentas(app){
 
     (cart.length>0?
     '<div class="c co fa" style="text-align:center;margin-top:6px"><div class="ps">Total del pedido</div><div class="bn" style="margin:8px 0 4px">$'+money(tot)+'</div><div class="mo">Bs. '+fmtBS(tot)+'</div></div>'+
+    (isFullAccess()?'<button class="btn bs fa" style="margin-bottom:12px" onclick="presupuestoDesdeCarrito()">Generar presupuesto de este carrito</button>':'')+
     '<div class="c fa fa1">'+
     '<div class="step"><div class="stepn">3</div><div class="stept">Cobro</div></div>'+
     '<label class="lbl">Metodo de pago</label><select id="vMetodo" class="inp" onchange="saleDraft.metodo=this.value">'+
@@ -1492,7 +1493,7 @@ function rVentas(app){
     '</div>'+
     (!saleDraft.pagoCompleto?('<label class="lbl">Cuanto abono ahora ($) — deja 0 si no abono nada</label><input id="vAbono" type="number" placeholder="0.00" class="inp" style="color:var(--g);font-weight:800" value="'+safe(saleDraft.abono)+'" oninput="saleDraft.abono=this.value">'):('<div class="hint">Se registrara como pagado por completo: $'+money(tot)+'</div>'))+
     '</div>'+
-    '<button class="btn bo fa" onclick="saveVenta()" style="margin-bottom:12px">Registrar venta</button>'
+    '<button class="btn bo fa" onclick="saveVenta()" style="margin-bottom:12px">Registrar venta</button>'+(isFullAccess()?'<button class="btn bs fa" onclick="saveVenta(true)" style="margin-bottom:12px">Registrar y generar nota de entrega</button>':'')
     :'');
 }
 window.setPagoCompleto=function(v){saleDraft.pagoCompleto=v;if(v)saleDraft.abono="";render();};
@@ -1524,7 +1525,7 @@ function rHistorial(app){
         var aH="";
         if((v.historialAbonos||[]).length>0){aH='<div style="margin-top:10px"><div style="font-size:10px;font-weight:800;color:var(--g);text-transform:uppercase;margin-bottom:5px">Pagos registrados</div>';v.historialAbonos.forEach(function(hh,hi){aH+='<div class="ae"><div class="mo">'+hh.fecha+' - '+(hh.nota||"Abono")+'</div><div style="display:flex;align-items:center;gap:9px"><span style="font-family:JetBrains Mono;font-size:13px;font-weight:800;color:var(--g)">+$'+money(hh.monto)+'</span>'+(isFullAccess()?'<button onclick="delAbono('+v.id+','+hi+')" style="background:none;border:none;color:#f87171;font-size:15px;cursor:pointer">&times;</button>':'')+'</div></div>';});aH+='</div>';}
         var iH=(v.items||[]).map(function(it){return '<div style="font-size:12px;color:var(--mt);margin-bottom:3px">- '+safe(it.concepto||"TRABAJO")+' - '+safe(it.m||"")+' $'+money(it.p)+'</div>';}).join("");
-        var actions=isFullAccess()?'<div style="display:flex;gap:6px"><button class="btn bp bsm" onclick="showRec('+v.id+')">Recibo</button><button class="btn bs bsm" onclick="editV('+v.id+')">Editar</button></div>':'<button class="btn bp bsm" onclick="showRec('+v.id+')">Recibo</button>';
+        var actions=isFullAccess()?'<div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn bp bsm" onclick="showRec('+v.id+')">Recibo</button><button class="btn bs bsm" onclick="notaDesdeVenta('+v.id+',\'entrega\')">Nota</button><button class="btn bs bsm" onclick="editV('+v.id+')">Editar</button></div>':'<button class="btn bp bsm" onclick="showRec('+v.id+')">Recibo</button>';
         h+='<div class="mc" style="position:relative">'+
           (isFullAccess()?'<button onclick="delVenta('+v.id+')" style="position:absolute;top:8px;right:8px;background:rgba(239,68,68,.16);border:1px solid rgba(239,68,68,.25);color:#f87171;width:26px;height:26px;border-radius:50%;font-size:13px;cursor:pointer">&times;</button>':'')+
           '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;padding-right:'+(isFullAccess()?'34px':'0')+'"><div class="mo">'+v.fecha+' - '+(v.metodoPago||"CONTADO")+' - '+(v.vendedor||"ADMIN")+(docRefLabel(v)?' &middot; <span style="color:var(--p2);font-weight:800">'+docRefLabel(v)+'</span>':'')+'</div><span class="pill '+(isPaid(v)?'pg':'pr')+'" style="font-size:9px">'+(isPaid(v)?'PAGADO':'DEBE $'+money(sDebt(v)))+'</span></div>'+
@@ -1949,7 +1950,7 @@ window.autoPrice=function(){var _pid=$("vProd")&&$("vProd").value;if(_pid){var _
 window.updBS=function(){var v=n($("vPrec")&&$("vPrec").value);var el=$("bsPrev");if(el)el.textContent="Bs. "+fmtBS(v);};
 window.autoPhone=function(){var cli=($("vCli")&&$("vCli").value||"").trim().toUpperCase();var last=(S.ventas||[]).slice().reverse().find(function(v){return v.cliente===cli&&v.whatsapp;});if(last&&$("vWha"))$("vWha").value=last.whatsapp;};
 
-window.saveVenta=async function(){
+window.saveVenta=async function(conNota){
   var cli=(saleDraft.cliente||"").trim().toUpperCase();
   if(!cli){toast("Ingresa el nombre del cliente","#f87171");return;}
   if(!cart.length){toast("El carrito esta vacio","#f87171");return;}
@@ -1965,7 +1966,7 @@ window.saveVenta=async function(){
   var numeroFactura=await nextFacturaNumber();
   var newV = {id:Date.now(),numeroFactura:numeroFactura,cliente:cli,vendedor:user.nombre,total:tot,abono:abono,historialAbonos:hAb,fecha:fecha,items:cart.slice(),metodoPago:metodo,whatsapp:wha};
   await db.collection("ventas").doc(newV.id.toString()).set(newV);
-  cart=[];resetDraft();await sync();toast("Venta registrada - Factura N\u00b0 "+numeroFactura,"#22c55e");
+  cart=[];resetDraft();await sync();toast("Venta registrada - Factura N\u00b0 "+numeroFactura,"#22c55e");if(conNota===true&&isFullAccess()){window._lastVenta=newV;notaDesdeVenta(newV.id,"entrega");}else postVentaModal(newV);
 };
 
 window.liquidar=async function(id){var v=S.ventas.find(function(x){return x.id===id;});if(!v)return;var falta=sDebt(v);if(!v.historialAbonos)v.historialAbonos=[];v.historialAbonos.push({fecha:today(),monto:falta,nota:"Liquidacion completa"});v.abono=v.total;await db.collection("ventas").doc(v.id.toString()).set(v);await sync();toast("Cuenta liquidada","#22c55e");};
@@ -2126,6 +2127,43 @@ window.nuevoProductoRapido=function(){
       toast("Producto creado","#22c55e");
     }
   });
+};
+/* ===== PUENTE VENDER <-> PRESUPUESTOS / NOTAS DE ENTREGA ===== */
+function itemsToDocProducts(items,conMaterial){
+  return (items||[]).map(function(it){
+    var total=n(it.p),u=n(it.u);
+    var qty=u>0?u:(n(it.c)>0?n(it.c):1);
+    var price=(u>0&&n(it.pu)>0)?n(it.pu):total/qty;
+    var p={desc:String(it.concepto||it.m||"TRABAJO").trim(),qty:qty,price:price};
+    if(u>0)p.cat=true;
+    if(conMaterial&&it.mat_key){p.mat=it.mat_key;p.matQty=n(it.c);}
+    return p;
+  });
+}
+/* Abre el generador con los datos de una venta ya registrada (misma factura, sin duplicar la venta). */
+window.notaDesdeVenta=function(id,tipo){
+  var v=(S.ventas||[]).find(function(x){return x.id===id;});
+  if(!v&&window._lastVenta&&window._lastVenta.id===id)v=window._lastVenta;
+  if(!v){toast("No encontre esa venta","#f87171");return;}
+  closeForm();
+  window._czPrefill={tipo:tipo||"entrega",ventaId:v.id,numero:v.numeroFactura||(v.origenDocumento&&v.origenDocumento.numero)||"",cliente:v.cliente,telefono:v.whatsapp||"",fecha:v.fecha,products:itemsToDocProducts(v.items,false)};
+  go("cotizaciones");
+};
+/* Presupuesto con lo que ya armaste en el carrito, antes de vender. */
+window.presupuestoDesdeCarrito=function(){
+  if(!cart.length){toast("El carrito esta vacio","#f87171");return;}
+  window._czPrefill={tipo:"presupuesto",ventaId:null,numero:"",cliente:(saleDraft.cliente||"").trim().toUpperCase(),telefono:saleDraft.whatsapp||"",fecha:saleDraft.fecha||today(),products:itemsToDocProducts(cart,true)};
+  go("cotizaciones");
+};
+/* Despues de registrar una venta: opciones directas, sin salir a buscar nada */
+window.postVentaModal=function(v){
+  window._lastVenta=v;
+  $("formBody").innerHTML='<div style="padding:22px 20px 20px"><div class="pt" style="margin-bottom:4px">Venta registrada</div>'+
+    '<div class="mo" style="margin-bottom:14px">'+safe(docRefLabel(v))+' - '+safe(v.cliente)+' - $'+money(v.total)+'</div>'+
+    (isFullAccess()?'<button class="btn bp" onclick="notaDesdeVenta('+v.id+',\'entrega\')">Generar nota de entrega</button>':'')+
+    '<button class="btn bs" style="margin-top:10px" onclick="closeForm();showRec('+v.id+')">Ver recibo / enviar por WhatsApp</button>'+
+    '<button class="btn bs" style="margin-top:10px" onclick="closeForm()">Cerrar</button></div>';
+  $("formModal").classList.add("open");
 };
 window.saveGasto=async function(){var monto=n($("gMonto")&&$("gMonto").value);var desc=($("gDesc")&&$("gDesc").value||"").toUpperCase();if(!monto){toast("Ingresa el monto","#f87171");return;}var nGasto={id:Date.now(),cat:$("gCat")&&$("gCat").value||"OTROS",monto:monto,desc:desc,fecha:$("gDate")&&$("gDate").value||today()};await db.collection("gastos").doc(nGasto.id.toString()).set(nGasto);await sync();toast("Gasto registrado");};
 window.delGasto=async function(id){if(confirm("Eliminar gasto?")){await db.collection("gastos").doc(id.toString()).delete();await sync();}};
@@ -2506,9 +2544,9 @@ var CZ_HTML=`<div id="czRoot">
         <div>
           <label style="display:flex; justify-content:space-between; align-items:center;">
             <span>Número Correlativo</span>
-            <span class="correlative-tag" id="tagAutoNum">Inicia 0115</span>
+            <span class="correlative-tag" id="tagAutoNum">Inicia 0022</span>
           </label>
-          <input type="text" id="quoteNumber" oninput="CZ.render()" placeholder="0115">
+          <input type="text" id="quoteNumber" oninput="CZ.render()" placeholder="0022">
         </div>
         <div>
           <label style="display:flex; justify-content:space-between; align-items:center;">
@@ -2684,7 +2722,7 @@ var CZ_HTML=`<div id="czRoot">
             <div class="doc-kicker-badge" id="docKicker">PRESUPUESTO</div>
             <div class="doc-number-wrap">
               <div class="doc-number-label">NÚMERO</div>
-              <div class="doc-number-val" id="docNumber">N.° 0115</div>
+              <div class="doc-number-val" id="docNumber">N.° 0022</div>
             </div>
             <div class="doc-date-meta" id="docDateMeta">
               <!-- Injected via JS -->
@@ -2837,8 +2875,8 @@ var CZ_HTML=`<div id="czRoot">
     <div class="row2">
       <div>
         <label>Correlativo Presupuestos</label>
-        <input type="number" id="settingCounterQuote" value="115" min="1">
-        <span style="font-size:10.5px; color:var(--text-dim);">Comienza en 0115</span>
+        <input type="number" id="settingCounterQuote" value="22" min="1">
+        <span style="font-size:10.5px; color:var(--text-dim);">Comienza en 0022</span>
       </div>
       <div>
         <label>Correlativo Notas de Entrega + Ventas/Recibos</label>
@@ -2885,7 +2923,7 @@ var CZ_HTML=`<div id="czRoot">
 
 </div>
 `;
-function rCotizaciones(app){app.innerHTML=CZ_HTML;CZ.init();}
+function rCotizaciones(app){if($("czRoot")&&app.contains($("czRoot"))){if(window.CZ&&CZ.refreshCatalog)CZ.refreshCatalog();return;}app.innerHTML=CZ_HTML;CZ.init();}
 
 (function(){
 /* ================= UTILS ================= */
@@ -2959,13 +2997,14 @@ let company = {
 };
 
 let counters = {
-  presupuesto: 115,
-  entrega: 1
+  presupuesto: 22,
+  entrega: 22
 };
 
 let docType = 'presupuesto'; 
 let products = [];
 let currentDocId = null;
+let linkedVentaId = null;
 
 /* Precio unitario: minimo 2 decimales, pero muestra hasta 4 si los hay (0.044 -> 0.044, 5 -> 5.00). */
 function fmtUnitPrice(v){
@@ -3003,6 +3042,26 @@ function initApp() {
   newQuote(true);
   renderClientDatalist();
   renderCatalogPicker();
+  applyPrefill();
+}
+/* Datos que llegan desde Vender (venta registrada o carrito) */
+function applyPrefill() {
+  const pf = window._czPrefill;
+  if (!pf) return;
+  window._czPrefill = null;
+  setDocType(pf.tipo === 'presupuesto' ? 'presupuesto' : 'entrega');
+  document.getElementById('clientName').value = pf.cliente || '';
+  if (pf.cliente) autoFillClient(pf.cliente);
+  if (pf.telefono) document.getElementById('clientPhone').value = pf.telefono;
+  document.getElementById('quoteDate').value = pf.fecha || new Date().toISOString().split('T')[0];
+  if (pf.numero) document.getElementById('quoteNumber').value = pf.numero;
+  products = (pf.products && pf.products.length) ? pf.products : [{ desc: '', qty: 1, price: 0 }];
+  linkedVentaId = pf.ventaId || null;
+  const btnVenta = document.getElementById('btnRegisterSale');
+  if (btnVenta) btnVenta.style.display = linkedVentaId ? 'none' : '';
+  renderProductForm();
+  render();
+  showToast(linkedVentaId ? 'Nota creada desde la venta N.° ' + pf.numero : 'Presupuesto creado desde el carrito');
 }
 
 function setInitialNumberForCurrentType() {
@@ -3011,7 +3070,7 @@ function setInitialNumberForCurrentType() {
      Presupuesto mantiene su propio correlativo local, sin cambios. */
   const currentCount = docType === 'entrega'
     ? (S.facturaCounter || 1)
-    : (counters[docType] || (docType === 'presupuesto' ? 115 : 1));
+    : (counters[docType] || (docType === 'presupuesto' ? 22 : 1));
   document.getElementById('quoteNumber').value = formatNumber(currentCount);
 }
 
@@ -3384,7 +3443,7 @@ function newQuote(isInit = false) {
 
   if (isInit === true) {
     if (products.length === 0) {
-      products = [{ desc: 'Stickers en Vinil Adhesivo Laminado Troquelado (Pack 50 und)', qty: 2, price: 12.50 }];
+      products = [{ desc: '', qty: 1, price: 0 }];
     }
   } else {
     document.getElementById('clientName').value = '';
@@ -3394,6 +3453,9 @@ function newQuote(isInit = false) {
     document.getElementById('clientEmail').value = '';
     document.getElementById('quoteReference').value = '';
     products = [{ desc: '', qty: 1, price: 0 }];
+    linkedVentaId = null;
+    const btnVenta = document.getElementById('btnRegisterSale');
+    if (btnVenta) btnVenta.style.display = '';
   }
 
   const today = new Date().toISOString().split('T')[0];
@@ -3410,13 +3472,14 @@ function newQuote(isInit = false) {
 
 function incrementCurrentCounter() {
   const rawNum = document.getElementById('quoteNumber').value.trim();
+  if (linkedVentaId) { currentDocId = null; render(); return; } /* nota de una venta existente: conserva su numero */
   if (docType === 'entrega') {
     const currentNum = parseInt(rawNum.replace(/\D/g, ''), 10) || S.facturaCounter || 1;
-    S.facturaCounter = currentNum + 1;
+    S.facturaCounter = Math.max(S.facturaCounter || 1, currentNum + 1); /* el correlativo nunca retrocede */
     sync();
     document.getElementById('quoteNumber').value = formatNumber(S.facturaCounter);
   } else {
-    const currentNum = parseInt(rawNum.replace(/\D/g, ''), 10) || counters[docType] || (docType === 'presupuesto' ? 115 : 1);
+    const currentNum = parseInt(rawNum.replace(/\D/g, ''), 10) || counters[docType] || (docType === 'presupuesto' ? 22 : 1);
     counters[docType] = currentNum + 1;
     appStorage.set('counters', counters);
     document.getElementById('quoteNumber').value = formatNumber(counters[docType]);
@@ -3589,7 +3652,7 @@ function openSettings() {
   document.getElementById('companyEmail').value = company.email || '';
   document.getElementById('companyTaxId').value = company.taxId || '';
 
-  document.getElementById('settingCounterQuote').value = counters.presupuesto || 115;
+  document.getElementById('settingCounterQuote').value = counters.presupuesto || 22;
   document.getElementById('settingCounterDelivery').value = S.facturaCounter || 1;
 
   const logoPreview = document.getElementById('logoPreview');
@@ -3612,9 +3675,20 @@ async function saveSettings() {
   company.email = document.getElementById('companyEmail').value.trim();
   company.taxId = document.getElementById('companyTaxId').value.trim();
 
-  counters.presupuesto = parseInt(document.getElementById('settingCounterQuote').value, 10) || 115;
+  counters.presupuesto = parseInt(document.getElementById('settingCounterQuote').value, 10) || 22;
   /* El correlativo de Entrega ahora es el mismo contador compartido de Ventas/Recibos */
-  S.facturaCounter = parseInt(document.getElementById('settingCounterDelivery').value, 10) || 1;
+  const nuevoCorr = parseInt(document.getElementById('settingCounterDelivery').value, 10) || 1;
+  if (nuevoCorr !== S.facturaCounter) {
+    let maxUsado = 0;
+    (S.ventas || []).forEach(v => {
+      [v.numeroFactura, v.origenDocumento && v.origenDocumento.numero].forEach(x => {
+        const num = parseInt(String(x || '').replace(/\D/g, ''), 10) || 0;
+        if (num > maxUsado) maxUsado = num;
+      });
+    });
+    if (maxUsado >= nuevoCorr && !confirm('Ya existen ventas hasta el N.° ' + formatNumber(maxUsado) + '. Si empiezas en ' + formatNumber(nuevoCorr) + ' se van a repetir numeros de factura. ¿Continuar de todos modos?')) return;
+  }
+  S.facturaCounter = nuevoCorr;
 
   appStorage.set('company', company);
   appStorage.set('counters', counters);
@@ -3686,6 +3760,9 @@ function loadDocument(key) {
   const doc = appStorage.get(key);
   if (!doc) return;
   currentDocId = key;
+  linkedVentaId = null;
+  const btnVenta = document.getElementById('btnRegisterSale');
+  if (btnVenta) btnVenta.style.display = '';
 
   setDocType(doc.type || 'presupuesto');
   document.getElementById('quoteNumber').value = doc.number || '';
@@ -3774,6 +3851,10 @@ function showTab(which) {
    Deudas y Reportes sin tener que cargarlo dos veces. */
 async function registerAsSale() {
   try {
+    if (linkedVentaId) {
+      showToast('Esta nota ya pertenece a una venta registrada. No hace falta registrarla otra vez.');
+      return;
+    }
     if (!products.length || !products.some(p => (p.desc || '').trim())) {
       showToast('Agrega al menos un producto antes de registrar la venta');
       return;
@@ -3845,6 +3926,7 @@ async function registerAsSale() {
     setDocType: setDocType,
     addProduct: addProduct,
     addFromCatalog: addFromCatalog,
+    refreshCatalog: renderCatalogPicker,
     removeProduct: removeProduct,
     updateProduct: updateProduct,
     render: render,
