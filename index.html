@@ -920,6 +920,26 @@ select.inp{cursor:pointer}
       -webkit-print-color-adjust: exact !important;
       print-color-adjust: exact !important;
     }
+    /* El contenedor de la app es angosto y centrado en pantalla; al imprimir debe ocupar la hoja completa */
+    #app {
+      position: static !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      max-width: none !important;
+      width: 8.5in !important;
+      min-height: 0 !important;
+      height: auto !important;
+      overflow: visible !important;
+      transform: none !important;
+    }
+    #czRoot, #czRoot .layout {
+      display: block !important;
+      position: static !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      max-width: none !important;
+      width: 8.5in !important;
+    }
     #hdr, #nav, #czRoot .preview-info, #czRoot .topbar, #czRoot .panel, #czRoot .modal-bg, #czRoot .toast, #czRoot .mobile-tabs { display: none !important; }
     #czRoot .layout .preview-wrap { display: flex !important; }
     #czRoot #docCapture { zoom: 1 !important; }
