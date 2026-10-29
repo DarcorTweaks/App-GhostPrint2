@@ -1077,7 +1077,7 @@ window.closeForm=function(){$("formModal").classList.remove("open");};
 function norm(d){
   var emp=(d&&d.empleados)?d.empleados:DEFAULT_EMP.slice();
   emp=emp.map(function(e){if(!e.nivel)e.nivel="LIMITADO";return e;});
-  return{ventas:d&&d.ventas?d.ventas:S.ventas||[],inventario:d&&d.inventario?d.inventario:{},compras:d&&d.compras?d.compras:S.compras||[],gastos:d&&d.gastos?d.gastos:S.gastos||[],comprasUSDT:d&&d.comprasUSDT?d.comprasUSDT:S.comprasUSDT||[],servicios:d&&d.servicios?d.servicios:["DISENO","IMPRESION","CORTE"],metaMensual:d&&d.metaMensual?d.metaMensual:3000,tasaBCV:d&&d.tasaBCV?d.tasaBCV:0,tasaBinance:d&&d.tasaBinance?d.tasaBinance:0,tasaLastSync:d&&d.tasaLastSync?d.tasaLastSync:null,empleados:emp,inicioPeriodo:d&&d.inicioPeriodo?d.inicioPeriodo:null,saldoInicial:d&&d.saldoInicial?parseFloat(d.saldoInicial)||0:0,productos:d&&d.productos?d.productos:SEED_PROD.map(function(p){return Object.assign({},p);}),facturaCounter:d&&d.facturaCounter?d.facturaCounter:22};
+  return{ventas:d&&d.ventas?d.ventas:S.ventas||[],inventario:d&&d.inventario?d.inventario:{},compras:d&&d.compras?d.compras:S.compras||[],gastos:d&&d.gastos?d.gastos:S.gastos||[],comprasUSDT:d&&d.comprasUSDT?d.comprasUSDT:S.comprasUSDT||[],servicios:d&&d.servicios?d.servicios:["DISENO","IMPRESION","CORTE"],metaMensual:d&&d.metaMensual?d.metaMensual:3000,tasaBCV:d&&d.tasaBCV?d.tasaBCV:0,tasaBinance:d&&d.tasaBinance?d.tasaBinance:0,tasaLastSync:d&&d.tasaLastSync?d.tasaLastSync:null,empleados:emp,inicioPeriodo:d&&d.inicioPeriodo?d.inicioPeriodo:null,saldoInicial:d&&d.saldoInicial?parseFloat(d.saldoInicial)||0:0,productos:d&&d.productos?d.productos:SEED_PROD.map(function(p){return Object.assign({},p);}),facturaCounter:d&&d.facturaCounter?d.facturaCounter:22,fondoReset:!!(d&&d.fondoReset)};
 }
 async function sync(){
   try {
@@ -1092,7 +1092,8 @@ async function sync(){
       inicioPeriodo: S.inicioPeriodo || null,
       saldoInicial: S.saldoInicial || 0,
       productos: S.productos || [],
-      facturaCounter: S.facturaCounter || 1
+      facturaCounter: S.facturaCounter || 1,
+      fondoReset: !!S.fondoReset
     };
     await DOC.set(metadata);
     render();
@@ -1110,25 +1111,29 @@ async function nextFacturaNumber(){
   await sync();
   return fmtFactura(num);
 }
+var _softPend=false;
+function _typing(){var a=document.activeElement;return !!(a&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)&&$("app").contains(a));}
+function softRender(){if(_typing()){_softPend=true;return;}render();}
+document.addEventListener("focusout",function(){if(_softPend)setTimeout(function(){if(!_typing()){_softPend=false;render();}},300);});
 var dataLoaded=false;
 DOC.onSnapshot(
-  function(doc){if(doc.exists){S=norm(doc.data());render();}else{S=norm(null);} dataLoaded=true; },
+  function(doc){if(doc.exists){S=norm(doc.data());softRender();}else{S=norm(null);} dataLoaded=true; },
   function(error) {
     console.error("Error leyendo de Firebase:", error);
     alert("Hubo un error al leer de la base de datos:\n" + error.message);
   }
 );
 db.collection("ventas").onSnapshot(function(snap){
-  var arr=[]; snap.forEach(function(d){arr.push(d.data());}); S.ventas=arr; render();
+  var arr=[]; snap.forEach(function(d){arr.push(d.data());}); S.ventas=arr; softRender();
 });
 db.collection("compras").onSnapshot(function(snap){
-  var arr=[]; snap.forEach(function(d){arr.push(d.data());}); S.compras=arr; render();
+  var arr=[]; snap.forEach(function(d){arr.push(d.data());}); S.compras=arr; softRender();
 });
 db.collection("gastos").onSnapshot(function(snap){
-  var arr=[]; snap.forEach(function(d){arr.push(d.data());}); S.gastos=arr; render();
+  var arr=[]; snap.forEach(function(d){arr.push(d.data());}); S.gastos=arr; softRender();
 });
 db.collection("comprasUSDT").onSnapshot(function(snap){
-  var arr=[]; snap.forEach(function(d){arr.push(d.data());}); S.comprasUSDT=arr; render();
+  var arr=[]; snap.forEach(function(d){arr.push(d.data());}); S.comprasUSDT=arr; softRender();
 });
 
 // ===== COSTO PROMEDIO / GANANCIA REAL =====
@@ -1177,6 +1182,7 @@ function unlock(){
   if(user.rol==="LIMITADO"&&!canAccess("inicio"))view="ventas";
   buildNav();render();toast("Bienvenido, "+user.nombre,"#22c55e");
   if(isFullAccess()){
+    resetFondoUnaVez();
     setTimeout(autoSyncRates,1500);
     setTimeout(function(){
       if(localStorage.getItem("lastAutoBK")!==today()){
@@ -1186,13 +1192,20 @@ function unlock(){
     }, 2500);
   }
 }
+/* Pone el fondo inicial en 0 una sola vez (se guarda la marca en Firebase) */
+function resetFondoUnaVez(tries){
+  tries=tries||0;
+  if(!dataLoaded){if(tries<20)setTimeout(function(){resetFondoUnaVez(tries+1);},500);return;}
+  if(S.fondoReset)return;
+  S.saldoInicial=0;S.fondoReset=true;sync();
+}
 window.logout=function(){if(confirm("Cerrar sesion?")){unlocked=false;pinBuf="";$("hdr").style.display="none";$("nav").style.display="none";if($("voiceFab"))$("voiceFab").style.display="none";render();}};
 
 function buildNav(){
   var nav=$("nav");
   var items;
   if(isFullAccess()){
-    items=[{v:"inicio",ic:"&#9672;",t:"Inicio"},{v:"ventas",ic:"&#9889;",t:"Vender"},{v:"historial",ic:"&#9898;",t:"Ventas"},{v:"cobrar",ic:"&#9899;",t:"Deudas"},{v:"more",ic:"&#8801;",t:"Mas"}];
+    items=[{v:"inicio",ic:"&#9672;",t:"Inicio"},{v:"ventas",ic:"&#9889;",t:"Vender"},{v:"gastos",ic:"&#128184;",t:"Gastos"},{v:"cobrar",ic:"&#9899;",t:"Deudas"},{v:"more",ic:"&#8801;",t:"Mas"}];
   }else{
     items=[{v:"ventas",ic:"&#9889;",t:"Vender"},{v:"inventario",ic:"&#9635;",t:"Stock"},{v:"historial",ic:"&#9898;",t:"Mis ventas"},{v:"more",ic:"&#8801;",t:"Mas"}];
   }
@@ -1289,103 +1302,27 @@ window.nuevoPeriodo=async function(){
 };
 
 function rInicio(app){
-  var alertReserva = sessionStorage.getItem('alertReserva') === 'true';
-  if(alertReserva) setTimeout(function(){ sessionStorage.removeItem('alertReserva'); }, 8000);
-  var rows=mStats();
-  var curData=periodStats();
-  var totAll=rows.reduce(function(a,e){a.cobrado+=e[1].cobrado;a.gastos+=e[1].gastos;a.cogs+=e[1].cogs;return a;},{cobrado:0,gastos:0,cogs:0});
-  var cajaTotal=totAll.cobrado-totAll.gastos; // efectivo acumulado real (sin restar cogs, ya que cogs es costo de lo vendido no un gasto de caja aparte de compras registradas en gastos/compras)
-  var deudaTotal=(S.ventas||[]).reduce(function(a,v){return a+sDebt(v);},0);
-  var meta=S.metaMensual||3000,porc=Math.min((curData.facturado/meta)*100,100);
-  var tasa=S.tasaBCV||0;
-  var ventasHoy=(S.ventas||[]).filter(function(v){return v.fecha===today();});
-  var facHoy=ventasHoy.reduce(function(a,v){return a+n(v.total);},0);
-  var cobHoy=ventasHoy.reduce(function(a,v){return a+n(v.abono);},0);
-
-  // ===== CONTROL DE CAJA: basado en lo COBRADO (dinero real en mano) =====
-  // Por cada venta, calculamos proporcional a lo que ya pagaron
-  // Ej: vendiste vinil $50 costo $20, cliente pago $30 (60%) → reserva $12, libre $18
-  var reservaCobrado=0,gananciaLibreCobrado=0,reservaTotal=0,gananciaTotalProy=0;
-  var periodS=periodStart();
-  (S.ventas||[]).filter(function(v){return(v.fecha||'')>=periodS;}).forEach(function(v){
-    var cogs=ventaCOGS(v);
-    var tot=n(v.total),pag=Math.min(n(v.abono),tot);
-    var frac=tot>0?Math.min(pag/tot,1):0;
-    reservaCobrado+=cogs*frac;
-    gananciaLibreCobrado+=pag-cogs*frac;
-    reservaTotal+=cogs;
-    gananciaTotalProy+=tot-cogs;
-  });
-
+  var cs=cajaStats(),rows=mStats(),mes=today().slice(0,7);
+  var m=(rows.find(function(e){return e[0]===mes;})||[mes,{cobrado:0,gastos:0,gananciaReal:0}])[1];
+  var meDeben=(S.ventas||[]).reduce(function(a,v){return a+sDebt(v);},0);
+  var debo=(S.compras||[]).reduce(function(a,c){return a+compraDebt(c);},0);
+  var gan=m.gananciaReal;
   app.innerHTML=
-    '<div class="fa sec"><div><div class="ps">Hola, '+safe(user.nombre)+'</div><div class="pt">Resumen</div></div>'+(isFullAccess()?'<button class="btn bs bsm" onclick="nuevoPeriodo()">Empezar de cero</button>':'')+'</div>'+
-
-    '<div class="c cy fa fa1" style="border-color:rgba(245,158,11,.28)"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><div class="ps" style="color:var(--y)">&#128177; Tasas de cambio</div><button class="btn bs bsm" onclick="syncRates()" style="font-size:10px;padding:6px 12px;min-height:32px">&#128260; Actualizar</button></div><div class="g2" style="gap:10px"><div class="tile"><div class="tlbl" style="color:var(--g)">BCV OFICIAL</div><div class="bns" style="color:var(--g)">Bs. '+(tasa?tasa.toFixed(2):"---")+'</div><div class="mo">por USD</div></div><div class="tile"><div class="tlbl" style="color:var(--y)">BINANCE P2P</div><div class="bns" style="color:var(--y)">Bs. '+(S.tasaBinance?S.tasaBinance.toFixed(2):"---")+'</div><div class="mo">USDT/VES</div></div></div>'+(S.tasaLastSync?'<div class="mo" style="margin-top:8px;text-align:center;font-size:10px">Actualizado: '+new Date(S.tasaLastSync).toLocaleString("es-VE")+'</div>':'')+'</div>'+
-
-    '<div class="c fa" style="border-color:rgba(96,165,250,.22);background:rgba(96,165,250,.04)"><div class="ps" style="color:#60a5fa;margin-bottom:8px">&#128197; Hoy '+today()+'</div><div class="g3" style="gap:8px;text-align:center"><div><div style="font-family:Bebas Neue;font-size:28px">'+ventasHoy.length+'</div><div class="mo">Ventas</div></div><div><div style="font-family:Bebas Neue;font-size:28px;color:var(--o)">$'+money(facHoy)+'</div><div class="mo">Facturado</div></div><div><div style="font-family:Bebas Neue;font-size:28px;color:var(--g)">$'+money(cobHoy)+'</div><div class="mo">Cobrado</div></div></div></div>'+
-
-    '<div class="c cp fa fa1">'+
-    '<div class="ps" style="color:rgba(155,95,192,.95)">Ganancia real desde '+curData.inicio+'</div>'+
-    '<div class="bn" style="margin:8px 0 4px;color:'+(curData.gananciaReal>=0?"#fff":"#f87171")+'">$'+money(curData.gananciaReal)+'</div>'+
-    '<div class="mo">Cobrado - costo de materiales - gastos operativos</div>'+
-    '<div class="dv"></div>'+
-    '<div class="profitline"><span class="mo">Facturado</span><span style="font-weight:800">$'+money(curData.facturado)+'</span></div>'+
-    '<div class="profitline"><span class="mo">Cobrado</span><span style="font-weight:800;color:var(--g)">$'+money(curData.cobrado)+'</span></div>'+
-    '<div class="profitline"><span class="mo">Costo de materiales usados</span><span style="font-weight:800;color:var(--y)">-$'+money(curData.cogs)+'</span></div>'+
-    '<div class="profitline"><span class="mo">Gastos operativos</span><span style="font-weight:800;color:#f87171">-$'+money(curData.gastos-curData.pagosProveedor)+'</span></div>'+
-    '<div class="prog"><div class="progf" style="width:'+porc+'%"></div></div>'+
-    '<div style="display:flex;justify-content:space-between;margin-top:6px"><span style="font-size:10px;font-weight:800;color:var(--mt)">META $'+meta+'</span><span style="font-size:10px;font-weight:800;color:var(--o)">'+porc.toFixed(0)+'%</span></div>'+
-    '</div>'+
-
-    cajaCardHTML(cajaStats(),"fa1")+
-
-    '<div class="c fa fa2" style="padding:0;overflow:hidden;border-color:rgba(255,255,255,.1);cursor:pointer" onclick="go(\'cuadre\')">'+
-      '<div style="background:linear-gradient(135deg,rgba(239,68,68,.15),rgba(123,63,160,.12));padding:11px 16px;border-bottom:1px solid rgba(255,255,255,.07);display:flex;justify-content:space-between;align-items:center">'+
-        '<div style="font-size:9px;font-weight:800;color:var(--mt);text-transform:uppercase;letter-spacing:.1em">&#127974; Control de caja — materiales</div>'+
-        '<div style="font-size:9px;font-weight:800;color:var(--p2)">Ver detalle &#8250;</div>'+
-      '</div>'+
-      '<div style="padding:4px 0 2px;text-align:center;font-size:8px;font-weight:800;color:var(--g);text-transform:uppercase;letter-spacing:.1em;background:rgba(34,197,94,.04);border-bottom:1px solid rgba(255,255,255,.06)">&#9679; Tiempo real — basado en lo cobrado</div>'+
-      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:1px;background:rgba(255,255,255,.06)">'+
-        (alertReserva?'<style>@keyframes alertGlow{0%{box-shadow:0 0 10px #22c55e,inset 0 0 10px #22c55e;transform:scale(1);}50%{box-shadow:0 0 35px #22c55e,inset 0 0 25px #22c55e;transform:scale(1.02);}100%{box-shadow:0 0 10px #22c55e,inset 0 0 10px #22c55e;transform:scale(1);}}</style>':'')+
-        '<div style="background:rgba(13,8,16,.88);padding:13px 16px;text-align:center;'+(alertReserva?'animation: alertGlow 1.2s infinite; border-radius:12px; border:2px solid #22c55e; z-index:10; position:relative;':'')+'">'+
-          '<div style="font-size:9px;font-weight:800;color:'+(alertReserva?'#22c55e':'rgba(239,68,68,.8)')+';text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px">&#127974; '+(alertReserva?'!GUARDA ESTE DINERO!':'Reservar en caja')+'</div>'+
-          '<div style="font-family:Bebas Neue;font-size:28px;color:'+(alertReserva?'#22c55e':'#f87171')+'">$'+money(reservaCobrado)+'</div>'+
-          '<div style="font-size:9px;color:'+(alertReserva?'#fff':'var(--mt)')+'">No tocar — es para reponer</div>'+
-        '</div>'+
-        '<div style="background:rgba(13,8,16,.88);padding:13px 16px;text-align:center">'+
-          '<div style="font-size:9px;font-weight:800;color:'+(gananciaLibreCobrado>=0?'rgba(34,197,94,.8)':'rgba(239,68,68,.8)')+';text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px">&#128176; Ganancia libre</div>'+
-          '<div style="font-family:Bebas Neue;font-size:28px;color:'+(gananciaLibreCobrado>=0?'var(--g)':'#f87171')+'">'+(gananciaLibreCobrado>=0?'':'-')+'$'+money(Math.abs(gananciaLibreCobrado))+'</div>'+
-          '<div style="font-size:9px;color:var(--mt)">Toca esto para gastos</div>'+
-        '</div>'+
-      '</div>'+
-      '<div style="background:rgba(255,255,255,.025);border-top:1px solid rgba(255,255,255,.06);padding:9px 16px;display:flex;justify-content:space-between;align-items:center">'+
-        '<div style="font-size:9px;font-weight:800;color:var(--mt);text-transform:uppercase;letter-spacing:.08em">&#128313; Proyecci\u00f3n si cobras todo</div>'+
-        '<div style="display:flex;gap:14px">'+
-          '<div style="text-align:center"><div style="font-size:8px;color:rgba(239,68,68,.7);font-weight:800">Reservar</div><div style="font-family:Bebas Neue;font-size:15px;color:#f87171">$'+money(reservaTotal)+'</div></div>'+
-          '<div style="text-align:center"><div style="font-size:8px;color:'+(gananciaTotalProy>=0?'rgba(34,197,94,.7)':'rgba(239,68,68,.7)')+';font-weight:800">Libre</div><div style="font-family:Bebas Neue;font-size:15px;color:'+(gananciaTotalProy>=0?'var(--g)':'#f87171')+'">$'+money(gananciaTotalProy)+'</div></div>'+
-        '</div>'+
-      '</div>'+
-    '</div>'+
-
-    (function(){
-      var deudaProv=(S.compras||[]).reduce(function(a,c){return a+compraDebt(c);},0);
-      var comprasDeuda=(S.compras||[]).filter(function(c){return compraDebt(c)>0.01;}).length;
-      if(deudaProv<0.01)return '';
-      return '<div class="c fa fa2" style="border-color:rgba(251,146,60,.25);background:rgba(251,146,60,.04)">'+'<div style="display:flex;justify-content:space-between;align-items:center">'+'<div><div style="font-size:9px;font-weight:800;color:var(--mt);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">&#127978; Deuda a proveedores</div>'+'<div style="font-family:Bebas Neue;font-size:32px;color:#fb923c">$'+money(deudaProv)+'</div></div>'+'<div style="text-align:right"><div style="font-family:JetBrains Mono;font-size:14px;font-weight:800;color:var(--mt)">'+comprasDeuda+' compra'+(comprasDeuda>1?'s':'')+' pendiente'+(comprasDeuda>1?'s':'')+'</div>'+'<button class="btn bs bsm" style="margin-top:6px;color:#fb923c;border-color:rgba(251,146,60,.3)" onclick="go(\'gastos\')">Pagar / ver &#8250;</button></div></div></div>';
-    }())+
-
-    '<div class="g4 fa fa3" style="margin-bottom:14px">'+
-    '<div class="qb" onclick="go(\'ventas\')"><div style="font-size:22px">&#9889;</div><div style="font-size:10px;font-weight:800;color:var(--mt)">VENDER</div></div>'+
-    '<div class="qb" style="border-color:rgba(239,68,68,.35)" onclick="go(\'gastos\')"><div style="font-size:22px">&#128184;</div><div style="font-size:10px;font-weight:800;color:#f87171">GASTOS</div></div>'+
-    '<div class="qb" onclick="go(\'cobrar\')"><div style="font-size:22px">&#9899;</div><div style="font-size:10px;font-weight:800;color:var(--mt)">DEUDAS</div></div>'+
-    '<div class="qb" onclick="go(\'meses\')"><div style="font-size:22px">&#128197;</div><div style="font-size:10px;font-weight:800;color:var(--mt)">POR MES</div></div>'+
-    '<div class="qb" onclick="go(\'inventario\')"><div style="font-size:22px">&#9635;</div><div style="font-size:10px;font-weight:800;color:var(--mt)">STOCK</div></div>'+
-    '<div class="qb" style="border-color:rgba(96,165,250,.35)" onclick="go(\'vendedores\')"><div style="font-size:22px">&#128202;</div><div style="font-size:10px;font-weight:800;color:#60a5fa">VENDEDOR</div></div>'+
-    '</div>'+
-
-    '<div class="c fa"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><div class="ps">Ultimos meses</div><button class="btn bs bsm" onclick="go(\'meses\')">Ver todo</button></div>'+
-    '<div class="ch2"><canvas id="dChart"></canvas></div></div>';
-  setTimeout(function(){initDC(rows.slice(0,6).reverse());},80);
+    '<div class="fa sec"><div><div class="ps">Hola, '+safe(user.nombre)+'</div><div class="pt">Inicio</div></div>'+(S.tasaBCV>0?'<div class="mo" style="text-align:right">BCV<br><b>Bs. '+S.tasaBCV.toFixed(2)+'</b></div>':'')+'</div>'+
+    cajaCardHTML(cs,"fa1")+
+    '<div class="c fa fa1"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><div class="ps">Tasas del dia</div>'+(S.tasaLastSync?'<div class="mo">'+new Date(S.tasaLastSync).toLocaleString("es-VE",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})+'</div>':'')+'</div>'+
+      '<div class="g2" style="gap:10px"><div class="tile"><div class="tlbl">BCV</div><div class="bns">'+(S.tasaBCV>0?'Bs.'+S.tasaBCV.toFixed(2):'---')+'</div></div>'+
+      '<div class="tile"><div class="tlbl">Binance</div><div class="bns">'+(S.tasaBinance>0?'Bs.'+S.tasaBinance.toFixed(2):'---')+'</div></div></div>'+
+      (isFullAccess()?'<button class="btn bs bsm" style="margin-top:12px" onclick="syncRates()">&#128260; Actualizar tasas</button>':'')+'</div>'+
+    '<div class="c fa fa1"><div class="ps">Este mes</div><div class="g2" style="gap:10px;margin-top:10px">'+
+      '<div class="tile"><div class="tlbl" style="color:var(--g)">COBRADO</div><div class="bns" style="color:var(--g)">$'+money(m.cobrado)+'</div></div>'+
+      '<div class="tile"><div class="tlbl" style="color:#f87171">GASTOS</div><div class="bns" style="color:#f87171">$'+money(m.gastos)+'</div></div></div>'+
+      '<div class="profitline" style="margin-top:12px"><span class="mo">Ganancia real del mes</span><span style="font-weight:800;color:'+(gan>=0?"var(--g)":"#f87171")+'">'+(gan<0?"-":"")+'$'+money(Math.abs(gan))+'</span></div>'+
+      '<div class="mo">Cobrado - costo de materiales - gastos operativos</div></div>'+
+    '<div class="g2 fa fa2" style="margin-bottom:14px">'+
+      '<div class="c" style="cursor:pointer;margin:0" onclick="go(\'cobrar\')"><div class="ps">Te deben</div><div class="bns" style="color:var(--y);margin-top:6px">$'+money(meDeben)+'</div></div>'+
+      '<div class="c" style="cursor:pointer;margin:0" onclick="go(\'gastos\')"><div class="ps">Debes a proveedores</div><div class="bns" style="color:#fb923c;margin-top:6px">$'+money(debo)+'</div></div></div>'+
+    '<div class="g2 fa fa3"><button class="btn bp" onclick="go(\'ventas\')">&#9889; Vender</button><button class="btn br" onclick="nuevoGasto()">&#128184; Registrar gasto</button></div>';
 }
 
 function rMeses(app){
@@ -1783,37 +1720,48 @@ function deudasProveedores(){
 }
 /* Dinero disponible = lo cobrado de facturas - TODOS los egresos (gastos operativos + pagos a proveedores). */
 function cajaStats(){
-  var p=periodStats();
-  var saldo=n(S.saldoInicial);return{inicio:p.inicio,saldo:saldo,cobrado:p.cobrado,pagosProveedor:p.pagosProveedor,operativos:p.gastos-p.pagosProveedor,disponible:saldo+p.cobrado-p.gastos};
+  var cobrado=(S.ventas||[]).reduce(function(a,v){return a+n(v.abono);},0);
+  var gastos=(S.gastos||[]).reduce(function(a,g){return a+n(g.monto);},0);
+  var saldo=n(S.saldoInicial);
+  return{saldo:saldo,cobrado:cobrado,gastos:gastos,disponible:saldo+cobrado-gastos};
 }
 function cajaCardHTML(cs,extra){
   var neg=cs.disponible<0;
-  return '<div class="c cg fa '+(extra||"")+'"><div class="ps" style="color:var(--g)">&#128176; Dinero disponible desde '+cs.inicio+'</div>'+
+  return '<div class="c cg fa '+(extra||"")+'"><div class="ps" style="color:var(--g)">&#128176; Dinero disponible</div>'+
     '<div class="bn" style="margin:8px 0 4px;color:'+(neg?"#f87171":"#fff")+'">'+(neg?"-":"")+'$'+money(Math.abs(cs.disponible))+'</div>'+
-    '<div class="mo">Saldo inicial + cobrado de facturas - pagos a proveedores - gastos operativos</div><div class="dv"></div>'+
-    '<div class="profitline"><span class="mo">Saldo inicial</span><span style="font-weight:800">+$'+money(cs.saldo)+'</span></div>'+
-    '<div class="profitline"><span class="mo">Cobrado (facturas pagadas y abonos)</span><span style="font-weight:800;color:var(--g)">+$'+money(cs.cobrado)+'</span></div>'+
-    '<div class="profitline"><span class="mo">Pagado a proveedores</span><span style="font-weight:800;color:#a78bfa">-$'+money(cs.pagosProveedor)+'</span></div>'+
-    '<div class="profitline"><span class="mo">Gastos operativos</span><span style="font-weight:800;color:#f87171">-$'+money(cs.operativos)+'</span></div>'+
-    (isFullAccess()?'<button class="btn bs bsm" style="margin-top:12px" onclick="ajustarCaja()">Ajustar inicio y saldo inicial</button>':'')+'</div>';
+    '<div class="mo">Fondo inicial + todo lo cobrado - todos los gastos (sin importar la fecha)</div><div class="dv"></div>'+
+    '<div class="profitline"><span class="mo">Fondo inicial</span><span style="font-weight:800">$'+money(cs.saldo)+'</span></div>'+
+    '<div class="profitline"><span class="mo">Cobrado (ventas y abonos)</span><span style="font-weight:800;color:var(--g)">+$'+money(cs.cobrado)+'</span></div>'+
+    '<div class="profitline"><span class="mo">Gastos (incluye pagos a proveedores)</span><span style="font-weight:800;color:#f87171">-$'+money(cs.gastos)+'</span></div>'+
+    (isFullAccess()?'<button class="btn bs bsm" style="margin-top:12px" onclick="ajustarCaja()">Ajustar a lo que tengo hoy</button>':'')+'</div>';
 }
-/* Define desde que fecha cuenta el periodo y con cuanto dinero arrancas (dinero que ya tenias antes de la primera factura del periodo). */
+/* Escribes cuanto dinero tienes de verdad HOY y la app calcula el fondo inicial para que cuadre. */
 window.ajustarCaja=function(){
-  openForm({
-    title:"Inicio de caja",
-    sub:"Todo lo cobrado y gastado desde la fecha cuenta en Dinero disponible",
-    saveLabel:"Guardar",
-    fields:[
-      {id:"inicio",label:"Fecha de inicio del periodo",type:"date",value:periodStart()},
-      {id:"saldo",label:"Saldo inicial ($) - dinero que ya tenias",type:"number",step:"0.01",value:n(S.saldoInicial)||""}
-    ],
+  openForm({title:"Ajustar mi fondo",sub:"Escribe cuanto dinero tienes realmente hoy. La app calcula el resto.",saveLabel:"Guardar",
+    fields:[{id:"real",label:"Dinero que tengo hoy ($)",type:"number",step:"0.01",value:cajaStats().disponible.toFixed(2)}],
     onSave:async function(v){
-      if(!v.inicio){toast("Elige la fecha de inicio","#f87171");return false;}
-      var s=n(v.saldo);if(s<0){toast("El saldo inicial no puede ser negativo","#f87171");return false;}
-      S.inicioPeriodo=v.inicio;S.saldoInicial=s;await sync();toast("Caja actualizada","#22c55e");
-    }
-  });
+      var r=parseFloat(String(v.real).replace(",","."));
+      if(isNaN(r)){toast("Escribe un monto","#f87171");return false;}
+      var c=cajaStats();S.saldoInicial=r-c.cobrado+c.gastos;S.inicioPeriodo=null;await sync();toast("Fondo ajustado","#22c55e");
+    }});
 };
+window.nuevoGasto=function(){
+  openForm({title:"Nuevo gasto",sub:"Se descuenta de tu dinero disponible, sea cual sea la fecha",saveLabel:"Guardar gasto",
+    fields:[
+      {id:"monto",label:"Monto ($)",type:"number",step:"0.01",value:""},
+      {id:"desc",label:"Concepto",value:"",upper:true},
+      {id:"cat",label:"Categoria",type:"select",value:"OPERATIVO",options:[{v:"INSUMOS",t:"Insumos"},{v:"OPERATIVO",t:"Operativo"},{v:"SUELDOS",t:"Sueldos"},{v:"PUBLICIDAD",t:"Publicidad"},{v:"OTROS",t:"Otros"}]},
+      {id:"fecha",label:"Fecha",type:"date",value:today()}],
+    onSave:async function(v){
+      var monto=parseFloat(String(v.monto).replace(",","."));
+      if(!(monto>0)){toast("Escribe el monto","#f87171");return false;}
+      if(!/^\d{4}-\d{2}-\d{2}$/.test(v.fecha||"")){toast("Elige la fecha","#f87171");return false;}
+      var g={id:Date.now(),cat:v.cat||"OTROS",monto:monto,desc:String(v.desc||"").trim().toUpperCase()||"GASTO",fecha:v.fecha};
+      db.collection("gastos").doc(String(g.id)).set(g).catch(function(e){alert("No se pudo guardar el gasto: "+e.message);});
+      S.gastos=(S.gastos||[]).concat([g]);render();toast("Gasto registrado: -$"+money(monto),"#22c55e");
+    }});
+};
+window.saveGasto=function(){window.nuevoGasto();};
 function rGastos(app){
   var gastos=(S.gastos||[]).slice().sort(function(a,b){return String(b.fecha||"").localeCompare(String(a.fecha||""))||String(b.id).localeCompare(String(a.id));});
   var tot=gastos.reduce(function(a,g){return a+n(g.monto);},0);
@@ -1838,11 +1786,7 @@ function rGastos(app){
     h+='</div>';
   }
   h+='<div class="g2 fa fa2"><div class="c cr"><div class="ps">Total historico</div><div class="bns" style="color:#f87171;margin-top:6px">$'+money(tot)+'</div></div><div class="c" style="border-color:rgba(167,139,250,.25)"><div class="ps">Pagado a proveedores</div><div class="bns" style="color:#a78bfa;margin-top:6px">$'+money(totProv)+'</div></div></div>'+
-    '<div class="c fa fa2"><div class="ps" style="margin-bottom:10px">Registrar gasto</div>'+
-    '<label class="lbl">Categoria</label><select id="gCat" class="inp"><option value="INSUMOS">Insumos</option><option value="OPERATIVO">Operativo</option><option value="SUELDOS">Sueldos</option><option value="PUBLICIDAD">Publicidad</option><option value="OTROS">Otros</option></select>'+
-    '<div class="g2"><div><label class="lbl">Fecha</label><input id="gDate" type="date" class="inp" value="'+today()+'"></div><div><label class="lbl">Monto ($)</label><input id="gMonto" type="number" placeholder="0.00" class="inp"></div></div>'+
-    '<label class="lbl">Concepto</label><input id="gDesc" placeholder="Ej: PAGO LUZ" class="inp" style="text-transform:uppercase">'+
-    '<button class="btn br" onclick="saveGasto()">Guardar egreso</button></div>'+
+    '<button class="btn br fa fa2" style="margin-bottom:14px" onclick="nuevoGasto()">+ Registrar gasto</button>'+
     '<div class="ps" style="margin:6px 0 10px">Historial</div>';
   gastos.forEach(function(g,i){var esProv=g.origen==="compra";h+='<div class="ci" style="animation:fadeUp .28s ease '+(i*.03)+'s both"><div><div style="font-weight:800;font-size:14px;text-transform:uppercase">'+safe(g.desc||"Sin descripcion")+'</div><div class="mo">'+(g.cat||"OTROS")+' - '+(g.fecha||"")+'</div></div><div style="display:flex;align-items:center;gap:8px"><div style="font-family:JetBrains Mono;font-weight:800;color:#f87171">$'+money(g.monto)+'</div>'+(esProv?'<span style="background:rgba(167,139,250,.14);color:#a78bfa;padding:6px 11px;border-radius:9px;font-size:10px;font-weight:800">PROVEEDOR</span><button onclick="anularPagoProveedor(\''+g.id+'\')" title="Anular pago" style="background:none;border:none;color:#f87171;font-size:17px;cursor:pointer">&times;</button>':'<button onclick="editGasto('+g.id+')" style="background:rgba(96,165,250,.14);border:none;color:#60a5fa;padding:6px 11px;border-radius:9px;font-size:11px;font-weight:800;cursor:pointer">Editar</button>')+'</div></div>';});
   if(gastos.length===0)h+='<div class="empty">Sin gastos</div>';
@@ -1912,6 +1856,7 @@ function rEmpleados(app){
 
 function rMore(app){
   var admin=[
+    {i:"&#9898;",t:"Historial de ventas",s:"Todas las ventas y facturas",v:"historial",c:"var(--p2)"},
     {i:"&#128197;",t:"Detalle por Mes",s:"Ganancia real y gastos",v:"meses",c:"var(--p2)"},
     {i:"&#9635;",t:"Inventario y precios",s:"Stock, detal y mayor",v:"inventario",c:"var(--p2)"},
     {i:"&#128722;",t:"Cargar stock",s:"Ingresar mercancia",v:"compras",c:"#60a5fa"},
@@ -1924,14 +1869,15 @@ function rMore(app){
     {i:"&#128310;",t:"Billetera USDT",s:"Historial cripto",v:"usdt",c:"var(--y)"},
     {i:"&#128202;",t:"Reporte vendedores",s:"Rendimiento por persona",v:"vendedores",c:"#60a5fa"}
   ];
+  var extra=admin.filter(function(o){return ["cuadre","reportes","catalogo","empleados","usdt","vendedores"].indexOf(o.v)>-1;});
+  admin=admin.filter(function(o){return extra.indexOf(o)<0&&o.v!=="gastos";});
   var h='<div class="sec fa"><div><div class="ps">Ghost Print</div><div class="pt">Mas opciones</div></div></div>'+
     '<div class="c fa" style="display:flex;align-items:center;gap:12px"><div class="logo-badge">'+safe(user.nombre.charAt(0))+'</div><div><div style="font-weight:800;font-size:16px">'+safe(user.nombre)+'</div><span class="badge-role">'+(user.rol==="MAESTRO"?"Administrador":user.rol==="COMPLETO"?"Acceso completo":"Acceso limitado")+'</span></div></div>';
   if(isFullAccess()){
-    h+='<div style="background:rgba(239,68,68,.06);border:1.5px solid rgba(239,68,68,.22);border-radius:16px;padding:14px 17px;margin-bottom:9px;cursor:pointer;display:flex;align-items:center;gap:14px" onclick="mesNuevo()"><div style="font-size:22px;width:44px;height:44px;border-radius:12px;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.25);display:flex;align-items:center;justify-content:center;flex-shrink:0">&#8635;</div><div><div style="font-weight:800;font-size:15px;color:#f87171">Iniciar Mes Nuevo</div><div class="mo">Resetea periodo y carga inventario inicial</div></div></div>';
     admin.forEach(function(o,i){h+='<div onclick="go(\''+o.v+'\')" class="c fa" style="animation-delay:'+(i*.04)+'s;cursor:pointer;display:flex;align-items:center;gap:14px;padding:15px 17px;margin-bottom:9px"><div style="font-size:22px;width:44px;height:44px;border-radius:12px;background:rgba(255,255,255,.06);border:1px solid var(--bd);display:flex;align-items:center;justify-content:center;flex-shrink:0">'+o.i+'</div><div><div style="font-weight:800;font-size:15px;color:'+o.c+'">'+o.t+'</div><div class="mo">'+o.s+'</div></div></div>';});
+    if(extra.length){h+='<details style="margin-bottom:9px"><summary class="btn bs" style="list-style:none;text-align:center;cursor:pointer;margin-bottom:9px">Mas herramientas</summary>';extra.forEach(function(o){h+='<div onclick="go(\''+o.v+'\')" class="c" style="cursor:pointer;display:flex;align-items:center;gap:14px;padding:13px 17px;margin-bottom:9px"><div style="font-size:20px">'+o.i+'</div><div style="flex:1"><div style="font-weight:800;font-size:14px">'+o.t+'</div><div class="mo">'+o.s+'</div></div></div>';});h+='</details>';}
     h+='<div class="dv"></div>'+
       '<div class="g2" style="gap:8px;margin-bottom:9px"><button class="btn bs" onclick="exportBK()">Backup JSON</button><label class="btn bs" style="text-align:center;cursor:pointer">Restaurar<input type="file" accept="application/json" onchange="importBK(event)" style="display:none"></label></div>'+
-      '<button class="btn bs" onclick="backfillFacturas()" style="margin-bottom:9px">&#128290; Numerar facturas de ventas antiguas</button>'+
       '<button class="btn by" onclick="cambiarMeta()" style="margin-bottom:9px">Meta mensual: $'+(S.metaMensual||3000)+'</button>'+
       '<button class="btn bs" onclick="syncRates()" style="margin-bottom:9px">&#128260; Actualizar tasas \u2014 BCV: '+(S.tasaBCV>0?"Bs."+S.tasaBCV.toFixed(2):"---")+' | Binance: '+(S.tasaBinance>0?"Bs."+S.tasaBinance.toFixed(2):"---")+'</button>';
   }
@@ -2185,7 +2131,6 @@ window.postVentaModal=function(v){
     '<button class="btn bs" style="margin-top:10px" onclick="closeForm()">Cerrar</button></div>';
   $("formModal").classList.add("open");
 };
-window.saveGasto=async function(){var monto=n($("gMonto")&&$("gMonto").value);var desc=($("gDesc")&&$("gDesc").value||"").toUpperCase();if(!monto){toast("Ingresa el monto","#f87171");return;}var nGasto={id:Date.now(),cat:$("gCat")&&$("gCat").value||"OTROS",monto:monto,desc:desc,fecha:$("gDate")&&$("gDate").value||today()};await db.collection("gastos").doc(nGasto.id.toString()).set(nGasto);await sync();toast("Gasto registrado");};
 window.delGasto=async function(id){if(confirm("Eliminar gasto?")){await db.collection("gastos").doc(id.toString()).delete();await sync();}};
 window.editGasto=function(id){
   var g=(S.gastos||[]).find(function(x){return x.id===id;});if(!g)return;
@@ -4069,18 +4014,18 @@ function voiceHandleCommand(txt){
   var esMayor=/mayor|mayorista/.test(t);
 
   if(/gasto|gaste|gast[eé]|pagu[eé]/.test(t)){
-    go("gastos");
+    go("gastos");nuevoGasto();
     setTimeout(function(){
-      if($("gMonto")&&monto)$("gMonto").value=monto;
+      if($("ef_monto")&&monto)$("ef_monto").value=monto;
       var desc=t.replace(/gasto|gaste|gast[eé]|registra|registrar|un|una|de|pagu[eé]/gi,'').replace(/\d+([.,]\d+)?/g,'').trim();
-      if($("gDesc")&&desc)$("gDesc").value=desc.toUpperCase();
+      if($("ef_desc")&&desc)$("ef_desc").value=desc.toUpperCase();
       var cat="OTROS";
       if(/luz|agua|alquiler|renta|gasolina|transporte|internet|telefono/.test(t))cat="OPERATIVO";
       else if(/sueldo|nomina|empleado/.test(t))cat="SUELDOS";
       else if(/publicidad|anuncio|marketing|promocion/.test(t))cat="PUBLICIDAD";
       else if(/insumo|material|papel|tinta/.test(t))cat="INSUMOS";
-      if($("gCat"))$("gCat").value=cat;
-      toast("Gasto por voz: revisa y pulsa Guardar egreso","#f59e0b");
+      if($("ef_cat"))$("ef_cat").value=cat;
+      toast("Gasto por voz: revisa y pulsa Guardar gasto","#f59e0b");
     },300);
   } else if(/compra|compre|compr[eé]/.test(t)){
     go("compras");
